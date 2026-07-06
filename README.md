@@ -1,4 +1,3 @@
-README.md
 # Quanttora
 
 > Build Better Traders.
