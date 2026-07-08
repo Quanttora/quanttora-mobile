@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../core/theme/app_theme.dart';
 
 class QuanttoraApp extends StatelessWidget {
   const QuanttoraApp({super.key});
@@ -8,9 +9,7 @@ class QuanttoraApp extends StatelessWidget {
     return MaterialApp(
       title: 'Quanttora',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-      ),
+      theme: AppTheme.lightTheme,
       home: const Scaffold(
         body: Center(
           child: Text('Quanttora'),
