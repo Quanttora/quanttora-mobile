@@ -1,122 +1,45 @@
 import 'package:flutter/material.dart';
 
+import 'widgets/greeting_card.dart';
+import 'widgets/decision_score_card.dart';
+import 'widgets/mission_card.dart';
+import 'widgets/last_mistake_card.dart';
+import 'widgets/ai_insight_card.dart';
+
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
-
-  Widget buildCard({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E2746),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          Icon(
-            icon,
-            color: Colors.white,
-            size: 32,
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.70),
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Icon(
-            Icons.arrow_forward_ios,
-            color: Colors.white54,
-            size: 18,
-          ),
-        ],
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF0F172A),
+
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(20),
+
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 20),
+            children: const [
 
-              const Center(
-                child: Text(
-                  "QUANTTORA",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 2,
-                  ),
-                ),
-              ),
+              GreetingCard(),
 
-              const SizedBox(height: 8),
+              SizedBox(height: 20),
 
-              Center(
-                child: Text(
-                  "Build Better Traders",
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.70),
-                    fontSize: 16,
-                  ),
-                ),
-              ),
+              DecisionScoreCard(),
 
-              const SizedBox(height: 40),
+              SizedBox(height: 20),
 
-              buildCard(
-                icon: Icons.menu_book_rounded,
-                title: "Decision Journal",
-                subtitle: "Plan every trade before entry",
-              ),
+              MissionCard(),
 
-              buildCard(
-                icon: Icons.candlestick_chart,
-                title: "Market Analysis",
-                subtitle: "Understand today's market",
-              ),
+              SizedBox(height: 20),
 
-              buildCard(
-                icon: Icons.school_rounded,
-                title: "Trading Academy",
-                subtitle: "Learn trading with simple lessons",
-              ),
+              LastMistakeCard(),
 
-              buildCard(
-                icon: Icons.track_changes_rounded,
-                title: "Today's Focus",
-                subtitle: "Protect Capital",
-              ),
+              SizedBox(height: 20),
+
+              AIInsightCard(),
+
             ],
           ),
         ),
