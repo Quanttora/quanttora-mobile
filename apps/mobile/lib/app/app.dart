@@ -11,7 +11,9 @@ class QuanttoraApp extends StatelessWidget {
     return MaterialApp(
       title: 'Quanttora',
       debugShowCheckedModeBanner: false,
+
       theme: AppTheme.lightTheme,
+
       home: const HomeScreen(),
     );
   }
