@@ -5,31 +5,27 @@ class GreetingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-
       children: const [
 
         Text(
-          "Good Evening, Sagar 👋",
+          "👋 Good Evening, Sagar",
           style: TextStyle(
-            color: Colors.white,
-            fontSize: 28,
+            fontSize: 30,
             fontWeight: FontWeight.bold,
           ),
         ),
 
-        SizedBox(height: 6),
+        SizedBox(height: 8),
 
         Text(
-          "Become Better Than Yesterday",
+          "Let's build another profitable trading day.",
           style: TextStyle(
-            color: Colors.white70,
             fontSize: 16,
+            color: Colors.grey,
           ),
         ),
-
       ],
     );
   }
