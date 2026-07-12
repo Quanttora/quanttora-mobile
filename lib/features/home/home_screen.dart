@@ -1,5 +1,6 @@
-import '../decision_engine/decision_engine_screen.dart';
 import 'package:flutter/material.dart';
+
+import '../decision_engine/ai_scan_screen.dart';
 
 import 'widgets/greeting_card.dart';
 import 'widgets/decision_score_card.dart';
@@ -21,7 +22,6 @@ class HomeScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: const [
-
               GreetingCard(),
 
               SizedBox(height: 20),
@@ -49,15 +49,12 @@ class HomeScreen extends StatelessWidget {
               QuickActionCard(),
 
               SizedBox(height: 120),
-
             ],
           ),
         ),
       ),
-
       floatingActionButtonLocation:
           FloatingActionButtonLocation.centerDocked,
-
       floatingActionButton: SizedBox(
         width: 190,
         height: 60,
@@ -65,16 +62,16 @@ class HomeScreen extends StatelessWidget {
           backgroundColor: const Color(0xFF2563EB),
           elevation: 8,
           onPressed: () {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (_) => const DecisionEngineScreen(),
-    ),
-  );
-},
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const AIScanScreen(),
+              ),
+            );
+          },
           icon: const Icon(Icons.play_arrow_rounded),
           label: const Text(
-            "EXECUTE",
+            "ANALYZE TRADE",
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -82,7 +79,6 @@ class HomeScreen extends StatelessWidget {
           ),
         ),
       ),
-
       bottomNavigationBar: BottomAppBar(
         height: 75,
         shape: const CircularNotchedRectangle(),
@@ -90,30 +86,24 @@ class HomeScreen extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: const [
-
             _NavItem(
               icon: Icons.home_rounded,
               title: "Home",
               selected: true,
             ),
-
             _NavItem(
               icon: Icons.show_chart_rounded,
               title: "Markets",
             ),
-
             SizedBox(width: 50),
-
             _NavItem(
               icon: Icons.school_rounded,
               title: "Academy",
             ),
-
             _NavItem(
               icon: Icons.person_rounded,
               title: "Profile",
             ),
-
           ],
         ),
       ),
@@ -139,14 +129,8 @@ class _NavItem extends StatelessWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-
-        Icon(
-          icon,
-          color: color,
-        ),
-
+        Icon(icon, color: color),
         const SizedBox(height: 4),
-
         Text(
           title,
           style: TextStyle(
