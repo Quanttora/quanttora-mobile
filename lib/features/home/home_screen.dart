@@ -1,3 +1,4 @@
+import '../decision_engine/decision_engine_screen.dart';
 import 'package:flutter/material.dart';
 
 import 'widgets/greeting_card.dart';
@@ -63,7 +64,14 @@ class HomeScreen extends StatelessWidget {
         child: FloatingActionButton.extended(
           backgroundColor: const Color(0xFF2563EB),
           elevation: 8,
-          onPressed: () {},
+          onPressed: () {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => const DecisionEngineScreen(),
+    ),
+  );
+},
           icon: const Icon(Icons.play_arrow_rounded),
           label: const Text(
             "EXECUTE",
