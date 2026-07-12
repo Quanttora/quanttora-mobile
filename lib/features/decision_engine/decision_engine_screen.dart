@@ -1,5 +1,12 @@
 import 'package:flutter/material.dart';
 
+import 'widgets/decision_score_card.dart';
+import 'widgets/market_analysis_card.dart';
+import 'widgets/strategy_analysis_card.dart';
+import 'widgets/risk_analysis_card.dart';
+import 'widgets/psychology_analysis_card.dart';
+import 'widgets/ai_verdict_card.dart';
+
 class DecisionEngineScreen extends StatelessWidget {
   const DecisionEngineScreen({super.key});
 
@@ -8,13 +15,39 @@ class DecisionEngineScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Decision Engine"),
+        centerTitle: true,
       ),
-      body: const Center(
-        child: Text(
-          "Decision Engine Connected ✅",
-          style: TextStyle(
-            fontSize: 30,
-            fontWeight: FontWeight.bold,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            children: const [
+
+              DecisionScoreCard(),
+
+              SizedBox(height: 20),
+
+              MarketAnalysisCard(),
+
+              SizedBox(height: 20),
+
+              StrategyAnalysisCard(),
+
+              SizedBox(height: 20),
+
+              RiskAnalysisCard(),
+
+              SizedBox(height: 20),
+
+              PsychologyAnalysisCard(),
+
+              SizedBox(height: 20),
+
+              AIVerdictCard(),
+
+              SizedBox(height: 40),
+
+            ],
           ),
         ),
       ),
