@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/decision_engine/decision_result.dart';
+
 class StrategyAnalysisCard extends StatelessWidget {
-  const StrategyAnalysisCard({super.key});
+  final DecisionResult result;
+
+  const StrategyAnalysisCard({
+    super.key,
+    required this.result,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -37,140 +44,77 @@ class StrategyAnalysisCard extends StatelessWidget {
               ],
             ),
 
-            const SizedBox(height: 10),
+            const SizedBox(height: 20),
+
+            Row(
+              children: [
+
+                const Expanded(
+                  child: Text(
+                    "Strategy Score",
+                    style: TextStyle(fontSize: 16),
+                  ),
+                ),
+
+                Text(
+                  "${result.strategyScore} / 20",
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF7C3AED),
+                  ),
+                ),
+
+              ],
+            ),
+
+            const SizedBox(height: 20),
+
+            ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: LinearProgressIndicator(
+                value: result.strategyScore / 20,
+                minHeight: 10,
+                backgroundColor: Colors.grey.shade300,
+                color: const Color(0xFF7C3AED),
+              ),
+            ),
+
+            const SizedBox(height: 25),
 
             const Text(
-              "AI verifies your strategy before allowing execution.",
+              "Engine Reasons",
               style: TextStyle(
-                color: Colors.grey,
+                fontWeight: FontWeight.bold,
               ),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 12),
 
-            const _CheckTile(
-              title: "Trend Alignment",
-              status: true,
-            ),
+            ...result.reasons.skip(5).take(4).map(
+              (reason) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
 
-            const Divider(),
-
-            const _CheckTile(
-              title: "EMA Alignment",
-              status: true,
-            ),
-
-            const Divider(),
-
-            const _CheckTile(
-              title: "Liquidity Sweep",
-              status: true,
-            ),
-
-            const Divider(),
-
-            const _CheckTile(
-              title: "Breakout Confirmation",
-              status: true,
-            ),
-
-            const Divider(),
-
-            const _CheckTile(
-              title: "Retest Confirmation",
-              status: false,
-            ),
-
-            const Divider(),
-
-            const _CheckTile(
-              title: "Volume Confirmation",
-              status: true,
-            ),
-
-            const SizedBox(height: 24),
-
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF3F8FF),
-                borderRadius: BorderRadius.circular(18),
-              ),
-              child: const Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-
-                  Icon(
-                    Icons.psychology_alt,
-                    color: Color(0xFF2563EB),
-                  ),
-
-                  SizedBox(width: 12),
-
-                  Expanded(
-                    child: Text(
-                      "AI Opinion:\nThe setup is technically strong. Waiting for a clean retest would further improve the probability of success.",
-                      style: TextStyle(
-                        height: 1.5,
-                        fontSize: 15,
-                      ),
+                    const Icon(
+                      Icons.check_circle,
+                      size: 18,
+                      color: Colors.green,
                     ),
-                  ),
 
-                ],
+                    const SizedBox(width: 8),
+
+                    Expanded(
+                      child: Text(reason),
+                    ),
+
+                  ],
+                ),
               ),
             ),
 
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _CheckTile extends StatelessWidget {
-  final String title;
-  final bool status;
-
-  const _CheckTile({
-    required this.title,
-    required this.status,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-
-          Icon(
-            status ? Icons.check_circle : Icons.cancel,
-            color: status ? Colors.green : Colors.red,
-            size: 24,
-          ),
-
-          const SizedBox(width: 14),
-
-          Expanded(
-            child: Text(
-              title,
-              style: const TextStyle(
-                fontSize: 16,
-              ),
-            ),
-          ),
-
-          Text(
-            status ? "PASS" : "WAIT",
-            style: TextStyle(
-              color: status ? Colors.green : Colors.red,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-
-        ],
       ),
     );
   }

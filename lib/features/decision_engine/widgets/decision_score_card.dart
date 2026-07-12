@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/decision_engine/decision_result.dart';
+
 class DecisionScoreCard extends StatelessWidget {
-  const DecisionScoreCard({super.key});
+  final DecisionResult result;
+
+  const DecisionScoreCard({
+    super.key,
+    required this.result,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +34,7 @@ class DecisionScoreCard extends StatelessWidget {
                 SizedBox(width: 10),
 
                 Text(
-                  "Decision Score",
+                  "Q-Score™",
                   style: TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.bold,
@@ -49,27 +56,29 @@ class DecisionScoreCard extends StatelessWidget {
                   width: 10,
                 ),
               ),
-              child: const Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
 
-                  Text(
-                    "91",
-                    style: TextStyle(
-                      fontSize: 58,
-                      fontWeight: FontWeight.bold,
+                    Text(
+                      result.totalScore.toString(),
+                      style: const TextStyle(
+                        fontSize: 58,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
 
-                  Text(
-                    "/100",
-                    style: TextStyle(
-                      fontSize: 24,
-                      color: Colors.grey,
+                    const Text(
+                      "/100",
+                      style: TextStyle(
+                        fontSize: 24,
+                        color: Colors.grey,
+                      ),
                     ),
-                  ),
 
-                ],
+                  ],
+                ),
               ),
             ),
 
@@ -82,41 +91,28 @@ class DecisionScoreCard extends StatelessWidget {
                 color: const Color(0xFFE8F1FF),
                 borderRadius: BorderRadius.circular(18),
               ),
-              child: const Column(
+              child: Column(
                 children: [
 
-                  Text(
-                    "AI Confidence",
+                  const Text(
+                    "AI Verdict",
                     style: TextStyle(
-                      fontSize: 16,
                       color: Colors.grey,
                     ),
                   ),
 
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
 
                   Text(
-                    "94%",
-                    style: TextStyle(
-                      fontSize: 36,
+                    result.verdictText,
+                    style: const TextStyle(
+                      fontSize: 28,
                       color: Color(0xFF2563EB),
                       fontWeight: FontWeight.bold,
                     ),
                   ),
 
                 ],
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            const Text(
-              "Excellent trade quality detected.\nAll major conditions are aligned.",
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.black87,
-                height: 1.5,
               ),
             ),
 

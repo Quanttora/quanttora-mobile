@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/decision_engine/decision_result.dart';
+
 class MarketAnalysisCard extends StatelessWidget {
-  const MarketAnalysisCard({super.key});
+  final DecisionResult result;
+
+  const MarketAnalysisCard({
+    super.key,
+    required this.result,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -33,56 +40,26 @@ class MarketAnalysisCard extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-
               ],
             ),
 
-            const SizedBox(height: 10),
+            const SizedBox(height: 20),
 
-            const Text(
-              "Live market health before entering the trade.",
-              style: TextStyle(
-                color: Colors.grey,
-              ),
+            _ScoreRow(
+              "Market Trend",
+              result.marketScore,
+              25,
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
 
-            const _AnalysisTile(
-              title: "Trend",
-              value: "Bullish",
-              score: 96,
-              color: Colors.green,
+            _ScoreRow(
+              "Momentum",
+              result.momentumScore,
+              20,
             ),
 
-            const SizedBox(height: 18),
-
-            const _AnalysisTile(
-              title: "Momentum",
-              value: "Strong",
-              score: 92,
-              color: Colors.blue,
-            ),
-
-            const SizedBox(height: 18),
-
-            const _AnalysisTile(
-              title: "Volume",
-              value: "Above Average",
-              score: 89,
-              color: Colors.orange,
-            ),
-
-            const SizedBox(height: 18),
-
-            const _AnalysisTile(
-              title: "Volatility",
-              value: "Healthy",
-              score: 84,
-              color: Colors.deepPurple,
-            ),
-
-            const SizedBox(height: 22),
+            const SizedBox(height: 20),
 
             Container(
               padding: const EdgeInsets.all(18),
@@ -90,22 +67,37 @@ class MarketAnalysisCard extends StatelessWidget {
                 color: const Color(0xFFEFFAF3),
                 borderRadius: BorderRadius.circular(18),
               ),
-              child: const Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
 
-                  Icon(
-                    Icons.check_circle,
-                    color: Colors.green,
+                  const Text(
+                    "Engine Reasons",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
 
-                  SizedBox(width: 12),
+                  const SizedBox(height: 12),
 
-                  Expanded(
-                    child: Text(
-                      "AI Analysis: Market conditions support a high probability setup.",
-                      style: TextStyle(
-                        fontSize: 15,
-                        height: 1.5,
+                  ...result.reasons.take(5).map(
+                    (reason) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        children: [
+
+                          const Icon(
+                            Icons.check_circle,
+                            size: 18,
+                            color: Colors.green,
+                          ),
+
+                          const SizedBox(width: 8),
+
+                          Expanded(
+                            child: Text(reason),
+                          ),
+                        ],
                       ),
                     ),
                   ),
@@ -121,66 +113,36 @@ class MarketAnalysisCard extends StatelessWidget {
   }
 }
 
-class _AnalysisTile extends StatelessWidget {
+class _ScoreRow extends StatelessWidget {
   final String title;
-  final String value;
   final int score;
-  final Color color;
+  final int maxScore;
 
-  const _AnalysisTile({
-    required this.title,
-    required this.value,
-    required this.score,
-    required this.color,
-  });
+  const _ScoreRow(
+    this.title,
+    this.score,
+    this.maxScore,
+  );
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
       children: [
 
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+        Expanded(
+          child: Text(
+            title,
+            style: const TextStyle(
+              fontSize: 16,
             ),
-
-            Text(
-              "$score%",
-              style: TextStyle(
-                color: color,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-
-          ],
-        ),
-
-        const SizedBox(height: 6),
-
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.grey,
           ),
         ),
 
-        const SizedBox(height: 10),
-
-        ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: LinearProgressIndicator(
-            value: score / 100,
-            minHeight: 8,
-            color: color,
-            backgroundColor: Colors.grey.shade300,
+        Text(
+          "$score / $maxScore",
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF2563EB),
           ),
         ),
 

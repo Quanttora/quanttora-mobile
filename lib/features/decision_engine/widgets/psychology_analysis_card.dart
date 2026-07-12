@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/decision_engine/decision_result.dart';
+
 class PsychologyAnalysisCard extends StatelessWidget {
-  const PsychologyAnalysisCard({super.key});
+  final DecisionResult result;
+
+  const PsychologyAnalysisCard({
+    super.key,
+    required this.result,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -37,53 +44,40 @@ class PsychologyAnalysisCard extends StatelessWidget {
               ],
             ),
 
-            const SizedBox(height: 10),
+            const SizedBox(height: 20),
 
-            const Text(
-              "AI evaluates your current trading mindset.",
-              style: TextStyle(
-                color: Colors.grey,
+            Row(
+              children: [
+
+                const Expanded(
+                  child: Text(
+                    "Psychology Score",
+                    style: TextStyle(fontSize: 16),
+                  ),
+                ),
+
+                Text(
+                  "${result.psychologyScore} / 15",
+                  style: const TextStyle(
+                    color: Color(0xFF7C3AED),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: LinearProgressIndicator(
+                value: result.psychologyScore / 15,
+                minHeight: 10,
+                backgroundColor: Colors.grey.shade300,
+                color: const Color(0xFF7C3AED),
               ),
-            ),
-
-            const SizedBox(height: 24),
-
-            const _PsychologyRow(
-              title: "Emotional State",
-              value: "Calm",
-              color: Colors.green,
-            ),
-
-            const Divider(),
-
-            const _PsychologyRow(
-              title: "Today's Trades",
-              value: "1 / 3",
-              color: Colors.blue,
-            ),
-
-            const Divider(),
-
-            const _PsychologyRow(
-              title: "Revenge Trading",
-              value: "No",
-              color: Colors.green,
-            ),
-
-            const Divider(),
-
-            const _PsychologyRow(
-              title: "Discipline Score",
-              value: "94%",
-              color: Colors.deepPurple,
-            ),
-
-            const Divider(),
-
-            const _PsychologyRow(
-              title: "Confidence",
-              value: "Healthy",
-              color: Colors.orange,
             ),
 
             const SizedBox(height: 24),
@@ -95,11 +89,10 @@ class PsychologyAnalysisCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(18),
               ),
               child: const Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
 
                   Icon(
-                    Icons.lightbulb,
+                    Icons.psychology_alt,
                     color: Color(0xFF7C3AED),
                   ),
 
@@ -107,9 +100,8 @@ class PsychologyAnalysisCard extends StatelessWidget {
 
                   Expanded(
                     child: Text(
-                      "AI Coach:\nYou are following your trading rules today. Stay patient and don't increase position size after a winning trade.",
+                      "Psychology score is now calculated by the Quanttora Decision Engine.",
                       style: TextStyle(
-                        fontSize: 15,
                         height: 1.5,
                       ),
                     ),
@@ -121,46 +113,6 @@ class PsychologyAnalysisCard extends StatelessWidget {
 
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _PsychologyRow extends StatelessWidget {
-  final String title;
-  final String value;
-  final Color color;
-
-  const _PsychologyRow({
-    required this.title,
-    required this.value,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Row(
-        children: [
-
-          Expanded(
-            child: Text(
-              title,
-              style: const TextStyle(fontSize: 16),
-            ),
-          ),
-
-          Text(
-            value,
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.bold,
-              fontSize: 17,
-            ),
-          ),
-
-        ],
       ),
     );
   }
