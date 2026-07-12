@@ -7,18 +7,21 @@ class QuickActionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(22),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+          children: const [
 
-            const Row(
+            Row(
               children: [
 
                 Icon(
                   Icons.flash_on_rounded,
-                  color: Colors.amber,
+                  color: Color(0xFFF59E0B),
                 ),
 
                 SizedBox(width: 10),
@@ -26,7 +29,7 @@ class QuickActionCard extends StatelessWidget {
                 Text(
                   "Quick Actions",
                   style: TextStyle(
-                    fontSize: 22,
+                    fontSize: 24,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -34,23 +37,23 @@ class QuickActionCard extends StatelessWidget {
               ],
             ),
 
-            const SizedBox(height: 20),
+            SizedBox(height: 22),
 
             Row(
-              children: const [
+              children: [
 
                 Expanded(
-                  child: _ActionButton(
+                  child: _ActionTile(
                     icon: Icons.analytics_outlined,
                     title: "Analyze",
                     color: Colors.blue,
                   ),
                 ),
 
-                SizedBox(width: 12),
+                SizedBox(width: 14),
 
                 Expanded(
-                  child: _ActionButton(
+                  child: _ActionTile(
                     icon: Icons.play_circle_fill_rounded,
                     title: "Execute",
                     color: Colors.green,
@@ -60,23 +63,23 @@ class QuickActionCard extends StatelessWidget {
               ],
             ),
 
-            const SizedBox(height: 12),
+            SizedBox(height: 14),
 
             Row(
-              children: const [
+              children: [
 
                 Expanded(
-                  child: _ActionButton(
+                  child: _ActionTile(
                     icon: Icons.menu_book_rounded,
                     title: "Academy",
                     color: Colors.deepPurple,
                   ),
                 ),
 
-                SizedBox(width: 12),
+                SizedBox(width: 14),
 
                 Expanded(
-                  child: _ActionButton(
+                  child: _ActionTile(
                     icon: Icons.history_rounded,
                     title: "History",
                     color: Colors.orange,
@@ -85,6 +88,7 @@ class QuickActionCard extends StatelessWidget {
 
               ],
             ),
+
           ],
         ),
       ),
@@ -92,12 +96,13 @@ class QuickActionCard extends StatelessWidget {
   }
 }
 
-class _ActionButton extends StatelessWidget {
+class _ActionTile extends StatelessWidget {
+
   final IconData icon;
   final String title;
   final Color color;
 
-  const _ActionButton({
+  const _ActionTile({
     required this.icon,
     required this.title,
     required this.color,
@@ -109,7 +114,7 @@ class _ActionButton extends StatelessWidget {
       borderRadius: BorderRadius.circular(18),
       onTap: () {},
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 20),
+        padding: const EdgeInsets.symmetric(vertical: 22),
         decoration: BoxDecoration(
           color: color.withOpacity(.08),
           borderRadius: BorderRadius.circular(18),
@@ -120,14 +125,14 @@ class _ActionButton extends StatelessWidget {
             Icon(
               icon,
               color: color,
-              size: 30,
+              size: 34,
             ),
 
-            const SizedBox(height: 10),
+            SizedBox(height: 10),
 
             Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.bold,
               ),
             ),

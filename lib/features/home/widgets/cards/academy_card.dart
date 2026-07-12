@@ -7,18 +7,21 @@ class AcademyCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(22),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
 
-            Row(
-              children: const [
+            const Row(
+              children: [
 
                 Icon(
                   Icons.school_rounded,
-                  color: Colors.orange,
+                  color: Color(0xFFF59E0B),
                 ),
 
                 SizedBox(width: 10),
@@ -26,7 +29,7 @@ class AcademyCard extends StatelessWidget {
                 Text(
                   "Trading Academy",
                   style: TextStyle(
-                    fontSize: 22,
+                    fontSize: 24,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -34,30 +37,42 @@ class AcademyCard extends StatelessWidget {
               ],
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 10),
+
+            const Text(
+              "Master trading step by step.",
+              style: TextStyle(
+                color: Colors.grey,
+              ),
+            ),
+
+            const SizedBox(height: 22),
 
             const _CourseTile(
-              title: "Candlestick Basics",
-              subtitle: "15 Lessons",
               icon: Icons.candlestick_chart,
+              title: "Candlestick Mastery",
+              lessons: "18 Lessons",
+              progress: 0.80,
               color: Colors.blue,
             ),
 
-            SizedBox(height: 14),
+            SizedBox(height: 16),
 
             const _CourseTile(
-              title: "Risk Management",
-              subtitle: "10 Lessons",
-              icon: Icons.shield_outlined,
+              icon: Icons.show_chart,
+              title: "Market Structure",
+              lessons: "12 Lessons",
+              progress: 0.35,
               color: Colors.green,
             ),
 
-            SizedBox(height: 14),
+            SizedBox(height: 16),
 
             const _CourseTile(
-              title: "Options Greeks",
-              subtitle: "18 Lessons",
               icon: Icons.auto_graph,
+              title: "Options Greeks",
+              lessons: "15 Lessons",
+              progress: 0.10,
               color: Colors.deepPurple,
             ),
 
@@ -69,15 +84,18 @@ class AcademyCard extends StatelessWidget {
 }
 
 class _CourseTile extends StatelessWidget {
-  final String title;
-  final String subtitle;
+
   final IconData icon;
+  final String title;
+  final String lessons;
+  final double progress;
   final Color color;
 
   const _CourseTile({
-    required this.title,
-    required this.subtitle,
     required this.icon,
+    required this.title,
+    required this.lessons,
+    required this.progress,
     required this.color,
   });
 
@@ -87,48 +105,62 @@ class _CourseTile extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: color.withOpacity(.08),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
       ),
-      child: Row(
+      child: Column(
         children: [
 
-          CircleAvatar(
-            backgroundColor: color,
-            child: Icon(
-              icon,
-              color: Colors.white,
-            ),
+          Row(
+            children: [
+
+              CircleAvatar(
+                backgroundColor: color,
+                child: Icon(
+                  icon,
+                  color: Colors.white,
+                ),
+              ),
+
+              const SizedBox(width: 14),
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+
+                    Text(
+                      lessons,
+                      style: const TextStyle(
+                        color: Colors.grey,
+                      ),
+                    ),
+
+                  ],
+                ),
+              ),
+
+            ],
           ),
 
-          const SizedBox(width: 16),
+          const SizedBox(height: 16),
 
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-
-                const SizedBox(height: 4),
-
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    color: Colors.grey,
-                  ),
-                ),
-
-              ],
+          ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: LinearProgressIndicator(
+              value: progress,
+              minHeight: 8,
+              color: color,
+              backgroundColor: Colors.grey.shade300,
             ),
           ),
-
-          const Icon(Icons.arrow_forward_ios_rounded, size: 18),
 
         ],
       ),

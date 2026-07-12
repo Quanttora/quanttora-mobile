@@ -7,18 +7,21 @@ class AICoachCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(22),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
 
-            Row(
-              children: const [
+            const Row(
+              children: [
 
                 Icon(
-                  Icons.psychology,
-                  color: Colors.deepPurple,
+                  Icons.psychology_alt_rounded,
+                  color: Color(0xFF7C3AED),
                 ),
 
                 SizedBox(width: 10),
@@ -26,7 +29,7 @@ class AICoachCard extends StatelessWidget {
                 Text(
                   "AI Coach",
                   style: TextStyle(
-                    fontSize: 22,
+                    fontSize: 24,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -34,16 +37,26 @@ class AICoachCard extends StatelessWidget {
               ],
             ),
 
+            const SizedBox(height: 10),
+
+            const Text(
+              "Personal guidance based on your trading behaviour.",
+              style: TextStyle(
+                color: Colors.grey,
+              ),
+            ),
+
             const SizedBox(height: 20),
 
             Container(
-              padding: const EdgeInsets.all(16),
+              width: double.infinity,
+              padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: Colors.deepPurple.withOpacity(.08),
-                borderRadius: BorderRadius.circular(16),
+                color: const Color(0xFFF5F3FF),
+                borderRadius: BorderRadius.circular(18),
               ),
               child: const Text(
-                "You usually perform better after waiting for the first 15 minutes. Avoid entering on impulse today.",
+                "💡 You usually make better entries after waiting for confirmation. Avoid impulsive breakout entries today.",
                 style: TextStyle(
                   fontSize: 16,
                   height: 1.5,
@@ -57,7 +70,7 @@ class AICoachCard extends StatelessWidget {
               children: [
 
                 Expanded(
-                  child: _Metric(
+                  child: _StatCard(
                     title: "Discipline",
                     value: "95%",
                     color: Colors.green,
@@ -67,7 +80,7 @@ class AICoachCard extends StatelessWidget {
                 SizedBox(width: 12),
 
                 Expanded(
-                  child: _Metric(
+                  child: _StatCard(
                     title: "Patience",
                     value: "88%",
                     color: Colors.orange,
@@ -77,14 +90,16 @@ class AICoachCard extends StatelessWidget {
                 SizedBox(width: 12),
 
                 Expanded(
-                  child: _Metric(
-                    title: "Risk",
+                  child: _StatCard(
+                    title: "Execution",
                     value: "92%",
                     color: Colors.blue,
                   ),
                 ),
+
               ],
             ),
+
           ],
         ),
       ),
@@ -92,12 +107,12 @@ class AICoachCard extends StatelessWidget {
   }
 }
 
-class _Metric extends StatelessWidget {
+class _StatCard extends StatelessWidget {
   final String title;
   final String value;
   final Color color;
 
-  const _Metric({
+  const _StatCard({
     required this.title,
     required this.value,
     required this.color,
@@ -109,7 +124,7 @@ class _Metric extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 14),
       decoration: BoxDecoration(
         color: color.withOpacity(.08),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         children: [
@@ -127,8 +142,11 @@ class _Metric extends StatelessWidget {
 
           Text(
             title,
-            style: const TextStyle(fontSize: 13),
+            style: const TextStyle(
+              fontSize: 13,
+            ),
           ),
+
         ],
       ),
     );

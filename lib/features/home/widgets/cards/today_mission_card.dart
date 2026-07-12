@@ -7,17 +7,20 @@ class TodayMissionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(22),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
 
-            Row(
-              children: const [
+            const Row(
+              children: [
 
                 Icon(
-                  Icons.flag_circle,
+                  Icons.flag_circle_rounded,
                   color: Color(0xFF2563EB),
                 ),
 
@@ -26,28 +29,76 @@ class TodayMissionCard extends StatelessWidget {
                 Text(
                   "Today's Mission",
                   style: TextStyle(
-                    fontSize: 22,
+                    fontSize: 24,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
+
               ],
             ),
 
-            SizedBox(height: 20),
+            const SizedBox(height: 10),
 
-            _MissionItem("Wait for confirmation candle"),
+            const Text(
+              "Complete these before ending today's session.",
+              style: TextStyle(
+                color: Colors.grey,
+              ),
+            ),
 
-            SizedBox(height: 12),
+            const SizedBox(height: 22),
 
-            _MissionItem("Maximum 3 trades"),
+            const _MissionTile(
+              title: "Wait for confirmation candle",
+              completed: true,
+            ),
 
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
 
-            _MissionItem("Risk Reward above 1:2"),
+            const _MissionTile(
+              title: "Maximum 3 trades",
+              completed: true,
+            ),
 
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
 
-            _MissionItem("No revenge trading"),
+            const _MissionTile(
+              title: "Risk Reward above 1 : 2",
+              completed: false,
+            ),
+
+            const SizedBox(height: 12),
+
+            const _MissionTile(
+              title: "Avoid revenge trading",
+              completed: false,
+            ),
+
+            const SizedBox(height: 24),
+
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: const LinearProgressIndicator(
+                value: .50,
+                minHeight: 10,
+                backgroundColor: Color(0xFFE5E7EB),
+                color: Color(0xFF2563EB),
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            const Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                "2 / 4 Completed",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2563EB),
+                ),
+              ),
+            ),
+
           ],
         ),
       ),
@@ -55,20 +106,25 @@ class TodayMissionCard extends StatelessWidget {
   }
 }
 
-class _MissionItem extends StatelessWidget {
+class _MissionTile extends StatelessWidget {
   final String title;
+  final bool completed;
 
-  const _MissionItem(this.title, {super.key});
+  const _MissionTile({
+    required this.title,
+    required this.completed,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
 
-        const Icon(
-          Icons.check_circle,
-          color: Colors.green,
-          size: 22,
+        Icon(
+          completed
+              ? Icons.check_circle
+              : Icons.radio_button_unchecked,
+          color: completed ? Colors.green : Colors.grey,
         ),
 
         const SizedBox(width: 12),
@@ -76,11 +132,15 @@ class _MissionItem extends StatelessWidget {
         Expanded(
           child: Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
+              decoration: completed
+                  ? TextDecoration.lineThrough
+                  : TextDecoration.none,
             ),
           ),
         ),
+
       ],
     );
   }
