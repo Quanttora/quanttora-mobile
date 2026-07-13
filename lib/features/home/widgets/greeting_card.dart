@@ -1,126 +1,64 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_spacing.dart';
+import '../../../core/theme/app_text_styles.dart';
+import '../../../core/widgets/quanttora_card.dart';
+
 class GreetingCard extends StatelessWidget {
   const GreetingCard({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final hour = DateTime.now().hour;
-
-    String greeting = "Good Evening";
-
-    if (hour < 12) {
-      greeting = "Good Morning";
-    } else if (hour < 17) {
-      greeting = "Good Afternoon";
-    }
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [
-            Color(0xFF2563EB),
-            Color(0xFF3B82F6),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(28),
-      ),
+    return QuanttoraCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-
           Text(
-            "👋 $greeting, Sagar",
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-            ),
+            "Good Morning 👋",
+            style: AppTextStyles.bodySmall,
           ),
 
-          const SizedBox(height: 10),
+          const SizedBox(height: AppSpacing.sm),
 
-          const Text(
+          Text(
+            "Sagar",
+            style: AppTextStyles.display,
+          ),
+
+          const SizedBox(height: AppSpacing.md),
+
+          Text(
             "Trade with discipline.\nProfit is a by-product.",
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 16,
-              height: 1.4,
-            ),
+            style: AppTextStyles.body,
           ),
 
-          const SizedBox(height: 24),
+          const SizedBox(height: AppSpacing.lg),
 
-          Row(
-            children: [
-
-              Expanded(
-                child: _InfoCard(
-                  title: "Win Rate",
-                  value: "74%",
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.psychology_alt_rounded,
+                  color: AppColors.primary,
                 ),
-              ),
 
-              const SizedBox(width: 12),
+                const SizedBox(width: 12),
 
-              Expanded(
-                child: _InfoCard(
-                  title: "Today's Goal",
-                  value: "3 Trades",
+                Expanded(
+                  child: Text(
+                    "Today's AI Focus: Wait for high-quality setups. Don't chase the market.",
+                    style: AppTextStyles.bodyMedium,
+                  ),
                 ),
-              ),
-
-            ],
-          ),
-
-        ],
-      ),
-    );
-  }
-}
-
-class _InfoCard extends StatelessWidget {
-  final String title;
-  final String value;
-
-  const _InfoCard({
-    required this.title,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        vertical: 14,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(.18),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        children: [
-
-          Text(
-            value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 22,
+              ],
             ),
           ),
-
-          const SizedBox(height: 4),
-
-          Text(
-            title,
-            style: const TextStyle(
-              color: Colors.white70,
-            ),
-          ),
-
         ],
       ),
     );

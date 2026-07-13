@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/decision_engine/decision_engine.dart';
 import '../decision_engine/ai_scan_screen.dart';
 
 import 'widgets/greeting_card.dart';
@@ -15,40 +16,44 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final result = DecisionEngine.demoResult();
+
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              GreetingCard(),
+            children: [
+              const GreetingCard(),
 
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-              DecisionScoreCard(),
+              DecisionScoreCard(
+                result: result,
+              ),
 
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-              MarketPulseCard(),
+              const MarketPulseCard(),
 
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-              TodayMissionCard(),
+              const TodayMissionCard(),
 
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-              AICoachCard(),
+              const AICoachCard(),
 
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-              AcademyCard(),
+              const AcademyCard(),
 
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-              QuickActionCard(),
+              const QuickActionCard(),
 
-              SizedBox(height: 120),
+              const SizedBox(height: 120),
             ],
           ),
         ),
@@ -136,8 +141,7 @@ class _NavItem extends StatelessWidget {
           style: TextStyle(
             color: color,
             fontSize: 12,
-            fontWeight:
-                selected ? FontWeight.bold : FontWeight.normal,
+            fontWeight: selected ? FontWeight.bold : FontWeight.normal,
           ),
         ),
       ],
