@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../decision_engine/screens/ai_decision_screen.dart';
+import '../../session/services/session_manager.dart';
+
 class MyStrategiesScreen extends StatelessWidget {
   const MyStrategiesScreen({super.key});
 
@@ -66,7 +69,7 @@ class MyStrategiesScreen extends StatelessWidget {
             const SizedBox(height: 8),
 
             const Text(
-              "Quanttora AI will analyze the market using your selected strategy.",
+              "Quanttora AI will analyze using your selected strategy.",
               style: TextStyle(
                 fontSize: 16,
                 color: Colors.grey,
@@ -85,7 +88,18 @@ class MyStrategiesScreen extends StatelessWidget {
                     padding: const EdgeInsets.only(bottom: 18),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(22),
-                      onTap: () {},
+                      onTap: () {
+                        SessionManager.instance
+                            .updateStrategy(item.name);
+
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                const AIDecisionScreen(),
+                          ),
+                        );
+                      },
                       child: Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
@@ -191,9 +205,7 @@ class _InfoChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(
-          vertical: 10,
-        ),
+        padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
           color: Colors.grey.shade100,
           borderRadius: BorderRadius.circular(14),

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../session/services/session_manager.dart';
+import '../../strategy/screens/my_strategies_screen.dart';
+
 class TradingModeScreen extends StatefulWidget {
   const TradingModeScreen({super.key});
 
@@ -121,9 +124,7 @@ class _TradingModeScreenState extends State<TradingModeScreen> {
                                   : mode.color.withValues(alpha: 0.15),
                               child: Icon(
                                 mode.icon,
-                                color: selected
-                                    ? mode.color
-                                    : mode.color,
+                                color: mode.color,
                               ),
                             ),
 
@@ -176,7 +177,18 @@ class _TradingModeScreenState extends State<TradingModeScreen> {
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
-                onPressed: () {},
+                onPressed: () {
+                  SessionManager.instance
+                      .updateTradingMode(selectedMode);
+
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          const MyStrategiesScreen(),
+                    ),
+                  );
+                },
                 child: const Text(
                   "CONTINUE",
                   style: TextStyle(
