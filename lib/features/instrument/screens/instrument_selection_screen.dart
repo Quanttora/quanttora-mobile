@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../session/services/session_manager.dart';
+import '../../trading_mode/screens/trading_mode_screen.dart';
+
 class InstrumentSelectionScreen extends StatefulWidget {
   const InstrumentSelectionScreen({super.key});
 
@@ -133,7 +136,18 @@ class _InstrumentSelectionScreenState
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
-                onPressed: () {},
+                onPressed: () {
+                  SessionManager.instance
+                      .updateInstrument(selectedInstrument);
+
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          const TradingModeScreen(),
+                    ),
+                  );
+                },
                 child: const Text(
                   "CONTINUE",
                   style: TextStyle(
