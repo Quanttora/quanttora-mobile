@@ -18,7 +18,7 @@ class StrategyRepository {
 
   void saveStrategy(StrategyModel strategy) {
     final index = _strategies.indexWhere(
-      (s) => s.id == strategy.id,
+      (item) => item.id == strategy.id,
     );
 
     if (index == -1) {
@@ -28,22 +28,21 @@ class StrategyRepository {
     }
   }
 
-  void deleteStrategy(String id) {
-    _strategies.removeWhere(
-      (s) => s.id == id,
-    );
-
-    if (_selectedStrategy?.id == id) {
-      _selectedStrategy = null;
+  void selectStrategy(String id) {
+    for (final strategy in _strategies) {
+      if (strategy.id == id) {
+        _selectedStrategy = strategy;
+        return;
+      }
     }
   }
 
-  void selectStrategy(String id) {
-    try {
-      _selectedStrategy = _strategies.firstWhere(
-        (s) => s.id == id,
-      );
-    } catch (_) {
+  void deleteStrategy(String id) {
+    _strategies.removeWhere(
+      (item) => item.id == id,
+    );
+
+    if (_selectedStrategy?.id == id) {
       _selectedStrategy = null;
     }
   }
