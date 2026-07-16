@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/decision_engine/decision_engine.dart';
 import '../decision_engine/ai_scan_screen.dart';
+import '../trade_analysis/screens/trade_analysis_screen.dart';
 
 import 'widgets/greeting_card.dart';
 import 'widgets/decision_score_card.dart';
@@ -19,6 +20,7 @@ class HomeScreen extends StatelessWidget {
     final result = DecisionEngine.demoResult();
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF4F7FC),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
@@ -61,24 +63,24 @@ class HomeScreen extends StatelessWidget {
       floatingActionButtonLocation:
           FloatingActionButtonLocation.centerDocked,
       floatingActionButton: SizedBox(
-        width: 190,
+        width: 220,
         height: 60,
         child: FloatingActionButton.extended(
-          backgroundColor: const Color(0xFF2563EB),
+          backgroundColor: const Color(0xFF155EEF),
           elevation: 8,
           onPressed: () {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => const AIScanScreen(),
+                builder: (_) => TradeAnalysisScreen(),
               ),
             );
           },
-          icon: const Icon(Icons.play_arrow_rounded),
+          icon: const Icon(Icons.analytics_rounded),
           label: const Text(
             "ANALYZE TRADE",
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 17,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -141,7 +143,8 @@ class _NavItem extends StatelessWidget {
           style: TextStyle(
             color: color,
             fontSize: 12,
-            fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+            fontWeight:
+                selected ? FontWeight.bold : FontWeight.normal,
           ),
         ),
       ],

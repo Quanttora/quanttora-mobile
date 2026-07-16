@@ -18,59 +18,172 @@ class DecisionScoreCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return QuanttoraCard(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "Q-SCORE™",
-            style: AppTextStyles.heading,
+          Row(
+            children: [
+              const Icon(
+                Icons.psychology_alt_rounded,
+                color: AppColors.primary,
+                size: 28,
+              ),
+              const SizedBox(width: 10),
+              Text(
+                "AI Decision Score",
+                style: AppTextStyles.heading,
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 25),
+
+          Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: Center(
+                  child: SizedBox(
+                    width: 150,
+                    height: 150,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        SizedBox(
+                          width: 150,
+                          height: 150,
+                          child: CircularProgressIndicator(
+                            value: result.totalScore / 100,
+                            strokeWidth: 12,
+                            backgroundColor: Colors.grey.shade200,
+                            valueColor: const AlwaysStoppedAnimation(
+                              AppColors.primary,
+                            ),
+                          ),
+                        ),
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              result.totalScore.toString(),
+                              style: const TextStyle(
+                                fontSize: 42,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const Text(
+                              "/100",
+                              style: TextStyle(
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(width: 24),
+
+              Expanded(
+                flex: 3,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _infoTile(
+                      Icons.show_chart_rounded,
+                      "Market Health",
+                      "87 /100",
+                      Colors.green,
+                    ),
+                    const SizedBox(height: 14),
+                    _infoTile(
+                      Icons.auto_graph,
+                      "Strategy Match",
+                      "94%",
+                      Colors.blue,
+                    ),
+                    const SizedBox(height: 14),
+                    _infoTile(
+                      Icons.security,
+                      "Risk Level",
+                      "LOW",
+                      Colors.orange,
+                    ),
+                    const SizedBox(height: 14),
+                    _infoTile(
+                      Icons.gpp_good,
+                      "Verdict",
+                      result.verdictText,
+                      _getVerdictColor(result.verdict),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
 
           const SizedBox(height: AppSpacing.lg),
 
           Container(
-            width: 180,
-            height: 180,
+            width: double.infinity,
+            padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: AppColors.primary,
-                width: 8,
-              ),
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(16),
             ),
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    result.totalScore.toString(),
-                    style: AppTextStyles.score,
-                  ),
-                  Text(
-                    "/100",
-                    style: AppTextStyles.bodySmall,
-                  ),
-                ],
-              ),
+            child: Text(
+              "AI Insight\n\n${_getRating(result.totalScore)}. Market conditions are aligned with your selected strategy. Maintain discipline and execute only if all checklist items remain valid.",
+              style: AppTextStyles.body,
             ),
-          ),
-
-          const SizedBox(height: AppSpacing.lg),
-
-          Text(
-            result.verdictText,
-            style: AppTextStyles.verdict(
-              color: _getVerdictColor(result.verdict),
-            ),
-          ),
-
-          const SizedBox(height: AppSpacing.sm),
-
-          Text(
-            _getRating(result.totalScore),
-            style: AppTextStyles.body,
           ),
         ],
       ),
+    );
+  }
+
+  Widget _infoTile(
+    IconData icon,
+    String title,
+    String value,
+    Color color,
+  ) {
+    return Row(
+      children: [
+        CircleAvatar(
+          radius: 20,
+          backgroundColor: color.withValues(alpha: .12),
+          child: Icon(
+            icon,
+            color: color,
+            size: 20,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  color: Colors.grey,
+                  fontSize: 13,
+                ),
+              ),
+              Text(
+                value,
+                style: TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+            ],
+          ),
+        )
+      ],
     );
   }
 
@@ -88,9 +201,9 @@ class DecisionScoreCard extends StatelessWidget {
   }
 
   String _getRating(int score) {
-    if (score >= 90) return "Excellent Setup";
-    if (score >= 75) return "Good Setup";
-    if (score >= 60) return "Risky Setup";
-    return "Avoid Trading";
+    if (score >= 90) return "Excellent trading opportunity";
+    if (score >= 75) return "Good quality setup";
+    if (score >= 60) return "Trade with caution";
+    return "Avoid this trade";
   }
 }

@@ -5,149 +5,145 @@ class MarketPulseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        color: const Color(0xff111827),
         borderRadius: BorderRadius.circular(24),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(22),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(
+                Icons.candlestick_chart,
+                color: Colors.greenAccent,
+                size: 30,
+              ),
+              SizedBox(width: 12),
+              Text(
+                "Market Pulse",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
 
-            const Row(
+          const SizedBox(height: 8),
+
+          const Text(
+            "Live market overview",
+            style: TextStyle(
+              color: Colors.white60,
+            ),
+          ),
+
+          const SizedBox(height: 24),
+
+          const Row(
+            children: [
+              Expanded(
+                child: _PulseTile(
+                  title: "NIFTY 50",
+                  value: "25,185",
+                  change: "+182",
+                  color: Colors.green,
+                  icon: Icons.trending_up,
+                ),
+              ),
+              SizedBox(width: 14),
+              Expanded(
+                child: _PulseTile(
+                  title: "BANKNIFTY",
+                  value: "57,210",
+                  change: "+98",
+                  color: Colors.green,
+                  icon: Icons.account_balance,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 14),
+
+          const Row(
+            children: [
+              Expanded(
+                child: _PulseTile(
+                  title: "VIX",
+                  value: "11.24",
+                  change: "-2.4%",
+                  color: Colors.orange,
+                  icon: Icons.warning_amber,
+                ),
+              ),
+              SizedBox(width: 14),
+              Expanded(
+                child: _PulseTile(
+                  title: "FII Flow",
+                  value: "₹860 Cr",
+                  change: "BUY",
+                  color: Colors.lightBlue,
+                  icon: Icons.account_balance_wallet,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 24),
+
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: Colors.green.withValues(alpha: .10),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: Colors.green.withValues(alpha: .30),
+              ),
+            ),
+            child: const Row(
               children: [
-
                 Icon(
-                  Icons.public_rounded,
-                  color: Color(0xFF2563EB),
+                  Icons.psychology_alt,
+                  color: Colors.greenAccent,
                 ),
-
-                SizedBox(width: 10),
-
-                Text(
-                  "Market Pulse",
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-
-              ],
-            ),
-
-            const SizedBox(height: 8),
-
-            const Text(
-              "Quick overview before you enter a trade.",
-              style: TextStyle(
-                color: Colors.grey,
-              ),
-            ),
-
-            const SizedBox(height: 24),
-
-            const Row(
-              children: [
-
-                Expanded(
-                  child: _MarketTile(
-                    title: "NIFTY 50",
-                    value: "+0.82%",
-                    trend: "Bullish",
-                    color: Colors.green,
-                  ),
-                ),
-
                 SizedBox(width: 12),
-
                 Expanded(
-                  child: _MarketTile(
-                    title: "BANKNIFTY",
-                    value: "-0.18%",
-                    trend: "Neutral",
-                    color: Colors.orange,
-                  ),
-                ),
-
-              ],
-            ),
-
-            const SizedBox(height: 16),
-
-            const Row(
-              children: [
-
-                Expanded(
-                  child: _MarketTile(
-                    title: "INDIA VIX",
-                    value: "-2.4%",
-                    trend: "Low Fear",
-                    color: Colors.blue,
-                  ),
-                ),
-
-                SizedBox(width: 12),
-
-                Expanded(
-                  child: _MarketTile(
-                    title: "FII Activity",
-                    value: "+₹860Cr",
-                    trend: "Buying",
-                    color: Colors.deepPurple,
-                  ),
-                ),
-
-              ],
-            ),
-
-            const SizedBox(height: 24),
-
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFEFF6FF),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Row(
-                children: [
-
-                  Icon(
-                    Icons.auto_awesome,
-                    color: Color(0xFF2563EB),
-                  ),
-
-                  SizedBox(width: 12),
-
-                  Expanded(
-                    child: Text(
-                      "AI Bias: Bullish. Wait for pullback entries instead of chasing breakouts.",
+                  child: Text(
+                    "AI Market Bias : BULLISH\nWait for pullback confirmation before entering.",
+                    style: TextStyle(
+                      color: Colors.white,
+                      height: 1.4,
                     ),
                   ),
-
-                ],
-              ),
+                ),
+              ],
             ),
-
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _MarketTile extends StatelessWidget {
+class _PulseTile extends StatelessWidget {
   final String title;
   final String value;
-  final String trend;
+  final String change;
   final Color color;
+  final IconData icon;
 
-  const _MarketTile({
+  const _PulseTile({
     required this.title,
     required this.value,
-    required this.trend,
+    required this.change,
     required this.color,
+    required this.icon,
   });
 
   @override
@@ -155,41 +151,44 @@ class _MarketTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: color.withOpacity(.08),
+        color: const Color(0xff1F2937),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-
+          Icon(
+            icon,
+            color: color,
+            size: 24,
+          ),
+          const SizedBox(height: 12),
           Text(
             title,
             style: const TextStyle(
-              fontWeight: FontWeight.bold,
+              color: Colors.white70,
+              fontWeight: FontWeight.w600,
             ),
           ),
-
-          const SizedBox(height: 12),
-
+          const SizedBox(height: 8),
           Text(
             value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 24,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            change,
             style: TextStyle(
               color: color,
               fontWeight: FontWeight.bold,
-              fontSize: 22,
             ),
           ),
-
-          const SizedBox(height: 8),
-
-          Text(
-            trend,
-            style: TextStyle(
-              color: color,
-            ),
-          ),
-
         ],
       ),
     );
   }
-}  
+}
