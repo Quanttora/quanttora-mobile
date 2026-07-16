@@ -1,32 +1,89 @@
 import '../../features/trade_analysis/models/analysis_result.dart';
 
+import 'engines/trend_engine.dart';
+import 'engines/volume_engine.dart';
+import 'engines/vwap_engine.dart';
+import 'engines/adx_engine.dart';
+import 'engines/rsi_engine.dart';
+import 'engines/liquidity_engine.dart';
+import 'engines/risk_engine.dart';
+import 'engines/market_health_engine.dart';
+
 class AnalysisEngine {
   static AnalysisResult analyze({
     required String market,
     required String direction,
   }) {
+
+    final trend = TrendEngine.analyze(
+      market: market,
+      direction: direction,
+    );
+
+    final volume = VolumeEngine.analyze(
+      market: market,
+    );
+
+    final vwap = VWAPEngine.analyze(
+      market: market,
+      direction: direction,
+    );
+
+    final adx = ADXEngine.analyze();
+
+    final rsi = RSIEngine.analyze();
+
+    final liquidity = LiquidityEngine.analyze();
+
+    final risk = RiskEngine.analyze();
+
+    final marketHealth = MarketHealthEngine.analyze();
+
+    final confidence = (
+      trend.score +
+      volume.score +
+      vwap.score +
+      adx.score +
+      rsi.score +
+      liquidity.score +
+      risk.score +
+      marketHealth.score
+    ) ~/
+    8;
+
     return AnalysisResult(
       market: market,
       direction: direction,
 
-      confidence: 91,
-      marketHealth: 88,
+      confidence: confidence,
 
-      trend: "Bullish",
-      momentum: "Strong",
-      volume: "High",
-      liquidity: "Excellent",
+      marketHealth: marketHealth.score,
+
+      trend: trend.trend,
+
+      momentum: rsi.status,
+
+      volume: volume.status,
+
+      liquidity: liquidity.status,
+
       volatility: "Healthy",
-      sectorStrength: "Banking Leading",
+
+      sectorStrength: "Positive",
+
       heatMap: "Positive",
-      risk: "Low",
+
+      risk: risk.level,
 
       reasons: [
-        "Market trend supports your direction.",
-        "Volume participation is above average.",
-        "Liquidity is healthy.",
-        "Volatility is within acceptable range.",
-        "Sector strength is supportive.",
+        trend.reason,
+        volume.reason,
+        vwap.reason,
+        adx.reason,
+        rsi.reason,
+        liquidity.reason,
+        risk.reason,
+        marketHealth.reason,
       ],
     );
   }
