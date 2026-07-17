@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../core/decision_engine/decision_engine.dart';
-import '../decision_engine/ai_scan_screen.dart';
 import '../trade_analysis/screens/trade_analysis_screen.dart';
 
 import 'widgets/greeting_card.dart';
