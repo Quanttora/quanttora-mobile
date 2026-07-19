@@ -104,10 +104,53 @@ class AuthRoutes {
         print('========================================');
         print('');
 
-        return Response.found(
-          Uri.parse(
-            'quanttora://broker-connected',
-          ),
+        return Response.ok(
+          '''
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Quanttora</title>
+<style>
+body{
+background:#0F172A;
+font-family:Arial;
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
+margin:0;
+}
+.card{
+background:white;
+padding:40px;
+border-radius:18px;
+text-align:center;
+box-shadow:0 20px 50px rgba(0,0,0,.25);
+}
+h1{
+color:#16A34A;
+margin-bottom:15px;
+}
+p{
+font-size:18px;
+color:#555;
+}
+</style>
+</head>
+<body>
+
+<div class="card">
+<h1>✅ Upstox Connected Successfully</h1>
+<p>You can now close this browser and return to Quanttora.</p>
+</div>
+
+</body>
+</html>
+''',
+          headers: {
+            'Content-Type': 'text/html',
+          },
         );
       } catch (e) {
         return Response.internalServerError(
