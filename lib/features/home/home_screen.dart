@@ -40,6 +40,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadBroker() async {
     try {
       final data = await _brokerService.getBrokerStatus();
+print("BROKER STATUS: $data");
 
       setState(() {
         _connected = data['connected'] ?? false;
@@ -78,6 +79,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _loading = false;
   });
 }
+
   @override
   Widget build(BuildContext context) {
     final result = DecisionEngine.demoResult();
