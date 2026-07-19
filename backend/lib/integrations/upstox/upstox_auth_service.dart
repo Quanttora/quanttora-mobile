@@ -19,6 +19,18 @@ class UpstoxAuthService {
   Future<Map<String, dynamic>> exchangeCode({
     required String code,
   }) async {
+    print('');
+    print('========================================');
+    print('UPSTOX TOKEN EXCHANGE');
+    print('========================================');
+    print('Code            : $code');
+    print('Client ID       : ${AppConfig.upstoxClientId}');
+    print('Client Secret   : ${AppConfig.upstoxClientSecret}');
+    print('Secret Length   : ${AppConfig.upstoxClientSecret.length}');
+    print('Redirect URI    : ${AppConfig.upstoxRedirectUri}');
+    print('========================================');
+    print('');
+
     final response = await http.post(
       Uri.parse(
         'https://api.upstox.com/v2/login/authorization/token',
@@ -36,12 +48,30 @@ class UpstoxAuthService {
       },
     );
 
+    print('');
+    print('========================================');
+    print('UPSTOX RESPONSE');
+    print('========================================');
+    print('Status Code : ${response.statusCode}');
+    print('Headers     : ${response.headers}');
+    print('Body        : ${response.body}');
+    print('========================================');
+    print('');
+
     if (response.statusCode != 200) {
-      throw Exception(
-        'Upstox token exchange failed: ${response.body}',
-      );
+      throw Exception(response.body);
     }
 
-    return jsonDecode(response.body) as Map<String, dynamic>;
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+
+    print('');
+    print('========================================');
+    print('TOKEN RECEIVED');
+    print('========================================');
+    print('Access Token : ${data['access_token']}');
+    print('========================================');
+    print('');
+
+    return data;
   }
 }

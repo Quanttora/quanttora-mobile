@@ -1,31 +1,31 @@
 import 'dart:io';
 
 import 'package:backend/routes/auth_routes.dart';
+import 'package:backend/routes/broker_routes.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as io;
-import 'package:shelf_cors_headers/shelf_cors_headers.dart';
 import 'package:shelf_router/shelf_router.dart';
 
-Future<void> main() async {
+void main() async {
   final router = Router();
 
-  // Health Check
   router.get('/health', (Request request) {
-    return Response.ok(
-      'Quanttora Backend Running 🚀',
-      headers: {
-        HttpHeaders.contentTypeHeader: 'text/plain',
-      },
-    );
+    return Response.ok('Backend Running 🚀');
   });
 
-  // Auth Routes
-  router.mount('/auth/', AuthRoutes().router);
+  router.mount(
+    '/auth/',
+    AuthRoutes().router.call,
+  );
+
+  router.mount(
+    '/broker/',
+    BrokerRoutes().router.call,
+  );
 
   final handler = Pipeline()
       .addMiddleware(logRequests())
-      .addMiddleware(corsHeaders())
-      .addHandler(router);
+      .addHandler(router.call);
 
   final server = await io.serve(
     handler,
@@ -36,7 +36,6 @@ Future<void> main() async {
   print('');
   print('========================================');
   print('🚀 Quanttora Backend Started');
-  print('🌐 http://localhost:${server.port}');
+  print('🌐 http://${server.address.host}:${server.port}');
   print('========================================');
-  print('');
 }
