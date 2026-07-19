@@ -1,125 +1,90 @@
-import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'dart:io';
 
-import '../../instrument/screens/instrument_selection_screen.dart';
-import '../../session/services/session_manager.dart';
+import 'package:backend/integrations/upstox/upstox_auth_service.dart';
+import 'package:backend/models/broker_connection.dart';
+import 'package:backend/services/broker_connection_repository.dart';
+import 'package:http/http.dart' as http;
+import 'package:shelf/shelf.dart';
+import 'package:shelf_router/shelf_router.dart';
 
-class BrokerConnectionScreen extends StatelessWidget {
-  const BrokerConnectionScreen({super.key});
+class AuthRoutes {
+  final UpstoxAuthService _upstox = UpstoxAuthService();
+  final BrokerConnectionRepository _repository =
+      BrokerConnectionRepository();
 
-  @override
-  Widget build(BuildContext context) {
-    final brokers = [
-      Broker("Angel One", Icons.account_balance, Colors.blue),
-      Broker("Zerodha", Icons.show_chart, Colors.deepPurple),
-      Broker("Dhan", Icons.trending_up, Colors.green),
-      Broker("Upstox", Icons.bar_chart, Colors.orange),
-      Broker("Groww", Icons.auto_graph, Colors.teal),
-      Broker("Fyers", Icons.candlestick_chart, Colors.red),
-    ];
+  Router get router {
+    final router = Router();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Connect Broker"),
-        centerTitle: true,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "Choose your Broker",
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              "Select your broker to continue.",
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-              ),
-            ),
-            const SizedBox(height: 24),
-            Expanded(
-              child: ListView.separated(
-                itemCount: brokers.length,
-                separatorBuilder: (_, __) =>
-                    const SizedBox(height: 16),
-                itemBuilder: (context, index) {
-                  final broker = brokers[index];
+    router.get('/upstox/login', (Request request) {
+      return Response.found(
+        _upstox.getLoginUrl(),
+      );
+    });
 
-                  return Card(
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18),
-                      side: BorderSide(
-                        color: Colors.grey.shade300,
-                      ),
-                    ),
-                    child: ListTile(
-                      contentPadding:
-                          const EdgeInsets.symmetric(
-                        horizontal: 18,
-                        vertical: 14,
-                      ),
-                      leading: CircleAvatar(
-                        radius: 28,
-                        backgroundColor:
-                            broker.color.withValues(alpha: 0.15),
-                        child: Icon(
-                          broker.icon,
-                          color: broker.color,
-                        ),
-                      ),
-                      title: Text(
-                        broker.name,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      subtitle: const Text(
-                        "Secure Connection",
-                      ),
-                      trailing: const Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        size: 18,
-                      ),
-                      onTap: () {
-                        SessionManager.instance
-                            .updateBroker(broker.name);
+    router.get('/upstox/callback', (Request request) async {
+      final code = request.requestedUri.queryParameters['code'];
 
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                const InstrumentSelectionScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+      if (code == null || code.isEmpty) {
+        return Response(
+          HttpStatus.badRequest,
+          body: 'Authorization Code Missing',
+        );
+      }
+
+      try {
+        final token = await _upstox.exchangeCode(code: code);
+
+        final accessToken = token['access_token'] ?? '';
+
+        final profileResponse = await http.get(
+          Uri.parse(
+            'https://api.upstox.com/v2/user/profile',
+          ),
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': 'Bearer $accessToken',
+          },
+        );
+
+        if (profileResponse.statusCode != 200) {
+          return Response.internalServerError(
+            body: profileResponse.body,
+          );
+        }
+
+        final profile =
+            jsonDecode(profileResponse.body)['data'];
+
+        final connection = BrokerConnection(
+          broker: 'Upstox',
+          userId: profile['user_id'].toString(),
+          userName: profile['user_name'].toString(),
+          email: profile['email'].toString(),
+          accessToken: accessToken,
+          extendedToken: token['extended_token']?.toString() ?? '',
+        );
+
+        _repository.save(connection);
+
+        print('');
+        print('==============================');
+        print('UPSTOX CONNECTED');
+        print(connection.userName);
+        print(connection.email);
+        print('==============================');
+        print('');
+
+        return Response.found(
+          'http://localhost:3000/broker-connected',
+        );
+      } catch (e) {
+        return Response.internalServerError(
+          body: e.toString(),
+        );
+      }
+    });
+
+    return router;
   }
-}
-
-class Broker {
-  final String name;
-  final IconData icon;
-  final Color color;
-
-  const Broker(
-    this.name,
-    this.icon,
-    this.color,
-  );
 }
