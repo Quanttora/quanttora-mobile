@@ -31,6 +31,9 @@ class _HomeScreenState extends State<HomeScreen> {
   String _email = '';
   String _userId = '';
 
+  double _availableMargin = 0;
+double _usedMargin = 0;
+
   @override
   void initState() {
     super.initState();
@@ -50,6 +53,14 @@ print("BROKER STATUS: $data");
           _userName = data['userName'] ?? '';
           _email = data['email'] ?? '';
           _userId = data['userId'] ?? '';
+
+          final funds = await _brokerService.getFunds();
+
+_availableMargin =
+    (funds['data']['equity']['available_margin'] ?? 0).toDouble();
+
+_usedMargin =
+    (funds['data']['equity']['used_margin'] ?? 0).toDouble();
         }
 
         _loading = false;
@@ -76,6 +87,14 @@ print("BROKER STATUS: $data");
     _userName = data['userName'] ?? '';
     _email = data['email'] ?? '';
     _userId = data['userId'] ?? '';
+
+    final funds = await _brokerService.getFunds();
+
+_availableMargin =
+    (funds['data']['equity']['available_margin'] ?? 0).toDouble();
+
+_usedMargin =
+    (funds['data']['equity']['used_margin'] ?? 0).toDouble();
     _loading = false;
   });
 }

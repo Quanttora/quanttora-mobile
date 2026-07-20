@@ -16,7 +16,7 @@ class BrokerService {
       throw Exception('Unable to connect to backend');
     }
 
-    return jsonDecode(response.body) as Map<String, dynamic>;
+    return jsonDecode(response.body);
   }
 
   Future<void> connectBroker() async {
@@ -42,5 +42,17 @@ class BrokerService {
         const Duration(seconds: 2),
       );
     }
+  }
+
+  Future<Map<String, dynamic>> getFunds() async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/broker/funds'),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Unable to fetch funds');
+    }
+
+    return jsonDecode(response.body);
   }
 }
