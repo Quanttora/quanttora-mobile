@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:mobile/features/broker/broker_service.dart';
 import 'package:mobile/features/broker/widgets/broker_status_card.dart';
 
-import '../../core/decision_engine/decision_engine.dart';
-import '../trade_analysis/screens/trade_analysis_screen.dart';
+import 'package:mobile/core/decision_engine/decision_engine.dart';
+import 'package:mobile/features/trade_analysis/screens/trade_analysis_screen.dart';
 
 import 'widgets/greeting_card.dart';
 import 'widgets/decision_score_card.dart';
@@ -32,7 +32,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String _userId = '';
 
   double _availableMargin = 0;
-double _usedMargin = 0;
+  double _usedMargin = 0;
 
   @override
   void initState() {
@@ -43,7 +43,9 @@ double _usedMargin = 0;
   Future<void> _loadBroker() async {
     try {
       final data = await _brokerService.getBrokerStatus();
-print("BROKER STATUS: $data");
+      final funds = await _brokerService.getFunds();
+
+      print("BROKER STATUS: $data");
 
       setState(() {
         _connected = data['connected'] ?? false;
@@ -54,13 +56,13 @@ print("BROKER STATUS: $data");
           _email = data['email'] ?? '';
           _userId = data['userId'] ?? '';
 
-          final funds = await _brokerService.getFunds();
+          _availableMargin =
+              (funds['data']['equity']['available_margin'] ?? 0)
+                  .toDouble();
 
-_availableMargin =
-    (funds['data']['equity']['available_margin'] ?? 0).toDouble();
-
-_usedMargin =
-    (funds['data']['equity']['used_margin'] ?? 0).toDouble();
+          _usedMargin =
+              (funds['data']['equity']['used_margin'] ?? 0)
+                  .toDouble();
         }
 
         _loading = false;
@@ -73,31 +75,33 @@ _usedMargin =
   }
 
   Future<void> _connectBroker() async {
-  await _brokerService.connectBroker();
+    await _brokerService.connectBroker();
 
-  setState(() {
-    _loading = true;
-  });
+    setState(() {
+      _loading = true;
+    });
 
-  final data = await _brokerService.waitForConnection();
-
-  setState(() {
-    _connected = true;
-    _broker = data['broker'] ?? '';
-    _userName = data['userName'] ?? '';
-    _email = data['email'] ?? '';
-    _userId = data['userId'] ?? '';
-
+    final data = await _brokerService.waitForConnection();
     final funds = await _brokerService.getFunds();
 
-_availableMargin =
-    (funds['data']['equity']['available_margin'] ?? 0).toDouble();
+    setState(() {
+      _connected = true;
+      _broker = data['broker'] ?? '';
+      _userName = data['userName'] ?? '';
+      _email = data['email'] ?? '';
+      _userId = data['userId'] ?? '';
 
-_usedMargin =
-    (funds['data']['equity']['used_margin'] ?? 0).toDouble();
-    _loading = false;
-  });
-}
+      _availableMargin =
+          (funds['data']['equity']['available_margin'] ?? 0)
+              .toDouble();
+
+      _usedMargin =
+          (funds['data']['equity']['used_margin'] ?? 0)
+              .toDouble();
+
+      _loading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -125,12 +129,14 @@ _usedMargin =
                     ),
                   )
                 else
-                  BrokerStatusCard(
+                                  BrokerStatusCard(
                     connected: _connected,
                     broker: _broker,
                     userName: _userName,
                     email: _email,
                     userId: _userId,
+                    availableMargin: _availableMargin,
+                    usedMargin: _usedMargin,
                     onConnect: _connectBroker,
                   ),
 
@@ -149,7 +155,8 @@ _usedMargin =
                 const TodayMissionCard(),
 
                 const SizedBox(height: 20),
-                                const AICoachCard(),
+
+                const AICoachCard(),
 
                 const SizedBox(height: 20),
 
@@ -228,10 +235,10 @@ class _NavItem extends StatelessWidget {
   final bool selected;
 
   const _NavItem({
+    super.key,
     required this.icon,
     required this.title,
     this.selected = false,
-    super.key,
   });
 
   @override

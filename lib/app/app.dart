@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:mobile/core/theme/app_theme.dart';
-import 'package:mobile/features/home/home_screen.dart';
+import 'package:mobile/app/app_shell.dart';
+
+import '../core/theme/app_theme.dart';
 
 class QuanttoraApp extends StatelessWidget {
   const QuanttoraApp({super.key});
@@ -11,7 +12,7 @@ class QuanttoraApp extends StatelessWidget {
       title: 'Quanttora',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      home: const HomeScreen(),
+      home: const AppShell(),
     );
   }
 }

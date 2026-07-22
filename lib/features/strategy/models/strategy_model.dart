@@ -1,110 +1,105 @@
 class StrategyModel {
   final String id;
-
   final String name;
-
-  final String market;
-
-  final String tradingMode;
-
-  final List<String> indicators;
-
-  final double riskPerTrade;
-
-  final String minimumRiskReward;
-
-  final double maximumDailyLoss;
-
-  final int maximumTrades;
-
+  final String description;
+  final String timeframe;
+  final List<String> instruments;
+  final int minimumAiScore;
+  final double riskRewardRatio;
+  final int maxTradesPerDay;
+  final bool avoidNews;
+  final bool avoidSideways;
+  final bool avoidLowVolume;
+  final bool isActive;
   final DateTime createdAt;
+  final DateTime updatedAt;
 
   const StrategyModel({
     required this.id,
     required this.name,
-    required this.market,
-    required this.tradingMode,
-    required this.indicators,
-    required this.riskPerTrade,
-    required this.minimumRiskReward,
-    required this.maximumDailyLoss,
-    required this.maximumTrades,
+    required this.description,
+    required this.timeframe,
+    required this.instruments,
+    required this.minimumAiScore,
+    required this.riskRewardRatio,
+    required this.maxTradesPerDay,
+    required this.avoidNews,
+    required this.avoidSideways,
+    required this.avoidLowVolume,
+    required this.isActive,
     required this.createdAt,
+    required this.updatedAt,
   });
+
+  StrategyModel copyWith({
+    String? id,
+    String? name,
+    String? description,
+    String? timeframe,
+    List<String>? instruments,
+    int? minimumAiScore,
+    double? riskRewardRatio,
+    int? maxTradesPerDay,
+    bool? avoidNews,
+    bool? avoidSideways,
+    bool? avoidLowVolume,
+    bool? isActive,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return StrategyModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      timeframe: timeframe ?? this.timeframe,
+      instruments: instruments ?? this.instruments,
+      minimumAiScore: minimumAiScore ?? this.minimumAiScore,
+      riskRewardRatio: riskRewardRatio ?? this.riskRewardRatio,
+      maxTradesPerDay: maxTradesPerDay ?? this.maxTradesPerDay,
+      avoidNews: avoidNews ?? this.avoidNews,
+      avoidSideways: avoidSideways ?? this.avoidSideways,
+      avoidLowVolume: avoidLowVolume ?? this.avoidLowVolume,
+      isActive: isActive ?? this.isActive,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
 
   Map<String, dynamic> toMap() {
     return {
       'id': id,
       'name': name,
-      'market': market,
-      'tradingMode': tradingMode,
-      'indicators': indicators,
-      'riskPerTrade': riskPerTrade,
-      'minimumRiskReward': minimumRiskReward,
-      'maximumDailyLoss': maximumDailyLoss,
-      'maximumTrades': maximumTrades,
+      'description': description,
+      'timeframe': timeframe,
+      'instruments': instruments,
+      'minimumAiScore': minimumAiScore,
+      'riskRewardRatio': riskRewardRatio,
+      'maxTradesPerDay': maxTradesPerDay,
+      'avoidNews': avoidNews,
+      'avoidSideways': avoidSideways,
+      'avoidLowVolume': avoidLowVolume,
+      'isActive': isActive,
       'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
     };
   }
 
-  factory StrategyModel.fromMap(
-    Map<String, dynamic> map,
-  ) {
+  factory StrategyModel.fromMap(Map<String, dynamic> map) {
     return StrategyModel(
-      id: map['id'],
-      name: map['name'],
-      market: map['market'],
-      tradingMode: map['tradingMode'],
-      indicators: List<String>.from(
-        map['indicators'] ?? [],
-      ),
-      riskPerTrade:
-          (map['riskPerTrade'] ?? 1).toDouble(),
-      minimumRiskReward:
-          map['minimumRiskReward'] ?? '1:3',
-      maximumDailyLoss:
-          (map['maximumDailyLoss'] ?? 0).toDouble(),
-      maximumTrades:
-          map['maximumTrades'] ?? 3,
-      createdAt: DateTime.parse(
-        map['createdAt'],
-      ),
-    );
-  }
-
-  StrategyModel copyWith({
-    String? id,
-    String? name,
-    String? market,
-    String? tradingMode,
-    List<String>? indicators,
-    double? riskPerTrade,
-    String? minimumRiskReward,
-    double? maximumDailyLoss,
-    int? maximumTrades,
-    DateTime? createdAt,
-  }) {
-    return StrategyModel(
-      id: id ?? this.id,
-      name: name ?? this.name,
-      market: market ?? this.market,
-      tradingMode:
-          tradingMode ?? this.tradingMode,
-      indicators:
-          indicators ?? this.indicators,
-      riskPerTrade:
-          riskPerTrade ?? this.riskPerTrade,
-      minimumRiskReward:
-          minimumRiskReward ??
-              this.minimumRiskReward,
-      maximumDailyLoss:
-          maximumDailyLoss ??
-              this.maximumDailyLoss,
-      maximumTrades:
-          maximumTrades ??
-              this.maximumTrades,
-      createdAt:
-          createdAt ?? this.createdAt,
+      id: map['id'] ?? '',
+      name: map['name'] ?? '',
+      description: map['description'] ?? '',
+      timeframe: map['timeframe'] ?? '',
+      instruments: List<String>.from(map['instruments'] ?? []),
+      minimumAiScore: map['minimumAiScore'] ?? 0,
+      riskRewardRatio: (map['riskRewardRatio'] ?? 0).toDouble(),
+      maxTradesPerDay: map['maxTradesPerDay'] ?? 0,
+      avoidNews: map['avoidNews'] ?? false,
+      avoidSideways: map['avoidSideways'] ?? false,
+      avoidLowVolume: map['avoidLowVolume'] ?? false,
+      isActive: map['isActive'] ?? true,
+      createdAt: DateTime.parse(map['createdAt']),
+      updatedAt: DateTime.parse(map['updatedAt']),
     );
   }
 }

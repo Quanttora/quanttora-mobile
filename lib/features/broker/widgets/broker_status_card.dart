@@ -6,16 +6,22 @@ class BrokerStatusCard extends StatelessWidget {
   final String userName;
   final String email;
   final String userId;
+
+  final double availableMargin;
+final double usedMargin;
+
   final VoidCallback? onConnect;
 
-  const BrokerStatusCard({
-    super.key,
-    required this.connected,
-    required this.broker,
-    required this.userName,
-    required this.email,
-    required this.userId,
-    this.onConnect,
+ const BrokerStatusCard({
+  super.key,
+  required this.connected,
+  required this.broker,
+  required this.userName,
+  required this.email,
+  required this.userId,
+  required this.availableMargin,
+  required this.usedMargin,
+  this.onConnect,
   });
 
   @override
@@ -55,10 +61,7 @@ class BrokerStatusCard extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 18),
-                Text("Broker : $broker"),
-                Text("Name : $userName"),
-                Text("Client ID : $userId"),
-                Text("Email : $email"),
+               Text("Broker : $broker"),
               ],
             )
           : Column(
