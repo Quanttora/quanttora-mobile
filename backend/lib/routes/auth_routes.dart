@@ -2,37 +2,38 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:backend/integrations/upstox/upstox_auth_service.dart';
+import 'package:backend/models/broker_connection.dart';
 import 'package:backend/models/broker_session.dart';
+import 'package:backend/services/broker_connection_repository.dart';
 import 'package:backend/services/broker_service.dart';
+import 'package:http/http.dart' as http;
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 
 class AuthRoutes {
   final UpstoxAuthService _upstox = UpstoxAuthService();
-  final BrokerService _brokerService = BrokerService.instance;
+  final BrokerConnectionRepository _repository =
+      BrokerConnectionRepository();
+
+  final BrokerService _brokerService =
+      BrokerService.instance;
 
   Router get router {
     final router = Router();
 
     router.get('/upstox/login', (Request request) {
-      final loginUrl = _upstox.getLoginUrl();
-
-      print('');
-      print('========================================');
-      print('Opening Upstox Login');
-      print(loginUrl);
-      print('========================================');
-      print('');
-
-      return Response.found(loginUrl);
+      return Response.found(
+        _upstox.getLoginUrl(),
+      );
     });
 
     router.get('/upstox/callback', (Request request) async {
       final code = request.requestedUri.queryParameters['code'];
 
       if (code == null || code.isEmpty) {
-        return Response.badRequest(
-          body: 'Authorization code not received.',
+        return Response(
+          HttpStatus.badRequest,
+          body: 'Authorization Code Missing',
         );
       }
 
@@ -41,116 +42,60 @@ class AuthRoutes {
           code: code,
         );
 
-        final accessToken = token['access_token'];
+        final accessToken = token['access_token'] ?? '';
 
-        if (accessToken == null) {
-          return Response.internalServerError(
-            body: 'Access token not received.',
-          );
-        }
-
-        final profileRequest = await HttpClient().getUrl(
+        final profileResponse = await http.get(
           Uri.parse(
             'https://api.upstox.com/v2/user/profile',
           ),
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': 'Bearer $accessToken',
+          },
         );
-
-        profileRequest.headers.set(
-          HttpHeaders.authorizationHeader,
-          'Bearer $accessToken',
-        );
-
-        profileRequest.headers.set(
-          HttpHeaders.acceptHeader,
-          'application/json',
-        );
-
-        final profileResponse = await profileRequest.close();
-
-        final profileBody =
-            await utf8.decoder.bind(profileResponse).join();
 
         if (profileResponse.statusCode != 200) {
           return Response.internalServerError(
-            body: profileBody,
+            body: profileResponse.body,
           );
         }
 
         final profile =
-            jsonDecode(profileBody) as Map<String, dynamic>;
+            jsonDecode(profileResponse.body)['data'];
 
-        final data =
-            profile['data'] as Map<String, dynamic>;
-
-        final session = BrokerSession(
+        final connection = BrokerConnection(
           broker: 'Upstox',
-          userId: data['user_id'] ?? '',
-          userName: data['user_name'] ?? '',
-          email: data['email'] ?? '',
+          userId: profile['user_id'].toString(),
+          userName: profile['user_name'].toString(),
+          email: profile['email'].toString(),
           accessToken: accessToken,
-          connectedAt: DateTime.now(),
+          extendedToken:
+              token['extended_token']?.toString() ?? '',
         );
 
-        _brokerService.connect(session);
+        _repository.save(connection);
+
+        _brokerService.connect(
+          BrokerSession(
+            broker: connection.broker,
+            userId: connection.userId,
+            userName: connection.userName,
+            email: connection.email,
+            accessToken: connection.accessToken,
+            connectedAt: DateTime.now(),
+          ),
+        );
 
         print('');
-        print('========================================');
-        print('BROKER CONNECTED');
-        print('========================================');
-        print('Broker : ${session.broker}');
-        print('User   : ${session.userName}');
-        print('ID     : ${session.userId}');
-        print('Email  : ${session.email}');
-        print('========================================');
+        print('==============================');
+        print('UPSTOX CONNECTED');
+        print(connection.userName);
+        print(connection.email);
+        print('==============================');
         print('');
 
-        return Response.ok(
-          '''
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Quanttora</title>
-<style>
-body{
-background:#0F172A;
-font-family:Arial;
-display:flex;
-justify-content:center;
-align-items:center;
-height:100vh;
-margin:0;
-}
-.card{
-background:white;
-padding:40px;
-border-radius:18px;
-text-align:center;
-box-shadow:0 20px 50px rgba(0,0,0,.25);
-}
-h1{
-color:#16A34A;
-margin-bottom:15px;
-}
-p{
-font-size:18px;
-color:#555;
-}
-</style>
-</head>
-<body>
-
-<div class="card">
-<h1>✅ Upstox Connected Successfully</h1>
-<p>You can now close this browser and return to Quanttora.</p>
-</div>
-
-</body>
-</html>
-''',
-          headers: {
-            'Content-Type': 'text/html',
-          },
+        return Response.found(
+          'http://localhost:3000/broker-connected',
         );
       } catch (e) {
         return Response.internalServerError(

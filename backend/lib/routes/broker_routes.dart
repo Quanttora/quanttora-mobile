@@ -1,11 +1,14 @@
 import 'dart:convert';
 
+import 'package:backend/integrations/upstox/upstox_broker_service.dart';
 import 'package:backend/services/broker_service.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 
 class BrokerRoutes {
   final BrokerService _brokerService = BrokerService.instance;
+  final UpstoxBrokerService _upstoxBrokerService =
+      UpstoxBrokerService();
 
   Router get router {
     final router = Router();
@@ -33,6 +36,23 @@ class BrokerRoutes {
           'email': session.email,
           'connectedAt': session.connectedAt.toIso8601String(),
         }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      );
+    });
+
+    router.get('/funds', (Request request) async {
+      if (!_brokerService.isConnected) {
+        return Response.forbidden('Broker not connected');
+      }
+
+      final data = await _upstoxBrokerService.getFunds(
+        _brokerService.session!.accessToken,
+      );
+
+      return Response.ok(
+        jsonEncode(data),
         headers: {
           'Content-Type': 'application/json',
         },

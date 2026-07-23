@@ -25,10 +25,10 @@ class UpstoxAuthService {
     print('========================================');
     print('Code            : $code');
     print('Client ID       : ${AppConfig.upstoxClientId}');
-    print('Client Secret   : ${AppConfig.upstoxClientSecret}');
+    print('Client ID Length: ${AppConfig.upstoxClientId.length}');
     print('Secret Length   : ${AppConfig.upstoxClientSecret.length}');
     print('Redirect URI    : ${AppConfig.upstoxRedirectUri}');
-    print('========================================');
+        print('========================================');
     print('');
 
     final response = await http.post(
