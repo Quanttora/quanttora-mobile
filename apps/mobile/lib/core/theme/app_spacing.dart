@@ -1,33 +1,15 @@
 class AppSpacing {
   AppSpacing._();
 
-  // Base Units
-  static const double xs = 4;
-  static const double sm = 8;
-  static const double md = 16;
-  static const double lg = 24;
-  static const double xl = 32;
-  static const double xxl = 40;
-  static const double xxxl = 56;
+  static const xs = 4.0;
 
-  // Screen Padding
-  static const double screenPadding = 20;
+  static const sm = 8.0;
 
-  // Card
-  static const double cardPadding = 20;
-  static const double cardRadius = 24;
+  static const md = 16.0;
 
-  // Buttons
-  static const double buttonHeight = 58;
-  static const double buttonRadius = 18;
+  static const lg = 24.0;
 
-  // Icons
-  static const double iconSmall = 18;
-  static const double iconMedium = 24;
-  static const double iconLarge = 32;
-  static const double iconXLarge = 64;
+  static const xl = 32.0;
 
-  // Gaps
-  static const double sectionGap = 24;
-  static const double itemGap = 16;
+  static const xxl = 40.0;
 }

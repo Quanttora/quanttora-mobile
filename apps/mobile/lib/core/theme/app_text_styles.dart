@@ -5,72 +5,31 @@ import 'app_colors.dart';
 class AppTextStyles {
   AppTextStyles._();
 
-  // Display
-  static const TextStyle display = TextStyle(
-    fontSize: 34,
+  static const title = TextStyle(
+    fontSize: 24,
     fontWeight: FontWeight.bold,
-    color: AppColors.textPrimary,
+    color: AppColors.text,
   );
 
-  // Headings
-  static const TextStyle heading = TextStyle(
-    fontSize: 28,
-    fontWeight: FontWeight.bold,
-    color: AppColors.textPrimary,
-  );
-
-  static const TextStyle subHeading = TextStyle(
-    fontSize: 22,
+  static const heading = TextStyle(
+    fontSize: 20,
     fontWeight: FontWeight.w700,
-    color: AppColors.textPrimary,
+    color: AppColors.text,
   );
 
-  // Body
-  static const TextStyle body = TextStyle(
+  static const body = TextStyle(
     fontSize: 16,
-    color: AppColors.textPrimary,
-    height: 1.5,
+    color: AppColors.text,
   );
 
-  static const TextStyle bodyMedium = TextStyle(
-    fontSize: 15,
-    color: AppColors.textPrimary,
-  );
-
-  static const TextStyle bodySmall = TextStyle(
+  static const subtitle = TextStyle(
     fontSize: 14,
-    color: AppColors.textSecondary,
+    color: AppColors.subtitle,
   );
 
-  // Labels
-  static const TextStyle label = TextStyle(
+  static const label = TextStyle(
     fontSize: 13,
-    fontWeight: FontWeight.w500,
-    color: AppColors.textSecondary,
+    fontWeight: FontWeight.w600,
+    color: AppColors.subtitle,
   );
-
-  // Buttons
-  static const TextStyle button = TextStyle(
-    fontSize: 18,
-    fontWeight: FontWeight.bold,
-    color: Colors.white,
-  );
-
-  // Score
-  static const TextStyle score = TextStyle(
-    fontSize: 58,
-    fontWeight: FontWeight.bold,
-    color: AppColors.textPrimary,
-  );
-
-  // Verdict
-  static TextStyle verdict({
-    Color color = AppColors.success,
-  }) {
-    return TextStyle(
-      fontSize: 32,
-      fontWeight: FontWeight.bold,
-      color: color,
-    );
-  }
 }
