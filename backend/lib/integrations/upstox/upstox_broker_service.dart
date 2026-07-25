@@ -92,4 +92,17 @@ class UpstoxBrokerService {
       accessToken,
     );
   }
+
+  Future<Map<String, dynamic>> getHistoricalCandles(
+    String accessToken,
+    String instrumentKey,
+    String interval,
+    String toDate,
+    String fromDate,
+  ) async {
+    return _get(
+      '/historical-candle/$instrumentKey/$interval/$toDate/$fromDate',
+      accessToken,
+    );
+  }
 }

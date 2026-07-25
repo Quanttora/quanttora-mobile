@@ -59,10 +59,6 @@ class BrokerRoutes {
       );
     });
 
-    // ===========================
-    // LIVE QUOTES
-    // ===========================
-
     router.get('/quotes', (Request request) async {
       if (!_brokerService.isConnected) {
         return Response.forbidden('Broker not connected');
