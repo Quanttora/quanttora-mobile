@@ -59,6 +59,37 @@ class BrokerRoutes {
       );
     });
 
+    // ===========================
+    // LIVE QUOTES
+    // ===========================
+
+    router.get('/quotes', (Request request) async {
+      if (!_brokerService.isConnected) {
+        return Response.forbidden('Broker not connected');
+      }
+
+      final instrumentKey =
+          request.url.queryParameters['instrumentKey'];
+
+      if (instrumentKey == null || instrumentKey.isEmpty) {
+        return Response.badRequest(
+          body: 'instrumentKey is required',
+        );
+      }
+
+      final data = await _upstoxBrokerService.getQuotes(
+        _brokerService.session!.accessToken,
+        instrumentKey,
+      );
+
+      return Response.ok(
+        jsonEncode(data),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      );
+    });
+
     return router;
   }
 }
