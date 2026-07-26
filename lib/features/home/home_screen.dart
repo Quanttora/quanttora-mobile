@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:mobile/core/decision_engine/decision_engine.dart';
 import 'package:mobile/features/broker/broker_service.dart';
 import 'package:mobile/features/broker/widgets/broker_status_card.dart';
 
-import 'package:mobile/core/decision_engine/decision_engine.dart';
-import 'package:mobile/features/trade_analysis/screens/trade_analysis_screen.dart';
-
 import 'widgets/greeting_card.dart';
 import 'widgets/decision_score_card.dart';
-import 'widgets/cards/market_pulse_card.dart';
-import 'widgets/cards/today_mission_card.dart';
-import 'widgets/cards/ai_coach_card.dart';
 import 'widgets/cards/academy_card.dart';
+import 'widgets/cards/ai_coach_card.dart';
+import 'widgets/cards/market_pulse_card.dart';
 import 'widgets/cards/quick_action_card.dart';
+import 'widgets/cards/today_mission_card.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -37,37 +35,35 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _loadBroker();
+    _loadDashboard();
   }
 
-  Future<void> _loadBroker() async {
+  Future<void> _loadDashboard() async {
     try {
-      final data = await _brokerService.getBrokerStatus();
-      final funds = await _brokerService.getFunds();
+      final dashboard = await _brokerService.getDashboard();
 
-      print("BROKER STATUS: $data");
+      final user = dashboard['user'] ?? {};
+      final funds = dashboard['funds'] ?? {};
+      final equity = funds['data']?['equity'] ?? {};
 
       setState(() {
-        _connected = data['connected'] ?? false;
+        _connected = dashboard['connected'] ?? false;
 
-        if (_connected) {
-          _broker = data['broker'] ?? '';
-          _userName = data['userName'] ?? '';
-          _email = data['email'] ?? '';
-          _userId = data['userId'] ?? '';
+        _broker = dashboard['broker'] ?? '';
 
-          _availableMargin =
-              (funds['data']['equity']['available_margin'] ?? 0)
-                  .toDouble();
+        _userName = user['name'] ?? '';
+        _email = user['email'] ?? '';
+        _userId = user['userId'] ?? '';
 
-          _usedMargin =
-              (funds['data']['equity']['used_margin'] ?? 0)
-                  .toDouble();
-        }
+        _availableMargin =
+            (equity['available_margin'] ?? 0).toDouble();
+
+        _usedMargin =
+            (equity['used_margin'] ?? 0).toDouble();
 
         _loading = false;
       });
-    } catch (_) {
+    } catch (e) {
       setState(() {
         _loading = false;
       });
@@ -81,26 +77,9 @@ class _HomeScreenState extends State<HomeScreen> {
       _loading = true;
     });
 
-    final data = await _brokerService.waitForConnection();
-    final funds = await _brokerService.getFunds();
+    await Future.delayed(const Duration(seconds: 2));
 
-    setState(() {
-      _connected = true;
-      _broker = data['broker'] ?? '';
-      _userName = data['userName'] ?? '';
-      _email = data['email'] ?? '';
-      _userId = data['userId'] ?? '';
-
-      _availableMargin =
-          (funds['data']['equity']['available_margin'] ?? 0)
-              .toDouble();
-
-      _usedMargin =
-          (funds['data']['equity']['used_margin'] ?? 0)
-              .toDouble();
-
-      _loading = false;
-    });
+    await _loadDashboard();
   }
 
   @override
@@ -111,7 +90,7 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: const Color(0xFFF4F7FC),
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: _loadBroker,
+          onRefresh: _loadDashboard,
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -129,7 +108,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   )
                 else
-                                  BrokerStatusCard(
+                  BrokerStatusCard(
                     connected: _connected,
                     broker: _broker,
                     userName: _userName,
@@ -142,9 +121,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 const SizedBox(height: 20),
 
-                DecisionScoreCard(
-                  result: result,
-                ),
+                DecisionScoreCard(result: result),
 
                 const SizedBox(height: 20),
 
@@ -172,97 +149,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-      floatingActionButtonLocation:
-          FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: SizedBox(
-        width: 220,
-        height: 60,
-        child: FloatingActionButton.extended(
-          backgroundColor: const Color(0xFF155EEF),
-          elevation: 8,
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => TradeAnalysisScreen(),
-              ),
-            );
-          },
-          icon: const Icon(Icons.analytics_rounded),
-          label: const Text(
-            "ANALYZE TRADE",
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ),
-      bottomNavigationBar: BottomAppBar(
-        height: 75,
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 8,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: const [
-            _NavItem(
-              icon: Icons.home_rounded,
-              title: "Home",
-              selected: true,
-            ),
-            _NavItem(
-              icon: Icons.show_chart_rounded,
-              title: "Markets",
-            ),
-            SizedBox(width: 50),
-            _NavItem(
-              icon: Icons.school_rounded,
-              title: "Academy",
-            ),
-            _NavItem(
-              icon: Icons.person_rounded,
-              title: "Profile",
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-class _NavItem extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final bool selected;
-
-  const _NavItem({
-    super.key,
-    required this.icon,
-    required this.title,
-    this.selected = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final color = selected ? Colors.blue : Colors.grey;
-
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(
-          icon,
-          color: color,
-        ),
-        const SizedBox(height: 4),
-        Text(
-          title,
-          style: TextStyle(
-            color: color,
-            fontSize: 12,
-            fontWeight:
-                selected ? FontWeight.bold : FontWeight.normal,
-          ),
-        ),
-      ],
     );
   }
 }
