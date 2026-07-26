@@ -1,91 +1,147 @@
 import 'dart:convert';
 
-import 'package:backend/integrations/upstox/upstox_broker_service.dart';
 import 'package:backend/services/broker_service.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 
+import '../integrations/upstox/upstox_broker_service.dart';
+
 class BrokerRoutes {
+  final Router router = Router();
+
+  final UpstoxBrokerService _broker = UpstoxBrokerService();
   final BrokerService _brokerService = BrokerService.instance;
-  final UpstoxBrokerService _upstoxBrokerService =
-      UpstoxBrokerService();
 
-  Router get router {
-    final router = Router();
+  BrokerRoutes() {
+    router.get('/status', _status);
+    router.get('/funds', _funds);
+    router.get('/quotes', _quotes);
+    router.get('/history', _history);
+    router.get('/holdings', _holdings);
+    router.get('/positions', _positions);
+    router.get('/orders', _orders);
+    router.get('/trades', _trades);
+  }
 
-    router.get('/status', (Request request) {
-      if (!_brokerService.isConnected) {
-        return Response.ok(
-          jsonEncode({
-            'connected': false,
-          }),
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        );
-      }
+  Response _json(dynamic data) => Response.ok(
+        jsonEncode(data),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      );
 
-      final session = _brokerService.session!;
+  String _accessToken() {
+    final session = _brokerService.session;
 
-      return Response.ok(
-        jsonEncode({
-          'connected': true,
-          'broker': session.broker,
-          'userId': session.userId,
-          'userName': session.userName,
-          'email': session.email,
-          'connectedAt': session.connectedAt.toIso8601String(),
+    if (session == null) {
+      throw Exception('No broker connected');
+    }
+
+    return session.accessToken;
+  }
+
+  Future<Response> _execute(
+    Future<dynamic> Function(String token) action,
+  ) async {
+    try {
+      final token = _accessToken();
+
+      final result = await action(token);
+
+      return _json(result);
+    } catch (e) {
+      return Response.internalServerError(
+        body: jsonEncode({
+          'success': false,
+          'error': e.toString(),
         }),
         headers: {
           'Content-Type': 'application/json',
         },
       );
+    }
+  }
+
+  Future<Response> _status(Request request) async {
+    return _json({
+      'connected': _brokerService.isConnected,
+      'broker': _brokerService.session?.broker,
+      'user': _brokerService.session?.userName,
     });
+  }
 
-    router.get('/funds', (Request request) async {
-      if (!_brokerService.isConnected) {
-        return Response.forbidden('Broker not connected');
-      }
+  Future<Response> _funds(Request request) async {
+    return _execute(
+      (token) => _broker.getFunds(token),
+    );
+  }
 
-      final data = await _upstoxBrokerService.getFunds(
-        _brokerService.session!.accessToken,
+  Future<Response> _holdings(Request request) async {
+    return _execute(
+      (token) => _broker.getHoldings(token),
+    );
+  }
+
+  Future<Response> _positions(Request request) async {
+    return _execute(
+      (token) => _broker.getPositions(token),
+    );
+  }
+
+  Future<Response> _orders(Request request) async {
+    return _execute(
+      (token) => _broker.getOrderBook(token),
+    );
+  }
+
+  Future<Response> _trades(Request request) async {
+    return _execute(
+      (token) => _broker.getTradeBook(token),
+    );
+  }
+
+  Future<Response> _quotes(Request request) async {
+    final instrumentKey =
+        request.url.queryParameters['instrumentKey'];
+
+    if (instrumentKey == null) {
+      return Response.badRequest(
+        body: 'instrumentKey is required',
       );
+    }
 
-      return Response.ok(
-        jsonEncode(data),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      );
-    });
-
-    router.get('/quotes', (Request request) async {
-      if (!_brokerService.isConnected) {
-        return Response.forbidden('Broker not connected');
-      }
-
-      final instrumentKey =
-          request.url.queryParameters['instrumentKey'];
-
-      if (instrumentKey == null || instrumentKey.isEmpty) {
-        return Response.badRequest(
-          body: 'instrumentKey is required',
-        );
-      }
-
-      final data = await _upstoxBrokerService.getQuotes(
-        _brokerService.session!.accessToken,
+    return _execute(
+      (token) => _broker.getQuotes(
+        token,
         instrumentKey,
-      );
+      ),
+    );
+  }
 
-      return Response.ok(
-        jsonEncode(data),
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      );
-    });
+  Future<Response> _history(Request request) async {
+    final q = request.url.queryParameters;
 
-    return router;
+    final instrumentKey = q['instrumentKey'];
+    final fromDate = q['fromDate'];
+    final toDate = q['toDate'];
+
+    if (instrumentKey == null ||
+        fromDate == null ||
+        toDate == null) {
+      return Response.badRequest(
+        body:
+            'instrumentKey, fromDate and toDate are required',
+      );
+    }
+
+    return _execute(
+      (token) => _broker.getHistoricalCandles(
+        token,
+        instrumentKey,
+        q['interval'] ?? 'day',
+        toDate,
+        fromDate,
+      ),
+    );
   }
 }
