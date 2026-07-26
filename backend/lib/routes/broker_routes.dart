@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:backend/services/broker_dashboard_service.dart';
 import 'package:backend/services/broker_service.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
@@ -14,6 +15,7 @@ class BrokerRoutes {
 
   BrokerRoutes() {
     router.get('/status', _status);
+    router.get('/dashboard', _dashboard);
     router.get('/funds', _funds);
     router.get('/quotes', _quotes);
     router.get('/history', _history);
@@ -47,6 +49,25 @@ class BrokerRoutes {
       final token = _accessToken();
 
       final result = await action(token);
+
+      return _json(result);
+    } catch (e) {
+      return Response.internalServerError(
+        body: jsonEncode({
+          'success': false,
+          'error': e.toString(),
+        }),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      );
+    }
+  }
+
+  Future<Response> _dashboard(Request request) async {
+    try {
+      final result =
+          await BrokerDashboardService.instance.getDashboard();
 
       return _json(result);
     } catch (e) {
