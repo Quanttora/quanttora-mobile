@@ -8,20 +8,20 @@ class BrokerStatusCard extends StatelessWidget {
   final String userId;
 
   final double availableMargin;
-final double usedMargin;
+  final double usedMargin;
 
   final VoidCallback? onConnect;
 
- const BrokerStatusCard({
-  super.key,
-  required this.connected,
-  required this.broker,
-  required this.userName,
-  required this.email,
-  required this.userId,
-  required this.availableMargin,
-  required this.usedMargin,
-  this.onConnect,
+  const BrokerStatusCard({
+    super.key,
+    required this.connected,
+    required this.broker,
+    required this.userName,
+    required this.email,
+    required this.userId,
+    required this.availableMargin,
+    required this.usedMargin,
+    this.onConnect,
   });
 
   @override
@@ -60,8 +60,50 @@ final double usedMargin;
                     ),
                   ],
                 ),
+                const SizedBox(height: 20),
+                Text(
+                  broker,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 15),
+                Text("User : $userName"),
+                Text("Email : $email"),
+                Text("User ID : $userId"),
+                const Divider(height: 30),
+                Text(
+                  "Available Margin",
+                  style: TextStyle(
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  "₹ ${availableMargin.toStringAsFixed(2)}",
+                  style: const TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
+                  ),
+                ),
                 const SizedBox(height: 18),
-               Text("Broker : $broker"),
+                Text(
+                  "Used Margin",
+                  style: TextStyle(
+                    color: Colors.grey.shade700,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  "₹ ${usedMargin.toStringAsFixed(2)}",
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange,
+                  ),
+                ),
               ],
             )
           : Column(

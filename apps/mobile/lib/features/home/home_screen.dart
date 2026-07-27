@@ -1,16 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:mobile/core/decision_engine/decision_engine.dart';
 import 'package:mobile/features/broker/broker_service.dart';
 import 'package:mobile/features/broker/widgets/broker_status_card.dart';
 
-import 'package:mobile/core/decision_engine/decision_engine.dart';
-
 import 'widgets/greeting_card.dart';
 import 'widgets/decision_score_card.dart';
-import 'widgets/cards/market_pulse_card.dart';
-import 'widgets/cards/today_mission_card.dart';
-import 'widgets/cards/ai_coach_card.dart';
+
+import 'widgets/cards/portfolio_summary_card.dart';
+import 'widgets/cards/holdings_card.dart';
+import 'widgets/cards/positions_card.dart';
+import 'widgets/cards/orders_card.dart';
+import 'widgets/cards/trades_card.dart';
+
 import 'widgets/cards/academy_card.dart';
+import 'widgets/cards/ai_coach_card.dart';
+import 'widgets/cards/market_pulse_card.dart';
 import 'widgets/cards/quick_action_card.dart';
+import 'widgets/cards/today_mission_card.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -33,40 +39,55 @@ class _HomeScreenState extends State<HomeScreen> {
   double _availableMargin = 0;
   double _usedMargin = 0;
 
+  List<dynamic> _holdings = [];
+  List<dynamic> _positions = [];
+  List<dynamic> _orders = [];
+  List<dynamic> _trades = [];
+
   @override
   void initState() {
     super.initState();
-    _loadBroker();
+    _loadDashboard();
   }
 
-  Future<void> _loadBroker() async {
+  Future<void> _loadDashboard() async {
     try {
-      final data = await _brokerService.getBrokerStatus();
-      final funds = await _brokerService.getFunds();
+      final dashboard = await _brokerService.getDashboard();
 
-      print("BROKER STATUS: $data");
+      final user = dashboard["user"] ?? {};
+      final funds = dashboard["funds"] ?? {};
+      final equity = funds["data"]?["equity"] ?? {};
 
       setState(() {
-        _connected = data['connected'] ?? false;
+        _connected = dashboard["connected"] ?? false;
 
-        if (_connected) {
-          _broker = data['broker'] ?? '';
-          _userName = data['userName'] ?? '';
-          _email = data['email'] ?? '';
-          _userId = data['userId'] ?? '';
+        _broker = dashboard["broker"] ?? "";
 
-          _availableMargin =
-              (funds['data']['equity']['available_margin'] ?? 0)
-                  .toDouble();
+        _userName = user["name"] ?? "";
+        _email = user["email"] ?? "";
+        _userId = user["userId"] ?? "";
 
-          _usedMargin =
-              (funds['data']['equity']['used_margin'] ?? 0)
-                  .toDouble();
-        }
+        _availableMargin =
+            ((equity["available_margin"] ?? 0) as num).toDouble();
+
+        _usedMargin =
+            ((equity["used_margin"] ?? 0) as num).toDouble();
+
+        _holdings =
+            (dashboard["holdings"]?["data"] as List?) ?? [];
+
+        _positions =
+            (dashboard["positions"]?["data"] as List?) ?? [];
+
+        _orders =
+            (dashboard["orders"]?["data"] as List?) ?? [];
+
+        _trades =
+            (dashboard["trades"]?["data"] as List?) ?? [];
 
         _loading = false;
       });
-    } catch (_) {
+    } catch (e) {
       setState(() {
         _loading = false;
       });
@@ -80,26 +101,11 @@ class _HomeScreenState extends State<HomeScreen> {
       _loading = true;
     });
 
-    final data = await _brokerService.waitForConnection();
-    final funds = await _brokerService.getFunds();
+    await Future.delayed(
+      const Duration(seconds: 2),
+    );
 
-    setState(() {
-      _connected = true;
-      _broker = data['broker'] ?? '';
-      _userName = data['userName'] ?? '';
-      _email = data['email'] ?? '';
-      _userId = data['userId'] ?? '';
-
-      _availableMargin =
-          (funds['data']['equity']['available_margin'] ?? 0)
-              .toDouble();
-
-      _usedMargin =
-          (funds['data']['equity']['used_margin'] ?? 0)
-              .toDouble();
-
-      _loading = false;
-    });
+    await _loadDashboard();
   }
 
   @override
@@ -109,12 +115,13 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7FC),
       body: SafeArea(
-                child: RefreshIndicator(
-          onRefresh: _loadBroker,
+        child: RefreshIndicator(
+          onRefresh: _loadDashboard,
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
               children: [
                 const GreetingCard(),
 
@@ -124,20 +131,56 @@ class _HomeScreenState extends State<HomeScreen> {
                   const Center(
                     child: Padding(
                       padding: EdgeInsets.all(20),
-                      child: CircularProgressIndicator(),
+                      child:
+                          CircularProgressIndicator(),
                     ),
                   )
-                else
+                else ...[
                   BrokerStatusCard(
                     connected: _connected,
                     broker: _broker,
                     userName: _userName,
                     email: _email,
                     userId: _userId,
-                    availableMargin: _availableMargin,
+                    availableMargin:
+                        _availableMargin,
                     usedMargin: _usedMargin,
                     onConnect: _connectBroker,
                   ),
+
+                  const SizedBox(height: 20),
+
+                  PortfolioSummaryCard(
+                    connected: _connected,
+                    broker: _broker,
+                    availableMargin:
+                        _availableMargin,
+                    usedMargin: _usedMargin,
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  HoldingsCard(
+                    holdings: _holdings,
+                  ),
+
+                  const SizedBox(height: 20),
+                                    PositionsCard(
+                    positions: _positions,
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  OrdersCard(
+                    orders: _orders,
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  TradesCard(
+                    trades: _trades,
+                  ),
+                ],
 
                 const SizedBox(height: 20),
 
@@ -171,6 +214,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-          );
+    );
   }
 }
