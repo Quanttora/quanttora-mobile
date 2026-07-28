@@ -22,7 +22,6 @@ class UpstoxBrokerService {
     print('');
     print('============================');
     print('GET : $url');
-    print('TOKEN : ${accessToken.substring(0, accessToken.length > 20 ? 20 : accessToken.length)}...');
     print('============================');
 
     final response = await http.get(
@@ -64,12 +63,15 @@ class UpstoxBrokerService {
 
   Future<Map<String, dynamic>> getQuotes(
     String accessToken,
-    String instrumentKey,
-  ) =>
-      _get(
-        '/market-quote/quotes?instrument_key=$instrumentKey',
-        accessToken,
-      );
+    String instrumentKeys,
+  ) async {
+    final encodedKeys = Uri.encodeQueryComponent(instrumentKeys);
+
+    return _get(
+      '/market-quote/quotes?instrument_key=$encodedKeys',
+      accessToken,
+    );
+  }
 
   Future<Map<String, dynamic>> getHistoricalCandles(
     String accessToken,
@@ -77,9 +79,12 @@ class UpstoxBrokerService {
     String interval,
     String toDate,
     String fromDate,
-  ) =>
-      _get(
-        '/historical-candle/$instrumentKey/$interval/$toDate/$fromDate',
-        accessToken,
-      );
+  ) {
+    final encodedKey = Uri.encodeComponent(instrumentKey);
+
+    return _get(
+      '/historical-candle/$encodedKey/$interval/$toDate/$fromDate',
+      accessToken,
+    );
+  }
 }

@@ -16,13 +16,21 @@ class BrokerRoutes {
   BrokerRoutes() {
     router.get('/status', _status);
     router.get('/dashboard', _dashboard);
+
     router.get('/funds', _funds);
     router.get('/quotes', _quotes);
     router.get('/history', _history);
+
     router.get('/holdings', _holdings);
     router.get('/positions', _positions);
     router.get('/orders', _orders);
     router.get('/trades', _trades);
+
+    // NEW
+    router.get('/market-indices', _marketIndices);
+
+    // NEW
+    router.post('/disconnect', _disconnect);
   }
 
   Response _json(dynamic data) => Response.ok(
@@ -89,6 +97,29 @@ class BrokerRoutes {
       'broker': _brokerService.session?.broker,
       'user': _brokerService.session?.userName,
     });
+  }
+
+  Future<Response> _disconnect(Request request) async {
+    _brokerService.disconnect();
+
+    return _json({
+      'success': true,
+      'message': 'Broker disconnected',
+    });
+  }
+
+  Future<Response> _marketIndices(Request request) async {
+    const instruments =
+        'NSE_INDEX|Nifty 50,'
+        'NSE_INDEX|Nifty Bank,'
+        'NSE_INDEX|India VIX';
+
+    return _execute(
+      (token) => _broker.getQuotes(
+        token,
+        instruments,
+      ),
+    );
   }
 
   Future<Response> _funds(Request request) async {

@@ -7,21 +7,28 @@ import 'package:url_launcher/url_launcher.dart';
 class BrokerService {
   static const String baseUrl = 'http://localhost:8080';
 
-  Future<Map<String, dynamic>> getDashboard() async {
+  Future<Map<String, dynamic>> _get(String endpoint) async {
     final response = await http
-        .get(Uri.parse('$baseUrl/broker/dashboard'))
+        .get(Uri.parse('$baseUrl$endpoint'))
         .timeout(const Duration(seconds: 20));
 
     if (response.statusCode != 200) {
-      throw Exception('Unable to load dashboard');
+      throw Exception(response.body);
     }
 
     return jsonDecode(response.body);
   }
 
-  Future<List<dynamic>> getHoldings() async {
-    final dashboard = await getDashboard();
+  Future<Map<String, dynamic>> getDashboard() =>
+      _get('/broker/dashboard');
 
+  Future<Map<String, dynamic>> getMarketIndices() =>
+      _get('/broker/market-indices');
+
+  Future<Map<String, dynamic>> refreshMarketIndices() =>
+      getMarketIndices();
+
+  List<dynamic> extractHoldings(Map<String, dynamic> dashboard) {
     if (dashboard["holdings"] is Map &&
         dashboard["holdings"]["data"] is List) {
       return dashboard["holdings"]["data"];
@@ -30,9 +37,7 @@ class BrokerService {
     return [];
   }
 
-  Future<List<dynamic>> getPositions() async {
-    final dashboard = await getDashboard();
-
+  List<dynamic> extractPositions(Map<String, dynamic> dashboard) {
     if (dashboard["positions"] is Map &&
         dashboard["positions"]["data"] is List) {
       return dashboard["positions"]["data"];
@@ -41,9 +46,7 @@ class BrokerService {
     return [];
   }
 
-  Future<List<dynamic>> getOrders() async {
-    final dashboard = await getDashboard();
-
+  List<dynamic> extractOrders(Map<String, dynamic> dashboard) {
     if (dashboard["orders"] is Map &&
         dashboard["orders"]["data"] is List) {
       return dashboard["orders"]["data"];
@@ -52,19 +55,13 @@ class BrokerService {
     return [];
   }
 
-  Future<List<dynamic>> getTrades() async {
-    final dashboard = await getDashboard();
-
+  List<dynamic> extractTrades(Map<String, dynamic> dashboard) {
     if (dashboard["trades"] is Map &&
         dashboard["trades"]["data"] is List) {
       return dashboard["trades"]["data"];
     }
 
     return [];
-  }
-
-  Future<Map<String, dynamic>> refreshDashboard() async {
-    return await getDashboard();
   }
 
   Future<void> connectBroker() async {
@@ -77,6 +74,16 @@ class BrokerService {
 
     if (!launched) {
       throw Exception('Unable to launch Upstox Login');
+    }
+  }
+
+  Future<void> disconnectBroker() async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/broker/disconnect'),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Unable to disconnect broker');
     }
   }
 
