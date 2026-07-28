@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:mobile/core/decision_engine/decision_engine.dart';
-import 'package:mobile/features/broker/broker_service.dart';
-import 'package:mobile/features/broker/widgets/broker_status_card.dart';
 
-import 'widgets/greeting_card.dart';
-import 'widgets/decision_score_card.dart';
-import 'widgets/cards/academy_card.dart';
-import 'widgets/cards/ai_coach_card.dart';
-import 'widgets/cards/market_pulse_card.dart';
-import 'widgets/cards/quick_action_card.dart';
-import 'widgets/cards/today_mission_card.dart';
+import 'package:mobile/features/broker/broker_service.dart';
+
+import 'widgets/common/section_title.dart';
+
+import 'widgets/sections/ai_section.dart';
+import 'widgets/sections/broker_section.dart';
+import 'widgets/sections/holdings_section.dart';
+import 'widgets/sections/home_header.dart';
+import 'widgets/sections/market_indices_section.dart';
+import 'widgets/sections/news_section.dart';
+import 'widgets/sections/orders_section.dart';
+import 'widgets/sections/portfolio_section.dart';
+import 'widgets/sections/positions_section.dart';
+import 'widgets/sections/trades_section.dart';
+import 'widgets/sections/watchlist_section.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,15 +27,19 @@ class _HomeScreenState extends State<HomeScreen> {
   final BrokerService _brokerService = BrokerService();
 
   bool _loading = true;
-  bool _connected = false;
+  String? _error;
 
-  String _broker = '';
-  String _userName = '';
-  String _email = '';
-  String _userId = '';
+  Map<String, dynamic>? _marketIndices;
+  Map<String, dynamic>? _portfolio;
+  Map<String, dynamic>? _brokerProfile;
+  Map<String, dynamic>? _aiData;
 
-  double _availableMargin = 0;
-  double _usedMargin = 0;
+  List<dynamic> _holdings = [];
+  List<dynamic> _positions = [];
+  List<dynamic> _orders = [];
+  List<dynamic> _trades = [];
+  List<dynamic> _watchlist = [];
+  List<dynamic> _news = [];
 
   @override
   void initState() {
@@ -39,112 +48,235 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadDashboard() async {
-    try {
-      final dashboard = await _brokerService.getDashboard();
+  setState(() {
+    _loading = true;
+    _error = null;
+  });
 
-      final user = dashboard['user'] ?? {};
-      final funds = dashboard['funds'] ?? {};
-      final equity = funds['data']?['equity'] ?? {};
+  try {
+    final dashboard =
+        await _brokerService.getDashboard();
 
-      setState(() {
-        _connected = dashboard['connected'] ?? false;
+    _marketIndices =
+        await _brokerService.getMarketIndices();
 
-        _broker = dashboard['broker'] ?? '';
+    _portfolio = {
+      "availableMargin": ((dashboard["funds"]?["available_margin"] ?? 0)
+              as num)
+          .toDouble(),
+      "usedMargin":
+          ((dashboard["funds"]?["used_margin"] ?? 0) as num)
+              .toDouble(),
+      "broker": "Upstox",
+      "connected": dashboard["connected"] ?? false,
+    };
 
-        _userName = user['name'] ?? '';
-        _email = user['email'] ?? '';
-        _userId = user['userId'] ?? '';
+    _brokerProfile = {
+      "user_name":
+          dashboard["profile"]?["user_name"] ?? "--",
+      "email":
+          dashboard["profile"]?["email"] ?? "--",
+      "user_id":
+          dashboard["profile"]?["user_id"] ?? "--",
+    };
 
-        _availableMargin =
-            (equity['available_margin'] ?? 0).toDouble();
+    _holdings = await _brokerService.getHoldings();
+    _positions = await _brokerService.getPositions();
+    _orders = await _brokerService.getOrders();
+    _trades = await _brokerService.getTrades();
 
-        _usedMargin =
-            (equity['used_margin'] ?? 0).toDouble();
+    _watchlist = [];
+    _news = [];
 
-        _loading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _loading = false;
-      });
-    }
+    _aiData = {
+      "score": 82,
+      "trend": "Bullish",
+      "confidence": 91.4,
+      "message":
+          "Momentum remains positive. Prefer high-quality setups and maintain disciplined risk management.",
+    };
+  } catch (e) {
+    _error = e.toString();
   }
 
-  Future<void> _connectBroker() async {
-    await _brokerService.connectBroker();
+  if (!mounted) return;
 
-    setState(() {
-      _loading = true;
-    });
-
-    await Future.delayed(const Duration(seconds: 2));
-
-    await _loadDashboard();
-  }
+  setState(() {
+    _loading = false;
+  });
+}
 
   @override
   Widget build(BuildContext context) {
-    final result = DecisionEngine.demoResult();
-
-    return Scaffold(
-      backgroundColor: const Color(0xFFF4F7FC),
+        return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FB),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _loadDashboard,
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const GreetingCard(),
+                const HomeHeader(),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
 
-                if (_loading)
-                  const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(20),
-                      child: CircularProgressIndicator(),
-                    ),
-                  )
-                else
-                  BrokerStatusCard(
-                    connected: _connected,
-                    broker: _broker,
-                    userName: _userName,
-                    email: _email,
-                    userId: _userId,
-                    availableMargin: _availableMargin,
-                    usedMargin: _usedMargin,
-                    onConnect: _connectBroker,
-                  ),
+                const SectionTitle(
+                  title: "Market Indices",
+                ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 12),
 
-                DecisionScoreCard(result: result),
+                MarketIndicesSection(
+                  loading: _loading,
+                  error: _error,
+                  data: _marketIndices,
+                ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
 
-                const MarketPulseCard(),
+                const SectionTitle(
+                  title: "Broker Account",
+                ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 12),
 
-                const TodayMissionCard(),
+                BrokerSection(
+                  loading: _loading,
+                  connected: _brokerProfile != null,
+                  broker: "Upstox",
+                  userName:
+                      _brokerProfile?["user_name"] ?? "--",
+                  email:
+                      _brokerProfile?["email"] ?? "--",
+                  userId:
+                      _brokerProfile?["user_id"] ?? "--",
+                  availableMargin:
+                      ((_portfolio?["availableMargin"] ?? 0)
+                              as num)
+                          .toDouble(),
+                  usedMargin:
+                      ((_portfolio?["usedMargin"] ?? 0)
+                              as num)
+                          .toDouble(),
+                  onConnect: () {},
+                ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
 
-                const AICoachCard(),
+                const SectionTitle(
+                  title: "Portfolio",
+                ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 12),
 
-                const AcademyCard(),
+                PortfolioSection(
+                  loading: _loading,
+                  error: _error,
+                  portfolio: _portfolio,
+                ),
 
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
 
-                const QuickActionCard(),
+                const SectionTitle(
+                  title: "AI Coach",
+                ),
 
-                const SizedBox(height: 120),
-              ],
+                const SizedBox(height: 12),
+
+                AiSection(
+                  loading: _loading,
+                  error: _error,
+                  aiData: _aiData,
+                ),
+
+                const SizedBox(height: 24),
+                                const SectionTitle(
+                  title: "Holdings",
+                ),
+
+                const SizedBox(height: 12),
+
+                HoldingsSection(
+                  loading: _loading,
+                  error: _error,
+                  holdings: _holdings,
+                ),
+
+                const SizedBox(height: 24),
+
+                const SectionTitle(
+                  title: "Open Positions",
+                ),
+
+                const SizedBox(height: 12),
+
+                PositionsSection(
+                  loading: _loading,
+                  error: _error,
+                  positions: _positions,
+                ),
+
+                const SizedBox(height: 24),
+
+                const SectionTitle(
+                  title: "Today's Orders",
+                ),
+
+                const SizedBox(height: 12),
+
+                OrdersSection(
+                  loading: _loading,
+                  error: _error,
+                  orders: _orders,
+                ),
+
+                const SizedBox(height: 24),
+
+                const SectionTitle(
+                  title: "Today's Trades",
+                ),
+
+                const SizedBox(height: 12),
+
+                TradesSection(
+                  loading: _loading,
+                  error: _error,
+                  trades: _trades,
+                ),
+
+                const SizedBox(height: 24),
+
+                const SectionTitle(
+                  title: "Watchlist",
+                ),
+
+                const SizedBox(height: 12),
+
+                WatchlistSection(
+                  loading: _loading,
+                  error: _error,
+                  watchlist: _watchlist,
+                ),
+
+                const SizedBox(height: 24),
+
+                const SectionTitle(
+                  title: "Market News",
+                ),
+
+                const SizedBox(height: 12),
+
+                NewsSection(
+                  loading: _loading,
+                  error: _error,
+                  news: _news,
+                ),
+
+                const SizedBox(height: 32),
+                              ],
             ),
           ),
         ),
