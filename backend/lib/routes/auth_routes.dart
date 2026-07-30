@@ -6,17 +6,22 @@ import 'package:backend/models/broker_connection.dart';
 import 'package:backend/models/broker_session.dart';
 import 'package:backend/services/broker_connection_repository.dart';
 import 'package:backend/services/broker_service.dart';
+import 'package:backend/services/upstox_market_feed.dart';
 import 'package:http/http.dart' as http;
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 
 class AuthRoutes {
   final UpstoxAuthService _upstox = UpstoxAuthService();
+
   final BrokerConnectionRepository _repository =
       BrokerConnectionRepository();
 
   final BrokerService _brokerService =
       BrokerService.instance;
+
+  final UpstoxMarketFeed _marketFeed =
+    UpstoxMarketFeed.instance;
 
   Router get router {
     final router = Router();
@@ -27,8 +32,11 @@ class AuthRoutes {
       );
     });
 
-    router.get('/upstox/callback', (Request request) async {
-      final code = request.requestedUri.queryParameters['code'];
+    router.get('/upstox/callback', (
+      Request request,
+    ) async {
+      final code =
+          request.requestedUri.queryParameters['code'];
 
       if (code == null || code.isEmpty) {
         return Response(
@@ -42,7 +50,11 @@ class AuthRoutes {
           code: code,
         );
 
-        final accessToken = token['access_token'] ?? '';
+        final accessToken =
+            token['access_token']?.toString() ?? '';
+
+        final refreshToken =
+            token['refresh_token']?.toString();
 
         final profileResponse = await http.get(
           Uri.parse(
@@ -50,7 +62,8 @@ class AuthRoutes {
           ),
           headers: {
             'Accept': 'application/json',
-            'Authorization': 'Bearer $accessToken',
+            'Authorization':
+                'Bearer $accessToken',
           },
         );
 
@@ -66,11 +79,14 @@ class AuthRoutes {
         final connection = BrokerConnection(
           broker: 'Upstox',
           userId: profile['user_id'].toString(),
-          userName: profile['user_name'].toString(),
+          userName:
+              profile['user_name'].toString(),
           email: profile['email'].toString(),
           accessToken: accessToken,
           extendedToken:
-              token['extended_token']?.toString() ?? '',
+              token['extended_token']
+                      ?.toString() ??
+                  '',
         );
 
         _repository.save(connection);
@@ -81,17 +97,28 @@ class AuthRoutes {
             userId: connection.userId,
             userName: connection.userName,
             email: connection.email,
-            accessToken: connection.accessToken,
+            accessToken: accessToken,
+            refreshToken: refreshToken,
             connectedAt: DateTime.now(),
           ),
         );
 
+        await _marketFeed.connect();
+        await _marketFeed.subscribeMany([
+  'NSE_INDEX|Nifty 50',
+  'NSE_INDEX|Nifty Bank',
+  'BSE_INDEX|SENSEX',
+  'NSE_INDEX|India VIX',
+]);
+
         print('');
-        print('==============================');
+        print(
+            '==============================');
         print('UPSTOX CONNECTED');
         print(connection.userName);
         print(connection.email);
-        print('==============================');
+        print(
+            '==============================');
         print('');
 
         return Response.found(

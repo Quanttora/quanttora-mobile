@@ -1,0 +1,26 @@
+### Health Check
+GET http://localhost:8080/health
+
+###
+
+### Broker Status
+GET http://localhost:8080/broker/status
+
+###
+
+### Connect Market Feed
+POST http://localhost:8080/broker/market-feed/connect
+
+###
+
+### Subscribe NIFTY
+POST http://localhost:8080/broker/market-feed/subscribe?instrumentKey=NSE_INDEX|Nifty%2050
+
+###
+
+### Subscriptions
+GET http://localhost:8080/broker/market-feed/subscriptions
+###
+
+### Auth Status
+GET http://localhost:8080/auth/status

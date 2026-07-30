@@ -16,40 +16,47 @@ class IndexCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color accent =
-        positive ? Colors.green.shade700 : Colors.red.shade700;
+    final accent =
+        positive ? const Color(0xFF16A34A) : const Color(0xFFDC2626);
 
-    final Color bg =
-        positive ? Colors.green.shade50 : Colors.red.shade50;
+    final background =
+        positive ? const Color(0xFFF0FDF4) : const Color(0xFFFEF2F2);
 
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeOut,
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        boxShadow: const [
+        border: Border.all(
+          color: accent.withOpacity(.12),
+        ),
+        boxShadow: [
           BoxShadow(
-            color: Colors.black12,
+            color: Colors.black.withOpacity(.05),
             blurRadius: 12,
-            offset: Offset(0, 5),
+            offset: const Offset(0, 5),
           ),
         ],
       ),
       child: Row(
         children: [
-          Container(
-            height: 52,
-            width: 52,
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            height: 56,
+            width: 56,
             decoration: BoxDecoration(
-              color: bg,
-              borderRadius: BorderRadius.circular(14),
+              color: background,
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Icon(
               positive
                   ? Icons.trending_up_rounded
                   : Icons.trending_down_rounded,
               color: accent,
+              size: 30,
             ),
           ),
           const SizedBox(width: 16),
@@ -64,12 +71,13 @@ class IndexCard extends StatelessWidget {
                     fontSize: 16,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 Text(
                   value,
                   style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 26,
+                    letterSpacing: .3,
                   ),
                 ),
               ],
@@ -78,18 +86,31 @@ class IndexCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(
               horizontal: 14,
-              vertical: 8,
+              vertical: 10,
             ),
             decoration: BoxDecoration(
-              color: bg,
+              color: background,
               borderRadius: BorderRadius.circular(30),
             ),
-            child: Text(
-              change,
-              style: TextStyle(
-                color: accent,
-                fontWeight: FontWeight.bold,
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  positive
+                      ? Icons.arrow_drop_up_rounded
+                      : Icons.arrow_drop_down_rounded,
+                  color: accent,
+                  size: 22,
+                ),
+                Text(
+                  change,
+                  style: TextStyle(
+                    color: accent,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
             ),
           ),
         ],

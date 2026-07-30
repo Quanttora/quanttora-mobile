@@ -3,7 +3,10 @@ class BrokerSession {
   final String userId;
   final String userName;
   final String email;
+
   final String accessToken;
+  final String? refreshToken;
+
   final DateTime connectedAt;
 
   const BrokerSession({
@@ -12,6 +15,7 @@ class BrokerSession {
     required this.userName,
     required this.email,
     required this.accessToken,
+    this.refreshToken,
     required this.connectedAt,
   });
 
@@ -22,17 +26,21 @@ class BrokerSession {
       'userName': userName,
       'email': email,
       'accessToken': accessToken,
+      'refreshToken': refreshToken,
       'connectedAt': connectedAt.toIso8601String(),
     };
   }
 
-  factory BrokerSession.fromJson(Map<String, dynamic> json) {
+  factory BrokerSession.fromJson(
+    Map<String, dynamic> json,
+  ) {
     return BrokerSession(
       broker: json['broker'] ?? '',
       userId: json['userId'] ?? '',
       userName: json['userName'] ?? '',
       email: json['email'] ?? '',
       accessToken: json['accessToken'] ?? '',
+      refreshToken: json['refreshToken'],
       connectedAt: DateTime.parse(
         json['connectedAt'],
       ),

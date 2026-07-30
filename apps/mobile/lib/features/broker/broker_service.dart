@@ -25,15 +25,11 @@ class BrokerService {
   Future<Map<String, dynamic>> getMarketIndices() =>
       _get('/broker/market-indices');
 
-  Future<Map<String, dynamic>> refreshMarketIndices() =>
-      getMarketIndices();
-
   List<dynamic> extractHoldings(Map<String, dynamic> dashboard) {
     if (dashboard["holdings"] is Map &&
         dashboard["holdings"]["data"] is List) {
       return dashboard["holdings"]["data"];
     }
-
     return [];
   }
 
@@ -42,7 +38,6 @@ class BrokerService {
         dashboard["positions"]["data"] is List) {
       return dashboard["positions"]["data"];
     }
-
     return [];
   }
 
@@ -51,7 +46,6 @@ class BrokerService {
         dashboard["orders"]["data"] is List) {
       return dashboard["orders"]["data"];
     }
-
     return [];
   }
 
@@ -60,7 +54,6 @@ class BrokerService {
         dashboard["trades"]["data"] is List) {
       return dashboard["trades"]["data"];
     }
-
     return [];
   }
 
@@ -99,9 +92,7 @@ class BrokerService {
         }
       } catch (_) {}
 
-      await Future.delayed(
-        const Duration(seconds: 2),
-      );
+      await Future.delayed(const Duration(seconds: 2));
     }
 
     throw Exception("Connection timed out");
