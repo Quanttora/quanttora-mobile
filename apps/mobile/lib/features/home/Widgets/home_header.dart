@@ -14,54 +14,108 @@ class HomeHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-
-    String greeting;
-
-    if (now.hour < 12) {
-      greeting = "Good Morning";
-    } else if (now.hour < 17) {
-      greeting = "Good Afternoon";
-    } else {
-      greeting = "Good Evening";
-    }
-
     return Padding(
-      padding: const EdgeInsets.all(AppSpacing.screenPadding),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.screenPadding,
+      ),
       child: Row(
         children: [
           Expanded(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
               children: [
                 Text(
-                  greeting,
-                  style: AppTextStyles.bodyMedium,
+                  "👋 Good Evening, $userName",
+                  style: AppTextStyles.headlineMedium,
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  userName,
-                  style: AppTextStyles.displayMedium,
-                ),
-                const SizedBox(height: 4),
+
+                const SizedBox(height: 6),
+
                 const Text(
-                  "Welcome to Quanttora",
+                  "Trade smart with Quanttora AI",
                   style: AppTextStyles.bodyMedium,
+                ),
+
+                const SizedBox(height: 12),
+
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 8,
+                  children: const [
+                    _Chip(
+                      icon: Icons.smart_toy_rounded,
+                      text: "AI Ready",
+                      color: AppColors.primary,
+                    ),
+                    _Chip(
+                      icon: Icons.circle,
+                      text: "Market Live",
+                      color: AppColors.success,
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
+
           Container(
-            width: 52,
-            height: 52,
+            width: 56,
+            height: 56,
             decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.12),
-              shape: BoxShape.circle,
+              color: AppColors.primary.withValues(alpha: .10),
+              borderRadius: BorderRadius.circular(18),
             ),
             child: const Icon(
               Icons.person_rounded,
               color: AppColors.primary,
-              size: 28,
+              size: 30,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Chip extends StatelessWidget {
+  const _Chip({
+    required this.icon,
+    required this.text,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 8,
+      ),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: .10),
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            icon,
+            size: 14,
+            color: color,
+          ),
+
+          const SizedBox(width: 6),
+                    Text(
+            text,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],

@@ -10,13 +10,13 @@ class QuickActionsCard extends StatelessWidget {
     super.key,
     this.onBrokerTap,
     this.onJournalTap,
-    this.onAiScannerTap,
+    this.onAiTap,
     this.onWatchlistTap,
   });
 
   final VoidCallback? onBrokerTap;
   final VoidCallback? onJournalTap;
-  final VoidCallback? onAiScannerTap;
+  final VoidCallback? onAiTap;
   final VoidCallback? onWatchlistTap;
 
   @override
@@ -37,39 +37,50 @@ class QuickActionsCard extends StatelessWidget {
             style: AppTextStyles.titleLarge,
           ),
 
-          const SizedBox(height: 20),
+          const SizedBox(height: 18),
 
-          GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 2,
-            mainAxisSpacing: 16,
-            crossAxisSpacing: 16,
-            childAspectRatio: 1.6,
+          Row(
             children: [
-              _ActionTile(
-                title: "Connect Broker",
-                icon: Icons.account_balance_rounded,
-                color: AppColors.primary,
-                onTap: onBrokerTap,
+              Expanded(
+                child: _ActionButton(
+                  title: "Broker",
+                  icon: Icons.account_balance_rounded,
+                  color: AppColors.primary,
+                  onTap: onBrokerTap,
+                ),
               ),
-              _ActionTile(
-                title: "Trading Journal",
-                icon: Icons.menu_book_rounded,
-                color: AppColors.secondary,
-                onTap: onJournalTap,
+
+              const SizedBox(width: 12),
+
+              Expanded(
+                child: _ActionButton(
+                  title: "Journal",
+                  icon: Icons.menu_book_rounded,
+                  color: Colors.deepPurple,
+                  onTap: onJournalTap,
+                ),
               ),
-              _ActionTile(
-                title: "AI Scanner",
-                icon: Icons.auto_awesome_rounded,
-                color: AppColors.ai,
-                onTap: onAiScannerTap,
+
+              const SizedBox(width: 12),
+
+              Expanded(
+                child: _ActionButton(
+                  title: "AI",
+                  icon: Icons.auto_awesome_rounded,
+                  color: Colors.deepPurpleAccent,
+                  onTap: onAiTap,
+                ),
               ),
-              _ActionTile(
-                title: "Watchlist",
-                icon: Icons.visibility_rounded,
-                color: AppColors.warning,
-                onTap: onWatchlistTap,
+
+              const SizedBox(width: 12),
+
+              Expanded(
+                child: _ActionButton(
+                  title: "Watchlist",
+                  icon: Icons.visibility_rounded,
+                  color: Colors.orange,
+                  onTap: onWatchlistTap,
+                ),
               ),
             ],
           ),
@@ -79,8 +90,8 @@ class QuickActionsCard extends StatelessWidget {
   }
 }
 
-class _ActionTile extends StatelessWidget {
-  const _ActionTile({
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
     required this.title,
     required this.icon,
     required this.color,
@@ -95,18 +106,21 @@ class _ActionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: color.withValues(alpha: 0.10),
+      color: color.withValues(alpha: 0.08),
       borderRadius: BorderRadius.circular(18),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(18),
         child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
+          padding: const EdgeInsets.symmetric(
+            vertical: 22,
+            horizontal: 16,
+          ),
+          child: Column(
             children: [
               Container(
-                width: 46,
-                height: 46,
+                width: 52,
+                height: 52,
                 decoration: BoxDecoration(
                   color: color,
                   borderRadius: BorderRadius.circular(14),
@@ -114,16 +128,15 @@ class _ActionTile extends StatelessWidget {
                 child: Icon(
                   icon,
                   color: Colors.white,
-                  size: 24,
+                  size: 26,
                 ),
               ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Text(
-                  title,
-                  style: AppTextStyles.titleMedium,
-                  maxLines: 2,
-                ),
+
+              const SizedBox(height: 14),
+                            Text(
+                title,
+                style: AppTextStyles.titleMedium,
+                textAlign: TextAlign.center,
               ),
             ],
           ),

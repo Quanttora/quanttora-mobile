@@ -30,30 +30,81 @@ class MarketOverviewCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Market Overview",
-            style: AppTextStyles.titleLarge,
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  "Market Overview",
+                  style: AppTextStyles.titleLarge,
+                ),
+              ),
+
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withValues(alpha: .12),
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                child: const Text(
+                  "LIVE",
+                  style: TextStyle(
+                    color: AppColors.success,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+            ],
           ),
 
           const SizedBox(height: 20),
 
-          _MarketTile(index: nifty),
+          _MarketRow(index: nifty),
 
-          const Divider(),
+          const Divider(height: 28),
 
-          _MarketTile(index: sensex),
+          _MarketRow(index: sensex),
 
-          const Divider(),
+          const Divider(height: 28),
 
-          _MarketTile(index: bankNifty),
+          _MarketRow(index: bankNifty),
+
+          const SizedBox(height: 18),
+                    Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: .05),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.insights_rounded,
+                  color: AppColors.primary,
+                ),
+
+                const SizedBox(width: 12),
+
+                const Expanded(
+                  child: Text(
+                    "Market sentiment remains positive. Banking continues to lead the rally.",
+                    style: AppTextStyles.bodyMedium,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _MarketTile extends StatelessWidget {
-  const _MarketTile({
+class _MarketRow extends StatelessWidget {
+  const _MarketRow({
     required this.index,
   });
 
@@ -61,49 +112,56 @@ class _MarketTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color =
-        index.change >= 0 ? AppColors.profit : AppColors.loss;
+    final bool positive = index.change >= 0;
+    final Color color =
+        positive ? AppColors.success : AppColors.danger;
 
-    final icon = index.change >= 0
-        ? Icons.trending_up_rounded
-        : Icons.trending_down_rounded;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 10),
-      child: Row(
-        children: [
-          Icon(
-            icon,
+    return Row(
+      children: [
+        Container(
+          width: 46,
+          height: 46,
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: .10),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Icon(
+            positive
+                ? Icons.trending_up_rounded
+                : Icons.trending_down_rounded,
             color: color,
           ),
+        ),
 
-          const SizedBox(width: 12),
+        const SizedBox(width: 14),
 
-          Expanded(
-            child: Text(
-              index.name,
-              style: AppTextStyles.titleMedium,
+        Expanded(
+          child: Text(
+            index.name,
+            style: AppTextStyles.titleMedium,
+          ),
+        ),
+
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              index.value,
+              style: AppTextStyles.titleLarge,
             ),
-          ),
 
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Text(
-                index.value,
-                style: AppTextStyles.marketPrice,
+            const SizedBox(height: 4),
+                        Text(
+              index.changeText,
+              style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.w700,
+                fontSize: 13,
               ),
-              Text(
-                "${index.change >= 0 ? "+" : ""}${index.changeText}",
-                style: TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

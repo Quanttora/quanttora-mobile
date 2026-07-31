@@ -1,83 +1,80 @@
-import 'dart:async';
-
-import 'package:mobile/services/api_service.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:backend/models/broker_session.dart';
 
 class BrokerService {
-  static const String baseUrl = 'http://localhost:8080';
+  BrokerService._();
 
-  final ApiService _api = ApiService.instance;
+  static final BrokerService instance = BrokerService._();
 
-  Future<Map<String, dynamic>> getDashboard() =>
-      _api.getBrokerDashboard();
+  BrokerSession? _session;
 
-  Future<Map<String, dynamic>> getMarketIndices() =>
-      _api.getMarketDashboard();
+  BrokerSession? get session => _session;
 
-  List<dynamic> extractHoldings(Map<String, dynamic> dashboard) {
-    if (dashboard["holdings"] is Map &&
-        dashboard["holdings"]["data"] is List) {
-      return dashboard["holdings"]["data"];
-    }
-    return [];
+  bool get isConnected => _session != null;
+
+  void connect(BrokerSession session) {
+    _session = session;
   }
 
-  List<dynamic> extractPositions(Map<String, dynamic> dashboard) {
-    if (dashboard["positions"] is Map &&
-        dashboard["positions"]["data"] is List) {
-      return dashboard["positions"]["data"];
-    }
-    return [];
+  void disconnect() {
+    _session = null;
   }
 
-  List<dynamic> extractOrders(Map<String, dynamic> dashboard) {
-    if (dashboard["orders"] is Map &&
-        dashboard["orders"]["data"] is List) {
-      return dashboard["orders"]["data"];
-    }
-    return [];
+  void update(BrokerSession session) {
+    _session = session;
   }
 
-  List<dynamic> extractTrades(Map<String, dynamic> dashboard) {
-    if (dashboard["trades"] is Map &&
-        dashboard["trades"]["data"] is List) {
-      return dashboard["trades"]["data"];
-    }
-    return [];
+  bool hasValidSession() {
+    return _session != null &&
+        _session!.accessToken.isNotEmpty;
   }
 
-  Future<void> connectBroker() async {
-    final uri = Uri.parse('$baseUrl/auth/upstox/login');
-
-    final launched = await launchUrl(
-      uri,
-      mode: LaunchMode.externalApplication,
-    );
-
-    if (!launched) {
-      throw Exception('Unable to launch Upstox Login');
-    }
-  }
-
-  Future<void> disconnectBroker() async {
-    await _api.get('/broker/disconnect');
-  }
-
-  Future<Map<String, dynamic>> waitForConnection() async {
-    const maxAttempts = 30;
-
-    for (int i = 0; i < maxAttempts; i++) {
-      try {
-        final dashboard = await getDashboard();
-
-        if (dashboard["connected"] == true) {
-          return dashboard;
-        }
-      } catch (_) {}
-
-      await Future.delayed(const Duration(seconds: 2));
+  String get accessToken {
+    if (_session == null) {
+      throw StateError(
+        'Broker is not connected.',
+      );
     }
 
-    throw Exception("Connection timed out");
+    return _session!.accessToken;
+  }
+
+  String get broker {
+    if (_session == null) {
+      throw StateError(
+        'Broker is not connected.',
+      );
+    }
+
+    return _session!.broker;
+  }
+
+  String get userId {
+    if (_session == null) {
+      throw StateError(
+        'Broker is not connected.',
+      );
+    }
+
+    return _session!.userId;
+  }
+
+  String get userName {
+    if (_session == null) {
+      throw StateError(
+        'Broker is not connected.',
+      );
+    }
+
+    return _session!.userName;
+  }
+
+  String get email {
+    if (_session == null) {
+      throw StateError(
+        'Broker is not connected.',
+      );
+    }
+
+    return _session!.email;
   }
 }

@@ -9,11 +9,9 @@ class MarketNewsCard extends StatelessWidget {
   const MarketNewsCard({
     super.key,
     required this.news,
-    this.onNewsTap,
   });
 
   final List<MarketNews> news;
-  final ValueChanged<MarketNews>? onNewsTap;
 
   @override
   Widget build(BuildContext context) {
@@ -28,41 +26,30 @@ class MarketNewsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Market News",
-            style: AppTextStyles.titleLarge,
-          ),
-
-          const SizedBox(height: 20),
-
-          if (news.isEmpty)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 24),
+          Row(
+            children: [
+              const Expanded(
                 child: Text(
-                  "No market news available",
-                  style: AppTextStyles.bodyMedium,
+                  "Market News",
+                  style: AppTextStyles.titleLarge,
                 ),
               ),
-            )
-          else
-            ...List.generate(
-              news.length,
-              (index) {
-                final item = news[index];
 
-                return Column(
-                  children: [
-                    _NewsTile(
-                      news: item,
-                      onTap: () => onNewsTap?.call(item),
-                    ),
-                    if (index != news.length - 1)
-                      const Divider(height: 24),
-                  ],
-                );
-              },
+              TextButton(
+                onPressed: () {},
+                child: const Text("View All"),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          ...List.generate(
+            news.length,
+            (index) => _NewsTile(
+              news: news[index],
             ),
+          ),
         ],
       ),
     );
@@ -72,102 +59,114 @@ class MarketNewsCard extends StatelessWidget {
 class _NewsTile extends StatelessWidget {
   const _NewsTile({
     required this.news,
-    required this.onTap,
   });
 
   final MarketNews news;
-  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final badgeColor = news.isHighImpact
+    final Color color = news.isHighImpact
         ? AppColors.danger
         : AppColors.primary;
 
-    return InkWell(
-      borderRadius: BorderRadius.circular(16),
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: .05),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: .12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
               news.isHighImpact
                   ? Icons.campaign_rounded
                   : Icons.article_rounded,
-              color: badgeColor,
+              color: color,
             ),
+          ),
 
-            const SizedBox(width: 14),
+          const SizedBox(width: 14),
 
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    news.title,
-                    style: AppTextStyles.titleMedium,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  news.title,
+                  style: AppTextStyles.titleMedium,
+                ),
 
-                  const SizedBox(height: 6),
+                const SizedBox(height: 8),
+                                Row(
+                  children: [
+                    Text(
+                      news.source,
+                      style: AppTextStyles.bodySmall,
+                    ),
 
-                  Text(
-                    news.source,
-                    style: AppTextStyles.bodySmall,
-                  ),
+                    const SizedBox(width: 10),
 
-                  const SizedBox(height: 8),
+                    Text(
+                      "•",
+                      style: AppTextStyles.bodySmall,
+                    ),
 
-                  Row(
-                    children: [
-                      Text(
-                        news.time,
-                        style: AppTextStyles.bodySmall,
-                      ),
+                    const SizedBox(width: 10),
 
-                      if (news.isHighImpact) ...[
-                        const SizedBox(width: 10),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.danger.withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                          child: const Text(
-                            "HIGH IMPACT",
-                            style: TextStyle(
-                              color: AppColors.danger,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
+                    Text(
+                      news.time,
+                      style: AppTextStyles.bodySmall,
+                    ),
+
+                    if (news.isHighImpact) ...[
+                      const SizedBox(width: 12),
+
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.danger.withValues(alpha: .12),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Text(
+                          "HIGH IMPACT",
+                          style: TextStyle(
+                            color: AppColors.danger,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                      ],
+                      ),
                     ],
-                  ),
-                ],
-              ),
+                  ],
+                ),
+              ],
             ),
+          ),
 
-            const SizedBox(width: 8),
+          const SizedBox(width: 12),
 
-            const Icon(
-              Icons.chevron_right_rounded,
-              color: AppColors.textSecondary,
-            ),
-          ],
-        ),
+          Icon(
+            Icons.arrow_forward_ios_rounded,
+            size: 16,
+            color: Colors.grey.shade500,
+          ),
+        ],
       ),
     );
   }
 }
-
 class MarketNews {
   const MarketNews({
     required this.title,
