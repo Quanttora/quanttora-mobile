@@ -8,83 +8,135 @@ class ApiClient {
 
   static final ApiClient instance = ApiClient._();
 
-  final String _baseUrl =
-      dotenv.env['API_BASE_URL']!;
+  static const Duration _timeout = Duration(seconds: 15);
 
-  Future<Map<String, dynamic>> get(
-    String path,
-  ) async {
-    final response = await http.get(
-      Uri.parse("$_baseUrl$path"),
-      headers: const {
-        "Content-Type": "application/json",
-      },
-    );
+  String get _baseUrl {
+    final value = dotenv.env['API_BASE_URL']?.trim();
 
-    if (response.statusCode != 200) {
-      throw Exception(
-        "API Error ${response.statusCode}",
-      );
+    if (value == null || value.isEmpty) {
+      throw StateError('API_BASE_URL is not configured in .env');
     }
 
-    return jsonDecode(response.body)
-        as Map<String, dynamic>;
+    if (value.endsWith('/')) {
+      return value.substring(0, value.length - 1);
+    }
+
+    return value;
   }
-}
-  Future<List<dynamic>> getList(
-    String path,
-  ) async {
-    final response = await http.get(
-      Uri.parse("$_baseUrl$path"),
-      headers: const {
-        "Content-Type": "application/json",
-      },
-    );
 
-    if (response.statusCode != 200) {
-      throw Exception(
-        "API Error ${response.statusCode}",
-      );
+  Uri _buildUri(String path) {
+    final normalizedPath = path.startsWith('/') ? path : '/$path';
+
+    return Uri.parse('$_baseUrl$normalizedPath');
+  }
+
+  Map<String, String> get _headers => const {
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+  };
+
+  Future<Map<String, dynamic>> get(String path) async {
+    final response = await http
+        .get(_buildUri(path), headers: _headers)
+        .timeout(_timeout);
+
+    return _decodeMapResponse(response);
+  }
+
+  Future<List<dynamic>> getList(String path) async {
+    final response = await http
+        .get(_buildUri(path), headers: _headers)
+        .timeout(_timeout);
+
+    _validateResponse(response);
+
+    if (response.body.trim().isEmpty) {
+      return <dynamic>[];
     }
 
-    return jsonDecode(response.body)
-        as List<dynamic>;
+    final decoded = jsonDecode(response.body);
+
+    if (decoded is! List) {
+      throw const FormatException('Expected API response to be a JSON list.');
+    }
+
+    return decoded;
   }
 
   Future<Map<String, dynamic>> post(
     String path,
     Map<String, dynamic> body,
   ) async {
-    final response = await http.post(
-      Uri.parse("$_baseUrl$path"),
-      headers: const {
-        "Content-Type": "application/json",
-      },
-      body: jsonEncode(body),
-    );
+    final response = await http
+        .post(_buildUri(path), headers: _headers, body: jsonEncode(body))
+        .timeout(_timeout);
 
-    if (response.statusCode != 200 &&
-        response.statusCode != 201) {
-      throw Exception(
-        "API Error ${response.statusCode}",
-      );
-    }
-
-    return jsonDecode(response.body)
-        as Map<String, dynamic>;
+    return _decodeMapResponse(response);
   }
-    Future<bool> isServerAlive() async {
-    try {
-      final response = await http.get(
-        Uri.parse("$_baseUrl/market/status"),
-        headers: const {
-          "Content-Type": "application/json",
-        },
-      );
 
-      return response.statusCode == 200;
+  Future<bool> isServerAlive() async {
+    try {
+      final response = await http
+          .get(_buildUri('/market/status'), headers: _headers)
+          .timeout(_timeout);
+
+      return response.statusCode >= 200 && response.statusCode < 300;
     } catch (_) {
       return false;
     }
+  }
+
+  Map<String, dynamic> _decodeMapResponse(http.Response response) {
+    _validateResponse(response);
+
+    if (response.body.trim().isEmpty) {
+      return <String, dynamic>{};
+    }
+
+    final decoded = jsonDecode(response.body);
+
+    if (decoded is! Map) {
+      throw const FormatException('Expected API response to be a JSON object.');
+    }
+
+    return Map<String, dynamic>.from(decoded);
+  }
+
+  void _validateResponse(http.Response response) {
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return;
+    }
+
+    String message = 'API request failed (${response.statusCode}).';
+
+    if (response.body.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(response.body);
+
+        if (decoded is Map) {
+          final apiMessage = decoded['message'] ?? decoded['error'];
+
+          if (apiMessage != null && apiMessage.toString().trim().isNotEmpty) {
+            message = apiMessage.toString();
+          }
+        }
+      } catch (_) {
+        // Keep the safe HTTP status message.
+      }
+    }
+
+    throw ApiException(statusCode: response.statusCode, message: message);
+  }
+}
+
+class ApiException implements Exception {
+  final int statusCode;
+  final String message;
+
+  const ApiException({required this.statusCode, required this.message});
+
+  @override
+  String toString() {
+    return 'ApiException($statusCode): $message';
   }
 }
