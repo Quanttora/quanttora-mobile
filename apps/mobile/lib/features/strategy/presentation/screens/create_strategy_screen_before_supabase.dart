@@ -1,8 +1,4 @@
-﻿import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-
-import '../../data/supabase_strategy_repository.dart';
-import '../../models/strategy_model.dart';
+import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_colors.dart';
 import '../../../../core/theme/app_radius.dart';
@@ -20,11 +16,6 @@ class CreateStrategyScreen extends StatefulWidget {
 class _CreateStrategyScreenState
     extends State<CreateStrategyScreen> {
   final _formKey = GlobalKey<FormState>();
-
-  final SupabaseStrategyRepository _strategyRepository =
-      SupabaseStrategyRepository();
-
-  bool _isSaving = false;
 
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
@@ -123,76 +114,22 @@ class _CreateStrategyScreenState
       );
   }
 
-  Future<void> _save() async {
-    if (_isSaving) {
-      return;
-    }
+  void _save() {
+    /*
+      Persistence is intentionally not called here yet.
 
-    if (!_validateCurrentStep()) {
-      return;
-    }
+      The current StrategyRepository uses Supabase.instance.client,
+      but Supabase is not initialized in the Flutter application.
 
-    final user = Supabase.instance.client.auth.currentUser;
+      This screen will be connected to the Quanttora backend strategy
+      API once that production endpoint is implemented.
+    */
 
-    if (user == null) {
-      _showMessage(
-        'Please sign in before saving a strategy.',
-      );
-      return;
-    }
-
-    setState(() {
-      _isSaving = true;
-    });
-
-    try {
-      final now = DateTime.now();
-
-      final strategy = StrategyModel(
-        id: '',
-        userId: user.id,
-        name: _nameController.text.trim(),
-        description: _descriptionController.text.trim(),
-        timeframe: _timeframe,
-        instruments: _selectedInstruments.toList(),
-        minimumAiScore: _minimumAiScore.round(),
-        riskRewardRatio: _riskRewardRatio,
-        maxTradesPerDay: _maxTradesPerDay,
-        avoidNews: _avoidNews,
-        avoidSideways: _avoidSideways,
-        avoidLowVolume: _avoidLowVolume,
-        isActive: true,
-        createdAt: now,
-        updatedAt: now,
-      );
-
-      await _strategyRepository.createStrategy(strategy);
-
-      if (!mounted) {
-        return;
-      }
-
-      _showMessage(
-        'Strategy saved successfully.',
-      );
-
-      Navigator.of(context).pop(true);
-    } catch (error) {
-      if (!mounted) {
-        return;
-      }
-
-      _showMessage(
-        'Unable to save strategy: $error',
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSaving = false;
-        });
-      }
-    }
+    _showMessage(
+      'Strategy API connection is required before this strategy can be saved.',
+    );
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1015,4 +952,3 @@ class _BottomActions extends StatelessWidget {
     );
   }
 }
-

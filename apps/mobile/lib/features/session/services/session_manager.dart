@@ -1,3 +1,4 @@
+import '../../strategy/models/strategy_model.dart';
 import '../models/trade_session.dart';
 
 class SessionManager {
@@ -27,9 +28,33 @@ class SessionManager {
     );
   }
 
+  /// Legacy strategy-name update.
+  ///
+  /// Kept temporarily so existing screens continue to compile while
+  /// Quanttora is migrated to StrategyModel-based selection.
   void updateStrategy(String strategy) {
     _session = _session.copyWith(
       strategy: strategy,
+    );
+  }
+
+  /// Select a complete Quanttora strategy for the current trading session.
+  void selectStrategy(StrategyModel strategy) {
+    _session = _session.copyWith(
+      strategyId: strategy.id,
+      strategy: strategy.name,
+      strategyTimeframe: strategy.timeframe,
+      strategyInstruments: List<String>.from(
+        strategy.instruments,
+      ),
+      strategyMinimumAiScore: strategy.minimumAiScore,
+      strategyRiskRewardRatio: strategy.riskRewardRatio,
+      strategyMaxTradesPerDay: strategy.maxTradesPerDay,
+      strategyAvoidNews: strategy.avoidNews,
+      strategyAvoidSideways: strategy.avoidSideways,
+      strategyAvoidLowVolume: strategy.avoidLowVolume,
+      riskReward:
+          '1:${_formatRatio(strategy.riskRewardRatio)}',
     );
   }
 
@@ -51,5 +76,13 @@ class SessionManager {
 
   void clear() {
     _session = TradeSession();
+  }
+
+  static String _formatRatio(double value) {
+    if (value == value.roundToDouble()) {
+      return value.toInt().toString();
+    }
+
+    return value.toStringAsFixed(1);
   }
 }
