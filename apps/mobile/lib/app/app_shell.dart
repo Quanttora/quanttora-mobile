@@ -49,59 +49,56 @@ class _AppShellState extends State<AppShell> {
       floatingActionButtonLocation:
           FloatingActionButtonLocation.centerFloat,
 
-      floatingActionButton: Container(
-        height: 62,
-        constraints: const BoxConstraints(
-          maxWidth: 280,
-        ),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF155EEF)
-                  .withValues(alpha: .35),
-              blurRadius: 24,
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-
-        child: FloatingActionButton.extended(
-          heroTag: "analyze",
-
-          elevation: 0,
-
-          backgroundColor: const Color(0xFF155EEF),
-
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) =>
-                    const TradeAnalysisScreen(),
+      // Analyze Trade button appears ONLY on Home.
+      floatingActionButton: _selectedIndex == 0
+          ? Container(
+              height: 62,
+              constraints: const BoxConstraints(
+                maxWidth: 280,
               ),
-            );
-          },
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF155EEF)
+                        .withValues(alpha: .35),
+                    blurRadius: 24,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: FloatingActionButton.extended(
+                heroTag: "analyze",
+                elevation: 0,
+                backgroundColor: const Color(0xFF155EEF),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                          const TradeAnalysisScreen(),
+                    ),
+                  );
+                },
+                icon: const Icon(
+                  Icons.auto_awesome_rounded,
+                  size: 24,
+                ),
+                label: const Text(
+                  "Analyze Trade",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            )
+          : null,
 
-          icon: const Icon(
-            Icons.auto_awesome_rounded,
-            size: 24,
-          ),
-
-          label: const Text(
-            "Analyze Trade",
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ),
-      ),
-            bottomNavigationBar: SafeArea(
+      bottomNavigationBar: SafeArea(
         child: Container(
           margin: const EdgeInsets.fromLTRB(
             16,
@@ -227,6 +224,7 @@ class _NavItem extends StatelessWidget {
     );
   }
 }
+
 class AIScreen extends StatelessWidget {
   const AIScreen({super.key});
 
@@ -256,9 +254,9 @@ class AIScreen extends StatelessWidget {
               ),
             ],
           ),
-          child: Column(
+          child: const Column(
             mainAxisSize: MainAxisSize.min,
-            children: const [
+            children: [
               CircleAvatar(
                 radius: 38,
                 backgroundColor: Color(0xFFEAF2FF),
@@ -282,7 +280,9 @@ class AIScreen extends StatelessWidget {
               SizedBox(height: 10),
 
               Text(
-                "AI Scanner, Trade Assistant,\nMarket Insights and Decision Engine\nwill appear here.",
+                "AI Scanner, Trade Assistant,\n"
+                "Market Insights and Decision Engine\n"
+                "will appear here.",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 15,
@@ -326,9 +326,9 @@ class ProfileScreen extends StatelessWidget {
               ),
             ],
           ),
-                    child: Column(
+          child: const Column(
             mainAxisSize: MainAxisSize.min,
-            children: const [
+            children: [
               CircleAvatar(
                 radius: 38,
                 backgroundColor: Color(0xFFEAF2FF),
@@ -352,7 +352,9 @@ class ProfileScreen extends StatelessWidget {
               SizedBox(height: 10),
 
               Text(
-                "Account, Broker Connections,\nSubscription and Settings\nwill appear here.",
+                "Account, Broker Connections,\n"
+                "Subscription and Settings\n"
+                "will appear here.",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 15,

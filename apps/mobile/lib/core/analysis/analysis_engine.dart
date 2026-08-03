@@ -17,52 +17,90 @@ class AnalysisEngine {
     required String direction,
     required List<Candle> candles,
   }) {
+    // REAL TREND
     final trend = TrendEngine.analyze(
-      market: market,
+      candles: candles,
       direction: direction,
     );
 
+    // REAL VOLUME
     final volume = VolumeEngine.analyze(
-      market: market,
+      candles: candles,
     );
 
+    // REAL VWAP
     final vwap = VWAPEngine.analyze(
-      market: market,
+      candles: candles,
       direction: direction,
     );
 
-    final adx = ADXEngine.analyze();
+    // REAL ADX
+    final adx = ADXEngine.analyze(
+      candles: candles,
+    );
 
+    // REAL RSI
     final rsi = RSIEngine.analyze(
-  candles: candles,
-  direction: direction,
-);
+      candles: candles,
+      direction: direction,
+    );
 
+    // LIQUIDITY
+    // Real bid/ask depth will be supplied when
+    // tradable option/futures instruments are connected.
     final liquidity = LiquidityEngine.analyze();
 
-    final risk = RiskEngine.analyze();
+    // REAL MARKET-CONDITION RISK
+    final risk = RiskEngine.analyze(
+      candles: candles,
+    );
 
-    final marketHealth =
-        MarketHealthEngine.analyze();
-
-    // REAL EMA ANALYSIS
+    // REAL EMA
     final ema = EMAEngine.analyze(
       candles: candles,
       direction: direction,
     );
 
-    final confidence = (
-          trend.score +
-          volume.score +
-          vwap.score +
-          adx.score +
-          rsi.score +
-          liquidity.score +
-          risk.score +
-          marketHealth.score +
-          ema.score
-        ) ~/
-        9;
+    // REAL COMPOSITE MARKET HEALTH
+    final marketHealth = MarketHealthEngine.analyze(
+      trendScore: trend.score,
+      emaScore: ema.score,
+      adxScore: adx.score,
+      rsiScore: rsi.score,
+      riskScore: risk.score,
+    );
+
+    // Only reliable/available inputs participate
+    // in final confidence.
+    final scores = <int>[
+      trend.score,
+      adx.score,
+      rsi.score,
+      risk.score,
+      ema.score,
+    ];
+
+    // Index candles can have zero volume.
+    if (volume.status != 'Volume Unavailable' &&
+        volume.status != 'Insufficient Data') {
+      scores.add(volume.score);
+    }
+
+    // VWAP requires genuine volume.
+    if (vwap.status != 'Unavailable' &&
+        vwap.status != 'Insufficient Data') {
+      scores.add(vwap.score);
+    }
+
+    // Liquidity requires genuine bid/ask depth.
+    if (liquidity.available) {
+      scores.add(liquidity.score);
+    }
+
+    final confidence = scores.isEmpty
+        ? 0
+        : scores.reduce((a, b) => a + b) ~/
+            scores.length;
 
     return AnalysisResult(
       market: market,
@@ -80,20 +118,17 @@ class AnalysisEngine {
 
       liquidity: liquidity.status,
 
-      volatility: "Healthy",
+      volatility: risk.level,
 
-      sectorStrength: "Positive",
+      sectorStrength: "Unavailable",
 
-      heatMap: "Positive",
+      heatMap: "Unavailable",
 
       risk: risk.level,
 
       reasons: [
         trend.reason,
-
-        // REAL EMA REASON
         ema.reason,
-
         volume.reason,
         vwap.reason,
         adx.reason,
