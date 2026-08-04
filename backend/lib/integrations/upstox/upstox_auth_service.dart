@@ -26,7 +26,6 @@ class UpstoxAuthService {
     print('Code            : $code');
     print('Client ID       : ${AppConfig.upstoxClientId}');
     print('Client ID Length: ${AppConfig.upstoxClientId.length}');
-    print('Secret Length   : ${AppConfig.upstoxClientSecret.length}');
     print('Redirect URI    : ${AppConfig.upstoxRedirectUri}');
         print('========================================');
     print('');

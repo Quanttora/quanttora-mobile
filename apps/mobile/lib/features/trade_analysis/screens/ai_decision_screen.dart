@@ -4,7 +4,8 @@ import '../../../core/analysis/analysis_engine.dart';
 import '../../../core/services/market_data_service.dart';
 import '../models/analysis_result.dart';
 
-class AIDecisionScreen extends StatefulWidget {
+class AIDecisionScreen
+    extends StatefulWidget {
   final String market;
   final String direction;
 
@@ -21,7 +22,8 @@ class AIDecisionScreen extends StatefulWidget {
 
 class _AIDecisionScreenState
     extends State<AIDecisionScreen> {
-  final MarketDataService _marketDataService =
+  final MarketDataService
+      _marketDataService =
       MarketDataService();
 
   AnalysisResult? _result;
@@ -40,16 +42,21 @@ class _AIDecisionScreenState
   Future<void> _runAnalysis() async {
     try {
       final snapshot =
-          await _marketDataService.fetchSnapshot(
+          await _marketDataService
+              .fetchSnapshot(
         market: widget.market,
         timeframe: '3 min',
       );
 
       final result = AnalysisEngine.analyze(
-        market: widget.market,
-        direction: widget.direction,
-        candles: snapshot.candles,
-      );
+  market: widget.market,
+  direction: widget.direction,
+  candles: snapshot.candles,
+  optionChain: snapshot.optionChain,
+  oiData: snapshot.oiData,
+  heatMap: snapshot.heatMap,
+  sectorStrength: snapshot.sectorStrength,
+);
 
       if (!mounted) {
         return;
@@ -73,9 +80,12 @@ class _AIDecisionScreenState
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(
+    BuildContext context,
+  ) {
     return Scaffold(
-      backgroundColor: const Color(0xffF5F7FB),
+      backgroundColor:
+          const Color(0xffF5F7FB),
       appBar: AppBar(
         title: const Text(
           'AI Decision Report',
@@ -89,14 +99,16 @@ class _AIDecisionScreenState
     if (_loading) {
       return const Center(
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize:
+              MainAxisSize.min,
           children: [
             CircularProgressIndicator(),
             SizedBox(height: 16),
             Text(
               'Analyzing real market data...',
               style: TextStyle(
-                fontWeight: FontWeight.bold,
+                fontWeight:
+                    FontWeight.bold,
               ),
             ),
           ],
@@ -107,29 +119,39 @@ class _AIDecisionScreenState
     if (_error != null) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding:
+              const EdgeInsets.all(24),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
+            mainAxisSize:
+                MainAxisSize.min,
             children: [
               const Icon(
                 Icons.error_outline,
                 size: 50,
                 color: Colors.red,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(
+                height: 16,
+              ),
               const Text(
                 'Unable to complete analysis.',
                 style: TextStyle(
                   fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                  fontWeight:
+                      FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(
+                height: 12,
+              ),
               Text(
                 _error!,
-                textAlign: TextAlign.center,
+                textAlign:
+                    TextAlign.center,
               ),
-              const SizedBox(height: 20),
+              const SizedBox(
+                height: 20,
+              ),
               ElevatedButton(
                 onPressed: () {
                   setState(() {
@@ -152,7 +174,8 @@ class _AIDecisionScreenState
     final result = _result!;
 
     return ListView(
-      padding: const EdgeInsets.all(20),
+      padding:
+          const EdgeInsets.all(20),
       children: [
         Center(
           child: Column(
@@ -161,15 +184,19 @@ class _AIDecisionScreenState
                 'AI CONFIDENCE',
                 style: TextStyle(
                   color: Colors.grey,
-                  fontWeight: FontWeight.bold,
+                  fontWeight:
+                      FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(
+                height: 10,
+              ),
               Text(
                 '${result.confidence}%',
                 style: const TextStyle(
                   fontSize: 52,
-                  fontWeight: FontWeight.bold,
+                  fontWeight:
+                      FontWeight.bold,
                   color: Colors.green,
                 ),
               ),
@@ -240,7 +267,8 @@ class _AIDecisionScreenState
           'AI Reasons',
           style: TextStyle(
             fontSize: 20,
-            fontWeight: FontWeight.bold,
+            fontWeight:
+                FontWeight.bold,
           ),
         ),
 
@@ -268,7 +296,8 @@ class _AIDecisionScreenState
               'PROCEED TO BROKER',
               style: TextStyle(
                 fontSize: 18,
-                fontWeight: FontWeight.bold,
+                fontWeight:
+                    FontWeight.bold,
               ),
             ),
           ),
@@ -287,7 +316,8 @@ class _AIDecisionScreenState
         trailing: Text(
           value,
           style: const TextStyle(
-            fontWeight: FontWeight.bold,
+            fontWeight:
+                FontWeight.bold,
           ),
         ),
       ),

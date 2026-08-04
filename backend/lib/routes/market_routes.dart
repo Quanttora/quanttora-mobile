@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:backend/models/market_tick.dart';
 import 'package:backend/services/market_store.dart';
 import 'package:backend/services/upstox_market_feed.dart';
 import 'package:shelf/shelf.dart';
@@ -20,38 +19,138 @@ class MarketRoutes {
     'indiaVix': 'NSE_INDEX|India VIX',
   };
 
+  static const Map<String, String> _sectorSymbols = {
+    'AUTO': 'NSE_INDEX|Nifty Auto',
+    'FMCG': 'NSE_INDEX|Nifty FMCG',
+    'IT': 'NSE_INDEX|Nifty IT',
+    'METAL': 'NSE_INDEX|Nifty Metal',
+    'PHARMA': 'NSE_INDEX|Nifty Pharma',
+    'PSU BANK': 'NSE_INDEX|Nifty PSU Bank',
+    'REALTY': 'NSE_INDEX|Nifty Realty',
+  };
+
   static Response _status(Request request) {
     return _json({
-      'connected': UpstoxMarketFeed.instance.isConnected,
-      'totalQuotes': MarketStore.instance.getAll().length,
+      'connected':
+          UpstoxMarketFeed.instance.isConnected,
+      'totalQuotes':
+          MarketStore.instance.getAll().length,
     });
   }
 
   static Response _dashboard(Request request) {
     final Map<String, dynamic> indices = {};
 
-    _dashboardSymbols.forEach((key, instrumentKey) {
-      final tick = MarketStore.instance.get(instrumentKey);
-      indices[key] = tick?.toJson();
-    });
+    _dashboardSymbols.forEach(
+      (key, instrumentKey) {
+        final tick =
+            MarketStore.instance.get(
+          instrumentKey,
+        );
+
+        indices[key] = tick?.toJson();
+      },
+    );
+
+    final sectors = <Map<String, dynamic>>[];
+
+    _sectorSymbols.forEach(
+      (name, instrumentKey) {
+        final tick =
+            MarketStore.instance.get(
+          instrumentKey,
+        );
+
+        if (tick == null) {
+          return;
+        }
+
+        final previousClose = tick.change;
+
+        double percentageChange = 0;
+
+        if (previousClose > 0) {
+          percentageChange =
+              ((tick.ltp - previousClose) /
+                      previousClose) *
+                  100;
+        }
+
+        sectors.add({
+          'name': name,
+          'instrumentKey': instrumentKey,
+          'ltp': tick.ltp,
+          'previousClose': previousClose,
+          'percentageChange':
+              percentageChange,
+          'timestamp':
+              tick.timestamp.toIso8601String(),
+        });
+      },
+    );
+
+    sectors.sort(
+      (a, b) {
+        final aChange =
+            a['percentageChange'] as double;
+
+        final bChange =
+            b['percentageChange'] as double;
+
+        return bChange.compareTo(aChange);
+      },
+    );
+
+    Map<String, dynamic>? strongestSector;
+    Map<String, dynamic>? weakestSector;
+
+    if (sectors.isNotEmpty) {
+      strongestSector = sectors.first;
+      weakestSector = sectors.last;
+    }
 
     return _json({
-      'connected': UpstoxMarketFeed.instance.isConnected,
-      'marketOpen': MarketStore.instance.getAll().isNotEmpty,
+      'connected':
+          UpstoxMarketFeed.instance.isConnected,
+
+      'marketOpen':
+          MarketStore.instance
+              .getAll()
+              .isNotEmpty,
+
       'indices': indices,
-      'lastUpdated': DateTime.now().toIso8601String(),
+
+      // REAL SECTOR DATA
+      'sectors': sectors,
+
+      'sectorStrength': {
+        'available': sectors.isNotEmpty,
+        'strongest': strongestSector,
+        'weakest': weakestSector,
+        'totalSectors': sectors.length,
+      },
+
+      'lastUpdated':
+          DateTime.now().toIso8601String(),
     });
   }
 
-  static Response _quotes(Request request) {
-    return _json(MarketStore.instance.toJson());
+  static Response _quotes(
+    Request request,
+  ) {
+    return _json(
+      MarketStore.instance.toJson(),
+    );
   }
 
   static Response _quote(
     Request request,
     String instrumentKey,
   ) {
-    final tick = MarketStore.instance.get(instrumentKey);
+    final tick =
+        MarketStore.instance.get(
+      instrumentKey,
+    );
 
     if (tick == null) {
       return Response.notFound(
@@ -59,19 +158,25 @@ class MarketRoutes {
           'message': 'Quote not found',
         }),
         headers: const {
-          'Content-Type': 'application/json',
+          'Content-Type':
+              'application/json',
         },
       );
     }
 
-    return _json(tick.toJson());
+    return _json(
+      tick.toJson(),
+    );
   }
 
-  static Response _json(dynamic body) {
+  static Response _json(
+    dynamic body,
+  ) {
     return Response.ok(
       jsonEncode(body),
       headers: const {
-        'Content-Type': 'application/json',
+        'Content-Type':
+            'application/json',
       },
     );
   }

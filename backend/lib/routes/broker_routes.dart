@@ -4,6 +4,7 @@ import 'package:backend/integrations/upstox/upstox_broker_service.dart';
 import 'package:backend/services/broker_dashboard_service.dart';
 import 'package:backend/services/broker_service.dart';
 import 'package:backend/services/upstox_market_feed.dart';
+import 'package:backend/services/upstox_option_chain_service.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 
@@ -24,6 +25,12 @@ class BrokerRoutes {
     router.get('/funds', _funds);
     router.get('/quotes', _quotes);
     router.get('/history', _history);
+
+    // REAL OPTION CHAIN
+    router.get(
+      '/option-chain',
+      _optionChain,
+    );
 
     router.get('/holdings', _holdings);
     router.get('/positions', _positions);
@@ -108,10 +115,15 @@ class BrokerRoutes {
       );
     }
   }
-    Future<Response> _dashboard(Request request) async {
+
+  Future<Response> _dashboard(
+    Request request,
+  ) async {
     try {
       final result =
-          await BrokerDashboardService.instance.getDashboard();
+          await BrokerDashboardService
+              .instance
+              .getDashboard();
 
       return _json(result);
     } catch (e) {
@@ -121,28 +133,95 @@ class BrokerRoutes {
           'error': e.toString(),
         }),
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type':
+              'application/json',
         },
       );
     }
   }
 
-  Future<Response> _status(Request request) async {
+  Future<Response> _status(
+    Request request,
+  ) async {
     return _json({
-      'connected': _brokerService.isConnected,
-      'marketFeed': UpstoxMarketFeed.instance.isConnected,
-      'broker': _brokerService.session?.broker,
-      'user': _brokerService.session?.userName,
+      'connected':
+          _brokerService.isConnected,
+      'marketFeed':
+          UpstoxMarketFeed
+              .instance
+              .isConnected,
+      'broker':
+          _brokerService.session?.broker,
+      'user':
+          _brokerService.session?.userName,
     });
   }
 
-  Future<Response> _connectMarketFeed(Request request) async {
+  Future<Response> _optionChain(
+    Request request,
+  ) async {
     try {
-      await UpstoxMarketFeed.instance.connect();
+      final q =
+          request.url.queryParameters;
+
+      final instrumentKey =
+          q['instrumentKey'];
+
+      if (instrumentKey == null ||
+          instrumentKey.isEmpty) {
+        return Response.badRequest(
+          body: jsonEncode({
+            'success': false,
+            'error':
+                'instrumentKey is required',
+          }),
+          headers: {
+            'Content-Type':
+                'application/json',
+          },
+        );
+      }
+
+      final expiry =
+          q['expiry'] ?? 'current_week';
+
+      final result =
+          await UpstoxOptionChainService
+              .instance
+              .getOptionChain(
+        instrumentKey: instrumentKey,
+        expiryDate: expiry,
+      );
+
+      return _json(result);
+    } catch (e) {
+      return Response.internalServerError(
+        body: jsonEncode({
+          'success': false,
+          'error': e.toString(),
+        }),
+        headers: {
+          'Content-Type':
+              'application/json',
+        },
+      );
+    }
+  }
+
+  Future<Response> _connectMarketFeed(
+    Request request,
+  ) async {
+    try {
+      await UpstoxMarketFeed
+          .instance
+          .connect();
 
       return _json({
         'success': true,
-        'connected': UpstoxMarketFeed.instance.isConnected,
+        'connected':
+            UpstoxMarketFeed
+                .instance
+                .isConnected,
       });
     } catch (e) {
       return Response.internalServerError(
@@ -151,23 +230,31 @@ class BrokerRoutes {
           'error': e.toString(),
         }),
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type':
+              'application/json',
         },
       );
     }
   }
 
-  Future<Response> _subscribeMarketFeed(Request request) async {
+  Future<Response> _subscribeMarketFeed(
+    Request request,
+  ) async {
     final instrumentKey =
-        request.url.queryParameters['instrumentKey'];
+        request.url.queryParameters[
+            'instrumentKey'];
 
-    if (instrumentKey == null || instrumentKey.isEmpty) {
+    if (instrumentKey == null ||
+        instrumentKey.isEmpty) {
       return Response.badRequest(
-        body: 'instrumentKey is required',
+        body:
+            'instrumentKey is required',
       );
     }
 
-    await UpstoxMarketFeed.instance.subscribeFull(
+    await UpstoxMarketFeed
+        .instance
+        .subscribeFull(
       instrumentKey,
     );
 
@@ -175,52 +262,77 @@ class BrokerRoutes {
       'success': true,
       'instrument': instrumentKey,
       'subscriptions':
-          UpstoxMarketFeed.instance.subscriptions,
+          UpstoxMarketFeed
+              .instance
+              .subscriptions,
     });
   }
 
-  Future<Response> _unsubscribeMarketFeed(Request request) async {
+  Future<Response>
+      _unsubscribeMarketFeed(
+    Request request,
+  ) async {
     final instrumentKey =
-        request.url.queryParameters['instrumentKey'];
+        request.url.queryParameters[
+            'instrumentKey'];
 
-    if (instrumentKey == null || instrumentKey.isEmpty) {
+    if (instrumentKey == null ||
+        instrumentKey.isEmpty) {
       return Response.badRequest(
-        body: 'instrumentKey is required',
+        body:
+            'instrumentKey is required',
       );
     }
 
-    await UpstoxMarketFeed.instance.unsubscribeFull(
+    await UpstoxMarketFeed
+        .instance
+        .unsubscribeFull(
       instrumentKey,
     );
 
     return _json({
       'success': true,
       'subscriptions':
-          UpstoxMarketFeed.instance.subscriptions,
+          UpstoxMarketFeed
+              .instance
+              .subscriptions,
     });
   }
 
-  Future<Response> _subscriptions(Request request) async {
+  Future<Response> _subscriptions(
+    Request request,
+  ) async {
     return _json({
       'connected':
-          UpstoxMarketFeed.instance.isConnected,
+          UpstoxMarketFeed
+              .instance
+              .isConnected,
       'subscriptions':
-          UpstoxMarketFeed.instance.subscriptions,
+          UpstoxMarketFeed
+              .instance
+              .subscriptions,
     });
   }
 
-  Future<Response> _disconnect(Request request) async {
-    await UpstoxMarketFeed.instance.disconnect();
+  Future<Response> _disconnect(
+    Request request,
+  ) async {
+    await UpstoxMarketFeed
+        .instance
+        .disconnect();
 
     _brokerService.disconnect();
 
     return _json({
       'success': true,
-      'message': 'Broker disconnected',
+      'message':
+          'Broker disconnected',
     });
   }
 
-  Future<Response> _marketIndices(Request request) async {
+  Future<Response> _marketIndices(
+    Request request,
+  ) async {
     const instruments =
         'NSE_INDEX|Nifty 50,'
         'NSE_INDEX|Nifty Bank,'
@@ -233,44 +345,64 @@ class BrokerRoutes {
       ),
     );
   }
-    Future<Response> _funds(Request request) async {
+
+  Future<Response> _funds(
+    Request request,
+  ) async {
     return _execute(
-      (token) => _broker.getFunds(token),
+      (token) =>
+          _broker.getFunds(token),
     );
   }
 
-  Future<Response> _holdings(Request request) async {
+  Future<Response> _holdings(
+    Request request,
+  ) async {
     return _execute(
-      (token) => _broker.getHoldings(token),
+      (token) =>
+          _broker.getHoldings(token),
     );
   }
 
-  Future<Response> _positions(Request request) async {
+  Future<Response> _positions(
+    Request request,
+  ) async {
     return _execute(
-      (token) => _broker.getPositions(token),
+      (token) =>
+          _broker.getPositions(token),
     );
   }
 
-  Future<Response> _orders(Request request) async {
+  Future<Response> _orders(
+    Request request,
+  ) async {
     return _execute(
-      (token) => _broker.getOrderBook(token),
+      (token) =>
+          _broker.getOrderBook(token),
     );
   }
 
-  Future<Response> _trades(Request request) async {
+  Future<Response> _trades(
+    Request request,
+  ) async {
     return _execute(
-      (token) => _broker.getTradeBook(token),
+      (token) =>
+          _broker.getTradeBook(token),
     );
   }
 
-  Future<Response> _quotes(Request request) async {
+  Future<Response> _quotes(
+    Request request,
+  ) async {
     final instrumentKey =
-        request.url.queryParameters['instrumentKey'];
+        request.url.queryParameters[
+            'instrumentKey'];
 
     if (instrumentKey == null ||
         instrumentKey.isEmpty) {
       return Response.badRequest(
-        body: 'instrumentKey is required',
+        body:
+            'instrumentKey is required',
       );
     }
 
@@ -282,13 +414,20 @@ class BrokerRoutes {
     );
   }
 
-  Future<Response> _history(Request request) async {
-    final q = request.url.queryParameters;
+  Future<Response> _history(
+    Request request,
+  ) async {
+    final q =
+        request.url.queryParameters;
 
     final instrumentKey =
         q['instrumentKey'];
-    final fromDate = q['fromDate'];
-    final toDate = q['toDate'];
+
+    final fromDate =
+        q['fromDate'];
+
+    final toDate =
+        q['toDate'];
 
     if (instrumentKey == null ||
         fromDate == null ||

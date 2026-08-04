@@ -9,10 +9,20 @@ class MarketFeedProcessor {
       MarketFeedProcessor._();
 
   static const Map<String, String> _symbols = {
+    // MAIN INDICES
     'NSE_INDEX|Nifty 50': 'NIFTY 50',
     'NSE_INDEX|Nifty Bank': 'BANK NIFTY',
     'BSE_INDEX|SENSEX': 'SENSEX',
     'NSE_INDEX|India VIX': 'INDIA VIX',
+
+    // VERIFIED REAL NSE SECTOR INDICES
+    'NSE_INDEX|Nifty Auto': 'NIFTY AUTO',
+    'NSE_INDEX|Nifty FMCG': 'NIFTY FMCG',
+    'NSE_INDEX|Nifty IT': 'NIFTY IT',
+    'NSE_INDEX|Nifty Metal': 'NIFTY METAL',
+    'NSE_INDEX|Nifty Pharma': 'NIFTY PHARMA',
+    'NSE_INDEX|Nifty PSU Bank': 'NIFTY PSU BANK',
+    'NSE_INDEX|Nifty Realty': 'NIFTY REALTY',
   };
 
   void process(FeedResponse response) {
@@ -67,9 +77,9 @@ class MarketFeedProcessor {
         MarketStore.instance.update(tick);
 
         print(
-          '${tick.symbol.padRight(12)} '
+          '${tick.symbol.padRight(16)} '
           'LTP: ${tick.ltp.toStringAsFixed(2)} '
-          'Change: ${tick.change.toStringAsFixed(2)}',
+          'Close: ${tick.change.toStringAsFixed(2)}',
         );
       },
     );

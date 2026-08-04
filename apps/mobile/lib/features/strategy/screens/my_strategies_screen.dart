@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../decision_engine/screens/ai_decision_screen.dart';
 import '../../session/services/session_manager.dart';
+import '../../trade_analysis/screens/trade_analysis_screen.dart';
 import '../data/supabase_strategy_repository.dart';
 import '../models/strategy_model.dart';
 
@@ -39,16 +39,16 @@ class _MyStrategiesScreenState
   }
 
   void _selectStrategy(StrategyModel strategy) {
-    SessionManager.instance.selectStrategy(strategy);
+  SessionManager.instance.selectStrategy(strategy);
 
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const AIDecisionScreen(),
-      ),
-    );
-  }
-
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (_) => const TradeAnalysisScreen(),
+    ),
+  );
+}
+        
   String _formatRatio(double value) {
     if (value == value.roundToDouble()) {
       return value.toInt().toString();

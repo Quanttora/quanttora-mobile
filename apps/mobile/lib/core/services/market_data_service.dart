@@ -20,6 +20,10 @@ class MarketDataService {
     'INDIA VIX': 'NSE_INDEX|India VIX',
   };
 
+  Future<Map<String, dynamic>> fetchMarketDashboard() async {
+    return _api.get('/market/dashboard');
+  }
+
   Future<MarketSnapshot> fetchSnapshot({
     required String market,
     String timeframe = '3 min',
@@ -31,6 +35,10 @@ class MarketDataService {
     final candles = await _fetchHistoricalCandles(
       market: market,
       timeframe: timeframe,
+    );
+
+    final optionData = await _fetchOptionChain(
+      market: market,
     );
 
     final indices =
@@ -66,45 +74,439 @@ class MarketDataService {
       candles: finalCandles.isNotEmpty
           ? finalCandles
           : emptySnapshot().candles,
-      optionChain: const OptionChain(
-        pcr: 1.08,
-        maxCallOI: 25200,
-        maxPutOI: 25000,
-        callVolume: 215000,
-        putVolume: 198000,
+
+      // REAL UPSTOX OPTION CHAIN
+      optionChain: optionData.optionChain,
+
+      // REAL UPSTOX OI DATA
+      oiData: optionData.oiData,
+
+      // REAL SECTOR BREADTH
+      heatMap: _buildRealHeatMap(
+        dashboard,
       ),
-      oiData: const OIData(
-        callOIChange: 12000,
-        putOIChange: 18000,
-        callWriting: 8500,
-        putWriting: 14500,
-      ),
-      heatMap: HeatMap(
-        advancing:
-            dashboard['marketOpen'] == true
-                ? 34
-                : 0,
-        declining:
-            dashboard['marketOpen'] == true
-                ? 16
-                : 0,
-        strongestSector: 'Banking',
-        weakestSector: 'FMCG',
-      ),
-      sectorStrength: const SectorStrength(
-        name: 'Banking',
-        strength: 92,
-        leading: true,
+
+      // REAL SECTOR STRENGTH
+      sectorStrength:
+          _buildRealSectorStrength(
+        dashboard,
       ),
     );
   }
 
-  Future<List<Candle>> _fetchHistoricalCandles({
+  Future<_OptionAnalytics> _fetchOptionChain({
+    required String market,
+  }) async {
+    final instrumentKey =
+        _instrumentKeys[market.toUpperCase()];
+
+    if (instrumentKey == null) {
+      return _OptionAnalytics.empty();
+    }
+
+    if (market.toUpperCase() ==
+        'INDIA VIX') {
+      return _OptionAnalytics.empty();
+    }
+
+    final encodedInstrument =
+        Uri.encodeQueryComponent(
+      instrumentKey,
+    );
+
+    final path =
+        '/broker/option-chain'
+        '?instrumentKey=$encodedInstrument'
+        '&expiry=current_week';
+
+    try {
+      final response =
+          await _api.get(path);
+
+      final rawData =
+          response['data']
+              as List<dynamic>?;
+
+      if (rawData == null ||
+          rawData.isEmpty) {
+        debugPrint(
+          '[Quanttora] Option Chain returned 0 rows.',
+        );
+
+        return _OptionAnalytics.empty();
+      }
+
+      double totalCallOI = 0;
+      double totalPutOI = 0;
+
+      double totalCallVolume = 0;
+      double totalPutVolume = 0;
+
+      double totalCallOIChange = 0;
+      double totalPutOIChange = 0;
+
+      double callWriting = 0;
+      double putWriting = 0;
+
+      double maxCallOI = 0;
+      double maxPutOI = 0;
+
+      double maxCallOIStrike = 0;
+      double maxPutOIStrike = 0;
+
+      for (final row in rawData) {
+        if (row is! Map) {
+          continue;
+        }
+
+        final strikePrice =
+            _toDouble(
+          row['strike_price'],
+        );
+
+        final callOptions =
+            row['call_options'];
+
+        final putOptions =
+            row['put_options'];
+
+        Map<dynamic, dynamic>?
+            callMarket;
+
+        Map<dynamic, dynamic>?
+            putMarket;
+
+        if (callOptions is Map) {
+          final value =
+              callOptions['market_data'];
+
+          if (value is Map) {
+            callMarket = value;
+          }
+        }
+
+        if (putOptions is Map) {
+          final value =
+              putOptions['market_data'];
+
+          if (value is Map) {
+            putMarket = value;
+          }
+        }
+
+        final callOI =
+            _toDouble(
+          callMarket?['oi'],
+        );
+
+        final putOI =
+            _toDouble(
+          putMarket?['oi'],
+        );
+
+        final callPrevOI =
+            _toDouble(
+          callMarket?['prev_oi'],
+        );
+
+        final putPrevOI =
+            _toDouble(
+          putMarket?['prev_oi'],
+        );
+
+        final callVolume =
+            _toDouble(
+          callMarket?['volume'],
+        );
+
+        final putVolume =
+            _toDouble(
+          putMarket?['volume'],
+        );
+
+        final callChange =
+            callOI - callPrevOI;
+
+        final putChange =
+            putOI - putPrevOI;
+
+        totalCallOI += callOI;
+        totalPutOI += putOI;
+
+        totalCallVolume += callVolume;
+        totalPutVolume += putVolume;
+
+        totalCallOIChange +=
+            callChange;
+
+        totalPutOIChange +=
+            putChange;
+
+        if (callChange > 0) {
+          callWriting +=
+              callChange;
+        }
+
+        if (putChange > 0) {
+          putWriting +=
+              putChange;
+        }
+
+        if (callOI > maxCallOI) {
+          maxCallOI = callOI;
+          maxCallOIStrike =
+              strikePrice;
+        }
+
+        if (putOI > maxPutOI) {
+          maxPutOI = putOI;
+          maxPutOIStrike =
+              strikePrice;
+        }
+      }
+
+      final pcr =
+          totalCallOI > 0
+              ? totalPutOI /
+                  totalCallOI
+              : 0.0;
+
+      debugPrint(
+        '[Quanttora] REAL OPTION CHAIN',
+      );
+
+      debugPrint(
+        '[Quanttora] Rows: ${rawData.length}',
+      );
+
+      debugPrint(
+        '[Quanttora] PCR: ${pcr.toStringAsFixed(2)}',
+      );
+
+      debugPrint(
+        '[Quanttora] Max Call OI Strike: $maxCallOIStrike',
+      );
+
+      debugPrint(
+        '[Quanttora] Max Put OI Strike: $maxPutOIStrike',
+      );
+
+      return _OptionAnalytics(
+        optionChain:
+            OptionChain(
+          pcr: pcr,
+          maxCallOI:
+              maxCallOIStrike,
+          maxPutOI:
+              maxPutOIStrike,
+          callVolume:
+              totalCallVolume,
+          putVolume:
+              totalPutVolume,
+        ),
+        oiData: OIData(
+          callOIChange:
+              totalCallOIChange,
+          putOIChange:
+              totalPutOIChange,
+          callWriting:
+              callWriting,
+          putWriting:
+              putWriting,
+        ),
+      );
+    } catch (e) {
+      debugPrint(
+        '[Quanttora] Option Chain error: $e',
+      );
+
+      return _OptionAnalytics.empty();
+    }
+  }
+
+  HeatMap _buildRealHeatMap(
+    Map<String, dynamic> dashboard,
+  ) {
+    final rawSectors =
+        dashboard['sectors']
+            as List<dynamic>?;
+
+    if (rawSectors == null ||
+        rawSectors.isEmpty) {
+      return const HeatMap(
+        advancing: 0,
+        declining: 0,
+        strongestSector: '-',
+        weakestSector: '-',
+      );
+    }
+
+    int advancing = 0;
+    int declining = 0;
+
+    String strongestSector = '-';
+    String weakestSector = '-';
+
+    double? strongestChange;
+    double? weakestChange;
+
+    for (final raw in rawSectors) {
+      if (raw is! Map) {
+        continue;
+      }
+
+      final name =
+          raw['name']
+                  ?.toString() ??
+              '-';
+
+      final change =
+          _toDouble(
+        raw['percentageChange'],
+      );
+
+      if (change > 0) {
+        advancing++;
+      } else if (change < 0) {
+        declining++;
+      }
+
+      if (strongestChange == null ||
+          change >
+              strongestChange) {
+        strongestChange =
+            change;
+
+        strongestSector =
+            name;
+      }
+
+      if (weakestChange == null ||
+          change <
+              weakestChange) {
+        weakestChange =
+            change;
+
+        weakestSector =
+            name;
+      }
+    }
+
+    debugPrint(
+      '[Quanttora] REAL SECTOR BREADTH '
+      'Advancing: $advancing '
+      'Declining: $declining',
+    );
+
+    debugPrint(
+      '[Quanttora] Strongest Sector: '
+      '$strongestSector',
+    );
+
+    debugPrint(
+      '[Quanttora] Weakest Sector: '
+      '$weakestSector',
+    );
+
+    return HeatMap(
+      advancing: advancing,
+      declining: declining,
+      strongestSector:
+          strongestSector,
+      weakestSector:
+          weakestSector,
+    );
+  }
+
+  SectorStrength
+      _buildRealSectorStrength(
+    Map<String, dynamic> dashboard,
+  ) {
+    final rawSectors =
+        dashboard['sectors']
+            as List<dynamic>?;
+
+    if (rawSectors == null ||
+        rawSectors.isEmpty) {
+      return const SectorStrength(
+        name: '-',
+        strength: 0,
+        leading: false,
+      );
+    }
+
+    Map<dynamic, dynamic>?
+        strongest;
+
+    for (final raw in rawSectors) {
+      if (raw is! Map) {
+        continue;
+      }
+
+      if (strongest == null) {
+        strongest = raw;
+        continue;
+      }
+
+      final currentChange =
+          _toDouble(
+        raw['percentageChange'],
+      );
+
+      final strongestChange =
+          _toDouble(
+        strongest[
+            'percentageChange'],
+      );
+
+      if (currentChange >
+          strongestChange) {
+        strongest = raw;
+      }
+    }
+
+    if (strongest == null) {
+      return const SectorStrength(
+        name: '-',
+        strength: 0,
+        leading: false,
+      );
+    }
+
+    final name =
+        strongest['name']
+                ?.toString() ??
+            '-';
+
+    final percentageChange =
+        _toDouble(
+      strongest[
+          'percentageChange'],
+    );
+
+    debugPrint(
+      '[Quanttora] REAL LEADING SECTOR '
+      '$name '
+      '${percentageChange.toStringAsFixed(2)}%',
+    );
+
+    return SectorStrength(
+      name: name,
+      strength:
+          percentageChange,
+      leading:
+          percentageChange > 0,
+    );
+  }
+
+  Future<List<Candle>>
+      _fetchHistoricalCandles({
     required String market,
     required String timeframe,
   }) async {
     final instrumentKey =
-        _instrumentKeys[market.toUpperCase()];
+        _instrumentKeys[
+            market.toUpperCase()];
 
     if (instrumentKey == null) {
       debugPrint(
@@ -114,26 +516,24 @@ class MarketDataService {
       return <Candle>[];
     }
 
-    /*
-      Upstox historical API currently accepts
-      1minute but not 3minute / 5minute / 15minute.
-
-      Quanttora therefore fetches 1-minute candles
-      and builds the requested intraday timeframe
-      locally.
-    */
-
     final apiInterval =
-        _apiIntervalFor(timeframe);
+        _apiIntervalFor(
+      timeframe,
+    );
 
-    final now = DateTime.now();
+    final now =
+        DateTime.now();
 
-    final from = now.subtract(
+    final from =
+        now.subtract(
       const Duration(days: 10),
     );
 
-    final fromDate = _formatDate(from);
-    final toDate = _formatDate(now);
+    final fromDate =
+        _formatDate(from);
+
+    final toDate =
+        _formatDate(now);
 
     final encodedInstrument =
         Uri.encodeQueryComponent(
@@ -172,9 +572,11 @@ class MarketDataService {
         '[Quanttora] Real 1-minute candles received: ${rawCandles.length}',
       );
 
-      final candles = <Candle>[];
+      final candles =
+          <Candle>[];
 
-      for (final raw in rawCandles) {
+      for (final raw
+          in rawCandles) {
         if (raw is! List ||
             raw.length < 6) {
           continue;
@@ -191,11 +593,16 @@ class MarketDataService {
 
         candles.add(
           Candle(
-            open: _toDouble(raw[1]),
-            high: _toDouble(raw[2]),
-            low: _toDouble(raw[3]),
-            close: _toDouble(raw[4]),
-            volume: _toDouble(raw[5]),
+            open:
+                _toDouble(raw[1]),
+            high:
+                _toDouble(raw[2]),
+            low:
+                _toDouble(raw[3]),
+            close:
+                _toDouble(raw[4]),
+            volume:
+                _toDouble(raw[5]),
             time: time,
           ),
         );
@@ -203,31 +610,24 @@ class MarketDataService {
 
       candles.sort(
         (a, b) =>
-            a.time.compareTo(b.time),
+            a.time.compareTo(
+          b.time,
+        ),
       );
 
       final minutes =
-          _timeframeMinutes(timeframe);
+          _timeframeMinutes(
+        timeframe,
+      );
 
       if (minutes <= 1) {
-        debugPrint(
-          '[Quanttora] Final candles: ${candles.length}',
-        );
-
         return candles;
       }
 
-      final aggregated =
-          _aggregateCandles(
+      return _aggregateCandles(
         candles,
         minutes,
       );
-
-      debugPrint(
-        '[Quanttora] ${timeframe.trim()} candles generated: ${aggregated.length}',
-      );
-
-      return aggregated;
     } catch (e) {
       debugPrint(
         '[Quanttora] Historical candle error: $e',
@@ -246,19 +646,23 @@ class MarketDataService {
       return source;
     }
 
-    final result = <Candle>[];
+    final result =
+        <Candle>[];
 
     final groups =
         <DateTime, List<Candle>>{};
 
     for (final candle in source) {
-      final time = candle.time;
+      final time =
+          candle.time;
 
       final bucketMinute =
-          (time.minute ~/ minutes) *
+          (time.minute ~/
+                  minutes) *
               minutes;
 
-      final bucket = DateTime(
+      final bucket =
+          DateTime(
         time.year,
         time.month,
         time.day,
@@ -271,7 +675,8 @@ class MarketDataService {
         () => <Candle>[],
       );
 
-      groups[bucket]!.add(candle);
+      groups[bucket]!
+          .add(candle);
     }
 
     final keys =
@@ -279,11 +684,14 @@ class MarketDataService {
           ..sort();
 
     for (final key in keys) {
-      final group = groups[key]!;
+      final group =
+          groups[key]!;
 
       group.sort(
         (a, b) =>
-            a.time.compareTo(b.time),
+            a.time.compareTo(
+          b.time,
+        ),
       );
 
       if (group.isEmpty) {
@@ -298,24 +706,32 @@ class MarketDataService {
 
       double volume = 0;
 
-      for (final candle in group) {
-        if (candle.high > high) {
-          high = candle.high;
+      for (final candle
+          in group) {
+        if (candle.high >
+            high) {
+          high =
+              candle.high;
         }
 
-        if (candle.low < low) {
-          low = candle.low;
+        if (candle.low <
+            low) {
+          low =
+              candle.low;
         }
 
-        volume += candle.volume;
+        volume +=
+            candle.volume;
       }
 
       result.add(
         Candle(
-          open: group.first.open,
+          open:
+              group.first.open,
           high: high,
           low: low,
-          close: group.last.close,
+          close:
+              group.last.close,
           volume: volume,
           time: key,
         ),
@@ -329,7 +745,9 @@ class MarketDataService {
     String timeframe,
   ) {
     switch (
-        timeframe.trim().toLowerCase()) {
+        timeframe
+            .trim()
+            .toLowerCase()) {
       case '30 min':
         return '30minute';
 
@@ -345,7 +763,9 @@ class MarketDataService {
     String timeframe,
   ) {
     switch (
-        timeframe.trim().toLowerCase()) {
+        timeframe
+            .trim()
+            .toLowerCase()) {
       case '1 min':
         return 1;
 
@@ -372,7 +792,8 @@ class MarketDataService {
   String _dashboardKey(
     String market,
   ) {
-    switch (market.toUpperCase()) {
+    switch (
+        market.toUpperCase()) {
       case 'BANKNIFTY':
       case 'BANK NIFTY':
         return 'bankNifty';
@@ -442,6 +863,7 @@ class MarketDataService {
           time: DateTime.now(),
         ),
       ],
+
       optionChain:
           const OptionChain(
         pcr: 0,
@@ -450,23 +872,58 @@ class MarketDataService {
         callVolume: 0,
         putVolume: 0,
       ),
-      oiData: const OIData(
+
+      oiData:
+          const OIData(
         callOIChange: 0,
         putOIChange: 0,
         callWriting: 0,
         putWriting: 0,
       ),
-      heatMap: const HeatMap(
+
+      heatMap:
+          const HeatMap(
         advancing: 0,
         declining: 0,
         strongestSector: '-',
         weakestSector: '-',
       ),
+
       sectorStrength:
           const SectorStrength(
         name: '-',
         strength: 0,
         leading: false,
+      ),
+    );
+  }
+}
+
+class _OptionAnalytics {
+  final OptionChain optionChain;
+  final OIData oiData;
+
+  const _OptionAnalytics({
+    required this.optionChain,
+    required this.oiData,
+  });
+
+  factory _OptionAnalytics.empty() {
+    return const _OptionAnalytics(
+      optionChain:
+          OptionChain(
+        pcr: 0,
+        maxCallOI: 0,
+        maxPutOI: 0,
+        callVolume: 0,
+        putVolume: 0,
+      ),
+      oiData:
+          OIData(
+        callOIChange: 0,
+        putOIChange: 0,
+        callWriting: 0,
+        putWriting: 0,
       ),
     );
   }

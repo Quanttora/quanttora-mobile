@@ -11,11 +11,13 @@ class MarketOverviewCard extends StatelessWidget {
     required this.nifty,
     required this.sensex,
     required this.bankNifty,
+    required this.isLive,
   });
 
   final MarketIndex nifty;
   final MarketIndex sensex;
   final MarketIndex bankNifty;
+  final bool isLive;
 
   @override
   Widget build(BuildContext context) {
@@ -34,24 +36,29 @@ class MarketOverviewCard extends StatelessWidget {
             children: [
               const Expanded(
                 child: Text(
-                  "Market Overview",
+                  'Market Overview',
                   style: AppTextStyles.titleLarge,
                 ),
               ),
-
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: AppColors.success.withValues(alpha: .12),
-                  borderRadius: BorderRadius.circular(30),
+                  color: (isLive
+                          ? AppColors.success
+                          : Colors.grey)
+                      .withValues(alpha: .12),
+                  borderRadius:
+                      BorderRadius.circular(30),
                 ),
-                child: const Text(
-                  "LIVE",
+                child: Text(
+                  isLive ? 'LIVE' : 'UNAVAILABLE',
                   style: TextStyle(
-                    color: AppColors.success,
+                    color: isLive
+                        ? AppColors.success
+                        : Colors.grey,
                     fontWeight: FontWeight.bold,
                     fontSize: 11,
                   ),
@@ -71,32 +78,6 @@ class MarketOverviewCard extends StatelessWidget {
           const Divider(height: 28),
 
           _MarketRow(index: bankNifty),
-
-          const SizedBox(height: 18),
-                    Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: .05),
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.insights_rounded,
-                  color: AppColors.primary,
-                ),
-
-                const SizedBox(width: 12),
-
-                const Expanded(
-                  child: Text(
-                    "Market sentiment remains positive. Banking continues to lead the rally.",
-                    style: AppTextStyles.bodyMedium,
-                  ),
-                ),
-              ],
-            ),
-          ),
         ],
       ),
     );
@@ -112,9 +93,16 @@ class _MarketRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool positive = index.change >= 0;
-    final Color color =
-        positive ? AppColors.success : AppColors.danger;
+    final unavailable =
+        index.value == '--';
+
+    final positive = index.change >= 0;
+
+    final color = unavailable
+        ? Colors.grey
+        : positive
+            ? AppColors.success
+            : AppColors.danger;
 
     return Row(
       children: [
@@ -126,9 +114,11 @@ class _MarketRow extends StatelessWidget {
             borderRadius: BorderRadius.circular(14),
           ),
           child: Icon(
-            positive
-                ? Icons.trending_up_rounded
-                : Icons.trending_down_rounded,
+            unavailable
+                ? Icons.remove_rounded
+                : positive
+                    ? Icons.trending_up_rounded
+                    : Icons.trending_down_rounded,
             color: color,
           ),
         ),
@@ -143,15 +133,15 @@ class _MarketRow extends StatelessWidget {
         ),
 
         Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
+          crossAxisAlignment:
+              CrossAxisAlignment.end,
           children: [
             Text(
               index.value,
               style: AppTextStyles.titleLarge,
             ),
-
             const SizedBox(height: 4),
-                        Text(
+            Text(
               index.changeText,
               style: TextStyle(
                 color: color,

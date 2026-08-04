@@ -105,10 +105,20 @@ class AuthRoutes {
 
         await _marketFeed.connect();
         await _marketFeed.subscribeMany([
+  // MAIN INDICES
   'NSE_INDEX|Nifty 50',
   'NSE_INDEX|Nifty Bank',
   'BSE_INDEX|SENSEX',
   'NSE_INDEX|India VIX',
+
+  // REAL SECTOR INDICES
+  'NSE_INDEX|Nifty Auto',
+  'NSE_INDEX|Nifty FMCG',
+  'NSE_INDEX|Nifty IT',
+  'NSE_INDEX|Nifty Metal',
+  'NSE_INDEX|Nifty Pharma',
+  'NSE_INDEX|Nifty PSU Bank',
+  'NSE_INDEX|Nifty Realty',
 ]);
 
         print('');

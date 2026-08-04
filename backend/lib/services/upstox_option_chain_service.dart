@@ -1,0 +1,80 @@
+import 'dart:convert';
+
+import 'package:backend/services/broker_service.dart';
+import 'package:http/http.dart' as http;
+
+class UpstoxOptionChainService {
+  UpstoxOptionChainService._();
+
+  static final UpstoxOptionChainService instance =
+      UpstoxOptionChainService._();
+
+  static const String _baseUrl =
+      'https://api.upstox.com/v2/option/chain';
+
+  Future<Map<String, dynamic>> getOptionChain({
+    required String instrumentKey,
+    String expiryDate = 'current_week',
+  }) async {
+    final broker = BrokerService.instance;
+
+    if (!broker.hasValidSession()) {
+      throw StateError('Broker is not connected.');
+    }
+
+    final uri = Uri.parse(_baseUrl).replace(
+      queryParameters: {
+        'instrument_key': instrumentKey,
+        'expiry_date': expiryDate,
+      },
+    );
+
+    final response = await http.get(
+      uri,
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization':
+            'Bearer ${broker.accessToken}',
+      },
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Upstox Option Chain failed '
+        '(${response.statusCode}): ${response.body}',
+      );
+    }
+
+    final decoded = jsonDecode(response.body);
+
+    if (decoded is! Map<String, dynamic>) {
+      throw Exception(
+        'Invalid Option Chain response.',
+      );
+    }
+
+    if (decoded['status'] != 'success') {
+      throw Exception(
+        'Upstox Option Chain returned '
+        'status: ${decoded['status']}',
+      );
+    }
+
+    final data = decoded['data'];
+
+    if (data is! List) {
+      throw Exception(
+        'Option Chain data is unavailable.',
+      );
+    }
+
+    return {
+      'status': 'success',
+      'instrumentKey': instrumentKey,
+      'expiry': expiryDate,
+      'count': data.length,
+      'data': data,
+    };
+  }
+}
