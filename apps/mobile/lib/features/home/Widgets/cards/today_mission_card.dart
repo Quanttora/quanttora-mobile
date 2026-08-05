@@ -7,33 +7,22 @@ class TodayMissionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: Padding(
         padding: const EdgeInsets.all(22),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             const Row(
               children: [
-
-                Icon(
-                  Icons.flag_circle_rounded,
-                  color: Color(0xFF2563EB),
-                ),
+                Icon(Icons.flag_circle_rounded, color: Color(0xFF2563EB)),
 
                 SizedBox(width: 10),
 
                 Text(
                   "Today's Mission",
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
-
               ],
             ),
 
@@ -41,9 +30,7 @@ class TodayMissionCard extends StatelessWidget {
 
             const Text(
               "Complete these before ending today's session.",
-              style: TextStyle(
-                color: Colors.grey,
-              ),
+              style: TextStyle(color: Colors.grey),
             ),
 
             const SizedBox(height: 22),
@@ -55,10 +42,7 @@ class TodayMissionCard extends StatelessWidget {
 
             const SizedBox(height: 12),
 
-            const _MissionTile(
-              title: "Maximum 3 trades",
-              completed: true,
-            ),
+            const _MissionTile(title: "Maximum 3 trades", completed: true),
 
             const SizedBox(height: 12),
 
@@ -98,7 +82,6 @@ class TodayMissionCard extends StatelessWidget {
                 ),
               ),
             ),
-
           ],
         ),
       ),
@@ -110,20 +93,14 @@ class _MissionTile extends StatelessWidget {
   final String title;
   final bool completed;
 
-  const _MissionTile({
-    required this.title,
-    required this.completed,
-  });
+  const _MissionTile({required this.title, required this.completed});
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-
         Icon(
-          completed
-              ? Icons.check_circle
-              : Icons.radio_button_unchecked,
+          completed ? Icons.check_circle : Icons.radio_button_unchecked,
           color: completed ? Colors.green : Colors.grey,
         ),
 
@@ -140,7 +117,6 @@ class _MissionTile extends StatelessWidget {
             ),
           ),
         ),
-
       ],
     );
   }

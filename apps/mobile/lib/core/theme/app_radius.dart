@@ -10,21 +10,15 @@ class AppRadius {
   static const Radius xl = Radius.circular(24);
   static const Radius pill = Radius.circular(100);
 
-  static const BorderRadius xsBorder =
-      BorderRadius.all(xs);
+  static const BorderRadius xsBorder = BorderRadius.all(xs);
 
-  static const BorderRadius smBorder =
-      BorderRadius.all(sm);
+  static const BorderRadius smBorder = BorderRadius.all(sm);
 
-  static const BorderRadius mdBorder =
-      BorderRadius.all(md);
+  static const BorderRadius mdBorder = BorderRadius.all(md);
 
-  static const BorderRadius lgBorder =
-      BorderRadius.all(lg);
+  static const BorderRadius lgBorder = BorderRadius.all(lg);
 
-  static const BorderRadius xlBorder =
-      BorderRadius.all(xl);
+  static const BorderRadius xlBorder = BorderRadius.all(xl);
 
-  static const BorderRadius pillBorder =
-      BorderRadius.all(pill);
+  static const BorderRadius pillBorder = BorderRadius.all(pill);
 }

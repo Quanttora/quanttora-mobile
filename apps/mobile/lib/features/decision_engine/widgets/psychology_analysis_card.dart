@@ -5,42 +5,28 @@ import '../../../core/decision_engine/decision_result.dart';
 class PsychologyAnalysisCard extends StatelessWidget {
   final DecisionResult result;
 
-  const PsychologyAnalysisCard({
-    super.key,
-    required this.result,
-  });
+  const PsychologyAnalysisCard({super.key, required this.result});
 
   @override
   Widget build(BuildContext context) {
     return Card(
       elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: Padding(
         padding: const EdgeInsets.all(22),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             const Row(
               children: [
-
-                Icon(
-                  Icons.psychology_rounded,
-                  color: Color(0xFF7C3AED),
-                ),
+                Icon(Icons.psychology_rounded, color: Color(0xFF7C3AED)),
 
                 SizedBox(width: 10),
 
                 Text(
                   "Psychology Analysis",
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
-
               ],
             ),
 
@@ -48,7 +34,6 @@ class PsychologyAnalysisCard extends StatelessWidget {
 
             Row(
               children: [
-
                 const Expanded(
                   child: Text(
                     "Psychology Score",
@@ -64,7 +49,6 @@ class PsychologyAnalysisCard extends StatelessWidget {
                     fontSize: 18,
                   ),
                 ),
-
               ],
             ),
 
@@ -90,27 +74,19 @@ class PsychologyAnalysisCard extends StatelessWidget {
               ),
               child: const Row(
                 children: [
-
-                  Icon(
-                    Icons.psychology_alt,
-                    color: Color(0xFF7C3AED),
-                  ),
+                  Icon(Icons.psychology_alt, color: Color(0xFF7C3AED)),
 
                   SizedBox(width: 12),
 
                   Expanded(
                     child: Text(
                       "Psychology score is now calculated by the Quanttora Decision Engine.",
-                      style: TextStyle(
-                        height: 1.5,
-                      ),
+                      style: TextStyle(height: 1.5),
                     ),
                   ),
-
                 ],
               ),
             ),
-
           ],
         ),
       ),

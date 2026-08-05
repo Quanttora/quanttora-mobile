@@ -4,11 +4,7 @@ class ErrorCard extends StatelessWidget {
   final String message;
   final VoidCallback? onRetry;
 
-  const ErrorCard({
-    super.key,
-    required this.message,
-    this.onRetry,
-  });
+  const ErrorCard({super.key, required this.message, this.onRetry});
 
   @override
   Widget build(BuildContext context) {
@@ -18,9 +14,7 @@ class ErrorCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.red.shade50,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: Colors.red.shade200,
-        ),
+        border: Border.all(color: Colors.red.shade200),
       ),
       child: Column(
         children: [

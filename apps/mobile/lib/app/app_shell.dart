@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:mobile/features/home/home_screen.dart';
 import 'package:mobile/features/strategy/presentation/screens/strategy_screen.dart';
-import 'package:mobile/features/trade_analysis/screens/trade_analysis_screen.dart';
+import 'package:mobile/features/trading_mode/screens/trading_mode_screen.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -41,27 +41,20 @@ class _AppShellState extends State<AppShell> {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7FC),
 
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _pages,
-      ),
+      body: IndexedStack(index: _selectedIndex, children: _pages),
 
-      floatingActionButtonLocation:
-          FloatingActionButtonLocation.centerFloat,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
 
       // Analyze Trade button appears ONLY on Home.
       floatingActionButton: _selectedIndex == 0
           ? Container(
               height: 62,
-              constraints: const BoxConstraints(
-                maxWidth: 280,
-              ),
+              constraints: const BoxConstraints(maxWidth: 280),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF155EEF)
-                        .withValues(alpha: .35),
+                    color: const Color(0xFF155EEF).withValues(alpha: .35),
                     blurRadius: 24,
                     offset: const Offset(0, 10),
                   ),
@@ -78,21 +71,14 @@ class _AppShellState extends State<AppShell> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) =>
-                          const TradeAnalysisScreen(),
+                      builder: (_) => const TradingModeScreen(),
                     ),
                   );
                 },
-                icon: const Icon(
-                  Icons.auto_awesome_rounded,
-                  size: 24,
-                ),
+                icon: const Icon(Icons.auto_awesome_rounded, size: 24),
                 label: const Text(
                   "Analyze Trade",
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                 ),
               ),
             )
@@ -100,12 +86,7 @@ class _AppShellState extends State<AppShell> {
 
       bottomNavigationBar: SafeArea(
         child: Container(
-          margin: const EdgeInsets.fromLTRB(
-            16,
-            0,
-            16,
-            16,
-          ),
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           height: 74,
           decoration: BoxDecoration(
             color: Colors.white,
@@ -180,9 +161,7 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected
-        ? const Color(0xFF155EEF)
-        : Colors.grey.shade500;
+    final color = selected ? const Color(0xFF155EEF) : Colors.grey.shade500;
 
     return InkWell(
       borderRadius: BorderRadius.circular(18),
@@ -195,16 +174,11 @@ class _NavItem extends StatelessWidget {
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: selected
-                  ? const Color(0xFF155EEF)
-                      .withValues(alpha: .10)
+                  ? const Color(0xFF155EEF).withValues(alpha: .10)
                   : Colors.transparent,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
-              icon,
-              color: color,
-              size: 24,
-            ),
+            child: Icon(icon, color: color, size: 24),
           ),
 
           const SizedBox(height: 4),
@@ -214,9 +188,7 @@ class _NavItem extends StatelessWidget {
             style: TextStyle(
               color: color,
               fontSize: 11,
-              fontWeight: selected
-                  ? FontWeight.w700
-                  : FontWeight.w500,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
             ),
           ),
         ],
@@ -232,15 +204,10 @@ class AIScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7FC),
-      appBar: AppBar(
-        title: const Text("Quanttora AI"),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text("Quanttora AI"), centerTitle: true),
       body: Center(
         child: Container(
-          constraints: const BoxConstraints(
-            maxWidth: 520,
-          ),
+          constraints: const BoxConstraints(maxWidth: 520),
           margin: const EdgeInsets.all(24),
           padding: const EdgeInsets.all(28),
           decoration: BoxDecoration(
@@ -271,10 +238,7 @@ class AIScreen extends StatelessWidget {
 
               Text(
                 "Quanttora AI",
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
               ),
 
               SizedBox(height: 10),
@@ -284,10 +248,7 @@ class AIScreen extends StatelessWidget {
                 "Market Insights and Decision Engine\n"
                 "will appear here.",
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 15,
-                  color: Colors.black54,
-                ),
+                style: TextStyle(fontSize: 15, color: Colors.black54),
               ),
             ],
           ),
@@ -304,15 +265,10 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7FC),
-      appBar: AppBar(
-        title: const Text("Profile"),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text("Profile"), centerTitle: true),
       body: Center(
         child: Container(
-          constraints: const BoxConstraints(
-            maxWidth: 520,
-          ),
+          constraints: const BoxConstraints(maxWidth: 520),
           margin: const EdgeInsets.all(24),
           padding: const EdgeInsets.all(28),
           decoration: BoxDecoration(
@@ -343,10 +299,7 @@ class ProfileScreen extends StatelessWidget {
 
               Text(
                 "Profile",
-                style: TextStyle(
-                  fontSize: 26,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
               ),
 
               SizedBox(height: 10),
@@ -356,10 +309,7 @@ class ProfileScreen extends StatelessWidget {
                 "Subscription and Settings\n"
                 "will appear here.",
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 15,
-                  color: Colors.black54,
-                ),
+                style: TextStyle(fontSize: 15, color: Colors.black54),
               ),
             ],
           ),

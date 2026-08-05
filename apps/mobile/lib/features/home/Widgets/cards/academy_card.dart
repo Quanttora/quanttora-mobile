@@ -7,33 +7,22 @@ class AcademyCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: Padding(
         padding: const EdgeInsets.all(22),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             const Row(
               children: [
-
-                Icon(
-                  Icons.school_rounded,
-                  color: Color(0xFFF59E0B),
-                ),
+                Icon(Icons.school_rounded, color: Color(0xFFF59E0B)),
 
                 SizedBox(width: 10),
 
                 Text(
                   "Trading Academy",
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
-
               ],
             ),
 
@@ -41,9 +30,7 @@ class AcademyCard extends StatelessWidget {
 
             const Text(
               "Master trading step by step.",
-              style: TextStyle(
-                color: Colors.grey,
-              ),
+              style: TextStyle(color: Colors.grey),
             ),
 
             const SizedBox(height: 22),
@@ -75,7 +62,6 @@ class AcademyCard extends StatelessWidget {
               progress: 0.10,
               color: Colors.deepPurple,
             ),
-
           ],
         ),
       ),
@@ -84,7 +70,6 @@ class AcademyCard extends StatelessWidget {
 }
 
 class _CourseTile extends StatelessWidget {
-
   final IconData icon;
   final String title;
   final String lessons;
@@ -109,16 +94,11 @@ class _CourseTile extends StatelessWidget {
       ),
       child: Column(
         children: [
-
           Row(
             children: [
-
               CircleAvatar(
                 backgroundColor: color,
-                child: Icon(
-                  icon,
-                  color: Colors.white,
-                ),
+                child: Icon(icon, color: Colors.white),
               ),
 
               const SizedBox(width: 14),
@@ -127,7 +107,6 @@ class _CourseTile extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-
                     Text(
                       title,
                       style: const TextStyle(
@@ -136,17 +115,10 @@ class _CourseTile extends StatelessWidget {
                       ),
                     ),
 
-                    Text(
-                      lessons,
-                      style: const TextStyle(
-                        color: Colors.grey,
-                      ),
-                    ),
-
+                    Text(lessons, style: const TextStyle(color: Colors.grey)),
                   ],
                 ),
               ),
-
             ],
           ),
 
@@ -161,7 +133,6 @@ class _CourseTile extends StatelessWidget {
               backgroundColor: Colors.grey.shade300,
             ),
           ),
-
         ],
       ),
     );

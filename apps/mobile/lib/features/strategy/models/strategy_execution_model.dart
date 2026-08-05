@@ -1,9 +1,4 @@
-enum StrategyExecutionStatus {
-  pending,
-  analyzing,
-  completed,
-  failed,
-}
+enum StrategyExecutionStatus { pending, analyzing, completed, failed }
 
 class StrategyExecutionModel {
   final String id;
@@ -130,8 +125,7 @@ class StrategyExecutionModel {
       entryPrice: (map['entryPrice'] ?? 0).toDouble(),
       stopLoss: (map['stopLoss'] ?? 0).toDouble(),
       targetPrice: (map['targetPrice'] ?? 0).toDouble(),
-      riskRewardRatio:
-          (map['riskRewardRatio'] ?? 0).toDouble(),
+      riskRewardRatio: (map['riskRewardRatio'] ?? 0).toDouble(),
       status: StrategyExecutionStatus.values.firstWhere(
         (e) => e.name == map['status'],
         orElse: () => StrategyExecutionStatus.pending,

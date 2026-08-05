@@ -3,23 +3,18 @@ import '../models/strategy_model.dart';
 class StrategyRepository {
   StrategyRepository._();
 
-  static final StrategyRepository instance =
-      StrategyRepository._();
+  static final StrategyRepository instance = StrategyRepository._();
 
   final List<StrategyModel> _strategies = [];
 
   StrategyModel? _selectedStrategy;
 
-  List<StrategyModel> get strategies =>
-      List.unmodifiable(_strategies);
+  List<StrategyModel> get strategies => List.unmodifiable(_strategies);
 
-  StrategyModel? get selectedStrategy =>
-      _selectedStrategy;
+  StrategyModel? get selectedStrategy => _selectedStrategy;
 
   void saveStrategy(StrategyModel strategy) {
-    final index = _strategies.indexWhere(
-      (item) => item.id == strategy.id,
-    );
+    final index = _strategies.indexWhere((item) => item.id == strategy.id);
 
     if (index == -1) {
       _strategies.add(strategy);
@@ -38,9 +33,7 @@ class StrategyRepository {
   }
 
   void deleteStrategy(String id) {
-    _strategies.removeWhere(
-      (item) => item.id == id,
-    );
+    _strategies.removeWhere((item) => item.id == id);
 
     if (_selectedStrategy?.id == id) {
       _selectedStrategy = null;

@@ -19,25 +19,17 @@ class OrdersSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (loading) {
-      return const LoadingCard(
-        message: "Loading Orders...",
-      );
+      return const LoadingCard(message: "Loading Orders...");
     }
 
     if (error != null) {
-      return ErrorCard(
-        message: error!,
-      );
+      return ErrorCard(message: error!);
     }
 
     if (orders == null || orders!.isEmpty) {
-      return const ErrorCard(
-        message: "No orders available.",
-      );
+      return const ErrorCard(message: "No orders available.");
     }
 
-    return OrdersCard(
-      orders: orders!,
-    );
+    return OrdersCard(orders: orders!);
   }
 }

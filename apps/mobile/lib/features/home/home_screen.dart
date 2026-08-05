@@ -64,25 +64,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadDashboard() async {
     try {
-      final dashboard =
-          await _marketService.fetchMarketDashboard();
+      final dashboard = await _marketService.fetchMarketDashboard();
 
       final indices =
-          dashboard['indices'] as Map<String, dynamic>? ??
-              <String, dynamic>{};
+          dashboard['indices'] as Map<String, dynamic>? ?? <String, dynamic>{};
 
-      final connected =
-          dashboard['connected'] == true;
+      final connected = dashboard['connected'] == true;
 
-      final nifty = _buildMarketIndex(
-        name: 'NIFTY 50',
-        data: indices['nifty'],
-      );
+      final nifty = _buildMarketIndex(name: 'NIFTY 50', data: indices['nifty']);
 
-      final sensex = _buildMarketIndex(
-        name: 'SENSEX',
-        data: indices['sensex'],
-      );
+      final sensex = _buildMarketIndex(name: 'SENSEX', data: indices['sensex']);
 
       final bankNifty = _buildMarketIndex(
         name: 'BANK NIFTY',
@@ -99,9 +90,7 @@ class _HomeScreenState extends State<HomeScreen> {
         _loading = false;
       });
     } catch (error) {
-      debugPrint(
-        'Home dashboard market data error: $error',
-      );
+      debugPrint('Home dashboard market data error: $error');
 
       if (!mounted) return;
 
@@ -112,10 +101,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  MarketIndex _buildMarketIndex({
-    required String name,
-    required dynamic data,
-  }) {
+  MarketIndex _buildMarketIndex({required String name, required dynamic data}) {
     if (data is! Map) {
       return MarketIndex(
         name: name,
@@ -142,8 +128,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (previousClose > 0) {
       change = ltp - previousClose;
-      changePercent =
-          (change / previousClose) * 100;
+      changePercent = (change / previousClose) * 100;
     }
 
     final prefix = change > 0 ? '+' : '';
@@ -154,7 +139,7 @@ class _HomeScreenState extends State<HomeScreen> {
       change: change,
       changeText: previousClose > 0
           ? '$prefix${change.toStringAsFixed(2)} '
-              '($prefix${changePercent.toStringAsFixed(2)}%)'
+                '($prefix${changePercent.toStringAsFixed(2)}%)'
           : 'Price available',
     );
   }
@@ -164,20 +149,13 @@ class _HomeScreenState extends State<HomeScreen> {
       return value.toDouble();
     }
 
-    return double.tryParse(
-          value?.toString() ?? '',
-        ) ??
-        0;
+    return double.tryParse(value?.toString() ?? '') ?? 0;
   }
 
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
@@ -186,19 +164,13 @@ class _HomeScreenState extends State<HomeScreen> {
           onRefresh: _loadDashboard,
           child: ResponsiveContainer(
             child: ListView(
-              physics:
-                  const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(
-                vertical: 20,
-              ),
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.symmetric(vertical: 20),
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
                         'Quanttora',
@@ -213,9 +185,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             ? 'Market data connected'
                             : 'Market data unavailable',
                         style: TextStyle(
-                          color: _marketConnected
-                              ? Colors.green
-                              : Colors.grey,
+                          color: _marketConnected ? Colors.green : Colors.grey,
                           fontWeight: FontWeight.w600,
                         ),
                       ),

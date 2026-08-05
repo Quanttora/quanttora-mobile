@@ -34,9 +34,7 @@ class VolumeEngine {
       );
     }
 
-    final validCandles = candles
-        .where((candle) => candle.volume > 0)
-        .toList();
+    final validCandles = candles.where((candle) => candle.volume > 0).toList();
 
     if (validCandles.length < period + 1) {
       return const VolumeResult(
@@ -45,8 +43,7 @@ class VolumeEngine {
         relativeVolume: 0,
         status: 'Volume Unavailable',
         score: 0,
-        reason:
-            'Reliable volume data is unavailable for this instrument.',
+        reason: 'Reliable volume data is unavailable for this instrument.',
       );
     }
 
@@ -73,13 +70,11 @@ class VolumeEngine {
         relativeVolume: 0,
         status: 'Volume Unavailable',
         score: 0,
-        reason:
-            'Reliable volume data is unavailable for this instrument.',
+        reason: 'Reliable volume data is unavailable for this instrument.',
       );
     }
 
-    final relativeVolume =
-        currentVolume / averageVolume;
+    final relativeVolume = currentVolume / averageVolume;
 
     final int score;
     final String status;

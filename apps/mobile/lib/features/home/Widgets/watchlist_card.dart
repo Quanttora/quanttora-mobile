@@ -23,10 +23,7 @@ class WatchlistCard extends StatelessWidget {
         children: [
           const Text(
             "⭐ Watchlist",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 18),
 
@@ -74,25 +71,14 @@ class WatchlistCard extends StatelessWidget {
           Expanded(
             child: Text(
               symbol,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 15,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
             ),
           ),
-          Text(
-            price,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          Text(price, style: const TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(width: 12),
           Text(
             change,
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(color: color, fontWeight: FontWeight.bold),
           ),
         ],
       ),

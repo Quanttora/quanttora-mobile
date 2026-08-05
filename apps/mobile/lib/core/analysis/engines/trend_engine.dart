@@ -26,11 +26,9 @@ class TrendEngine {
       );
     }
 
-    final count =
-        candles.length < lookback ? candles.length : lookback;
+    final count = candles.length < lookback ? candles.length : lookback;
 
-    final recent =
-        candles.sublist(candles.length - count);
+    final recent = candles.sublist(candles.length - count);
 
     int bullishStructure = 0;
     int bearishStructure = 0;
@@ -39,17 +37,13 @@ class TrendEngine {
       final previous = recent[i - 1];
       final current = recent[i];
 
-      final higherHigh =
-          current.high > previous.high;
+      final higherHigh = current.high > previous.high;
 
-      final higherLow =
-          current.low > previous.low;
+      final higherLow = current.low > previous.low;
 
-      final lowerHigh =
-          current.high < previous.high;
+      final lowerHigh = current.high < previous.high;
 
-      final lowerLow =
-          current.low < previous.low;
+      final lowerLow = current.low < previous.low;
 
       if (higherHigh && higherLow) {
         bullishStructure++;
@@ -62,24 +56,20 @@ class TrendEngine {
 
     final totalComparisons = recent.length - 1;
 
-    final bullishRatio =
-        bullishStructure / totalComparisons;
+    final bullishRatio = bullishStructure / totalComparisons;
 
-    final bearishRatio =
-        bearishStructure / totalComparisons;
+    final bearishRatio = bearishStructure / totalComparisons;
 
     String trend;
     int baseScore;
     String structureReason;
 
-    if (bullishRatio > bearishRatio &&
-        bullishRatio >= 0.40) {
+    if (bullishRatio > bearishRatio && bullishRatio >= 0.40) {
       trend = 'Bullish';
       baseScore = 90;
       structureReason =
           'Recent candles show a dominant higher-high and higher-low structure.';
-    } else if (bearishRatio > bullishRatio &&
-        bearishRatio >= 0.40) {
+    } else if (bearishRatio > bullishRatio && bearishRatio >= 0.40) {
       trend = 'Bearish';
       baseScore = 90;
       structureReason =
@@ -91,31 +81,24 @@ class TrendEngine {
           'Recent price structure is mixed without a clear directional trend.';
     }
 
-    final normalizedDirection =
-        direction.trim().toUpperCase();
+    final normalizedDirection = direction.trim().toUpperCase();
 
     final directionMatches =
-        (normalizedDirection == 'CALL' &&
-                trend == 'Bullish') ||
-            (normalizedDirection == 'PUT' &&
-                trend == 'Bearish');
+        (normalizedDirection == 'CALL' && trend == 'Bullish') ||
+        (normalizedDirection == 'PUT' && trend == 'Bearish');
 
     final score = trend == 'Sideways'
         ? baseScore
         : directionMatches
-            ? baseScore
-            : 35;
+        ? baseScore
+        : 35;
 
     final reason = trend == 'Sideways'
         ? structureReason
         : directionMatches
-            ? '$structureReason This supports the $normalizedDirection direction.'
-            : '$structureReason This does not support the $normalizedDirection direction.';
+        ? '$structureReason This supports the $normalizedDirection direction.'
+        : '$structureReason This does not support the $normalizedDirection direction.';
 
-    return TrendResult(
-      trend: trend,
-      score: score,
-      reason: reason,
-    );
+    return TrendResult(trend: trend, score: score, reason: reason);
   }
 }

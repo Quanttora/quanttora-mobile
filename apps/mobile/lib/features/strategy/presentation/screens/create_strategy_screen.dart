@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../data/supabase_strategy_repository.dart';
@@ -13,12 +13,10 @@ class CreateStrategyScreen extends StatefulWidget {
   const CreateStrategyScreen({super.key});
 
   @override
-  State<CreateStrategyScreen> createState() =>
-      _CreateStrategyScreenState();
+  State<CreateStrategyScreen> createState() => _CreateStrategyScreenState();
 }
 
-class _CreateStrategyScreenState
-    extends State<CreateStrategyScreen> {
+class _CreateStrategyScreenState extends State<CreateStrategyScreen> {
   final _formKey = GlobalKey<FormState>();
 
   final SupabaseStrategyRepository _strategyRepository =
@@ -29,11 +27,7 @@ class _CreateStrategyScreenState
   final _nameController = TextEditingController();
   final _descriptionController = TextEditingController();
 
-  static const _instruments = <String>[
-    'NIFTY 50',
-    'BANK NIFTY',
-    'SENSEX',
-  ];
+  static const _instruments = <String>['NIFTY 50', 'BANK NIFTY', 'SENSEX'];
 
   static const _timeframes = <String>[
     '1 min',
@@ -81,9 +75,7 @@ class _CreateStrategyScreenState
     }
 
     if (_step == 1 && _selectedInstruments.isEmpty) {
-      _showMessage(
-        'Select at least one instrument.',
-      );
+      _showMessage('Select at least one instrument.');
       return false;
     }
 
@@ -116,11 +108,7 @@ class _CreateStrategyScreenState
   void _showMessage(String message) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(message),
-        ),
-      );
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _save() async {
@@ -135,9 +123,7 @@ class _CreateStrategyScreenState
     final user = Supabase.instance.client.auth.currentUser;
 
     if (user == null) {
-      _showMessage(
-        'Please sign in before saving a strategy.',
-      );
+      _showMessage('Please sign in before saving a strategy.');
       return;
     }
 
@@ -172,9 +158,7 @@ class _CreateStrategyScreenState
         return;
       }
 
-      _showMessage(
-        'Strategy saved successfully.',
-      );
+      _showMessage('Strategy saved successfully.');
 
       Navigator.of(context).pop(true);
     } catch (error) {
@@ -182,9 +166,7 @@ class _CreateStrategyScreenState
         return;
       }
 
-      _showMessage(
-        'Unable to save strategy: $error',
-      );
+      _showMessage('Unable to save strategy: $error');
     } finally {
       if (mounted) {
         setState(() {
@@ -193,6 +175,7 @@ class _CreateStrategyScreenState
       }
     }
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -203,9 +186,7 @@ class _CreateStrategyScreenState
         elevation: 0,
         leading: IconButton(
           onPressed: _back,
-          icon: const Icon(
-            Icons.arrow_back_rounded,
-          ),
+          icon: const Icon(Icons.arrow_back_rounded),
         ),
         title: const Text(
           'Create Strategy',
@@ -216,10 +197,7 @@ class _CreateStrategyScreenState
         top: false,
         child: Column(
           children: [
-            _ProgressHeader(
-              currentStep: _step,
-              titles: _stepTitles,
-            ),
+            _ProgressHeader(currentStep: _step, titles: _stepTitles),
             Expanded(
               child: Form(
                 key: _formKey,
@@ -231,8 +209,7 @@ class _CreateStrategyScreenState
                     AppSpacing.xxxl,
                   ),
                   child: AnimatedSwitcher(
-                    duration:
-                        const Duration(milliseconds: 200),
+                    duration: const Duration(milliseconds: 200),
                     child: KeyedSubtree(
                       key: ValueKey(_step),
                       child: _buildStep(),
@@ -243,8 +220,7 @@ class _CreateStrategyScreenState
             ),
             _BottomActions(
               isFirstStep: _step == 0,
-              isLastStep:
-                  _step == _stepTitles.length - 1,
+              isLastStep: _step == _stepTitles.length - 1,
               onBack: _back,
               onNext: _next,
               onSave: _save,
@@ -281,19 +257,14 @@ class _CreateStrategyScreenState
           description:
               'Give your strategy a clear identity. You can refine its trading rules later.',
         ),
-        const SizedBox(
-          height: AppSpacing.xxl,
-        ),
+        const SizedBox(height: AppSpacing.xxl),
         const _FieldLabel('Strategy name'),
         const SizedBox(height: AppSpacing.sm),
         TextFormField(
           controller: _nameController,
-          textCapitalization:
-              TextCapitalization.sentences,
+          textCapitalization: TextCapitalization.sentences,
           maxLength: 50,
-          decoration: const InputDecoration(
-            hintText: 'e.g. Nifty Momentum',
-          ),
+          decoration: const InputDecoration(hintText: 'e.g. Nifty Momentum'),
           validator: (value) {
             final name = value?.trim() ?? '';
 
@@ -313,13 +284,11 @@ class _CreateStrategyScreenState
         const SizedBox(height: AppSpacing.sm),
         TextFormField(
           controller: _descriptionController,
-          textCapitalization:
-              TextCapitalization.sentences,
+          textCapitalization: TextCapitalization.sentences,
           maxLines: 4,
           maxLength: 200,
           decoration: const InputDecoration(
-            hintText:
-                'Describe when and why you use this strategy.',
+            hintText: 'Describe when and why you use this strategy.',
           ),
         ),
       ],
@@ -332,8 +301,7 @@ class _CreateStrategyScreenState
       children: [
         const _StepHeading(
           title: 'Choose your market',
-          description:
-              'Select where this strategy is allowed to operate.',
+          description: 'Select where this strategy is allowed to operate.',
         ),
         const SizedBox(height: AppSpacing.xxl),
         const _FieldLabel('Instruments'),
@@ -342,8 +310,7 @@ class _CreateStrategyScreenState
           spacing: AppSpacing.sm,
           runSpacing: AppSpacing.sm,
           children: _instruments.map((instrument) {
-            final selected =
-                _selectedInstruments.contains(instrument);
+            final selected = _selectedInstruments.contains(instrument);
 
             return FilterChip(
               selected: selected,
@@ -394,17 +361,14 @@ class _CreateStrategyScreenState
         const SizedBox(height: AppSpacing.xxl),
         _SettingCard(
           title: 'Risk / Reward',
-          value:
-              '1:${_formatNumber(_riskRewardRatio)}',
-          description:
-              'Minimum reward expected for every unit of risk.',
+          value: '1:${_formatNumber(_riskRewardRatio)}',
+          description: 'Minimum reward expected for every unit of risk.',
           child: Slider(
             min: 1,
             max: 5,
             divisions: 8,
             value: _riskRewardRatio,
-            label:
-                '1:${_formatNumber(_riskRewardRatio)}',
+            label: '1:${_formatNumber(_riskRewardRatio)}',
             onChanged: (value) {
               setState(() {
                 _riskRewardRatio = value;
@@ -447,8 +411,7 @@ class _CreateStrategyScreenState
         const SizedBox(height: AppSpacing.xxl),
         _SettingCard(
           title: 'Minimum AI score',
-          value:
-              '${_minimumAiScore.round()} / 100',
+          value: '${_minimumAiScore.round()} / 100',
           description:
               'Required Quanttora analysis score before a trade qualifies.',
           child: Slider(
@@ -456,8 +419,7 @@ class _CreateStrategyScreenState
             max: 100,
             divisions: 10,
             value: _minimumAiScore,
-            label:
-                _minimumAiScore.round().toString(),
+            label: _minimumAiScore.round().toString(),
             onChanged: (value) {
               setState(() {
                 _minimumAiScore = value;
@@ -479,8 +441,7 @@ class _CreateStrategyScreenState
         ),
         _FilterSwitch(
           title: 'Avoid sideways markets',
-          description:
-              'Require sufficient directional market structure.',
+          description: 'Require sufficient directional market structure.',
           value: _avoidSideways,
           onChanged: (value) {
             setState(() {
@@ -504,42 +465,29 @@ class _CreateStrategyScreenState
   }
 
   Widget _buildReview() {
-    final description =
-        _descriptionController.text.trim();
+    final description = _descriptionController.text.trim();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const _StepHeading(
           title: 'Review your strategy',
-          description:
-              'Confirm the strategy controls before saving.',
+          description: 'Confirm the strategy controls before saving.',
         ),
         const SizedBox(height: AppSpacing.xxl),
         _ReviewCard(
           children: [
-            _ReviewRow(
-              label: 'Strategy',
-              value: _nameController.text.trim(),
-            ),
+            _ReviewRow(label: 'Strategy', value: _nameController.text.trim()),
             if (description.isNotEmpty)
-              _ReviewRow(
-                label: 'Description',
-                value: description,
-              ),
+              _ReviewRow(label: 'Description', value: description),
             _ReviewRow(
               label: 'Instruments',
-              value:
-                  _selectedInstruments.join(', '),
+              value: _selectedInstruments.join(', '),
             ),
-            _ReviewRow(
-              label: 'Timeframe',
-              value: _timeframe,
-            ),
+            _ReviewRow(label: 'Timeframe', value: _timeframe),
             _ReviewRow(
               label: 'Risk / Reward',
-              value:
-                  '1:${_formatNumber(_riskRewardRatio)}',
+              value: '1:${_formatNumber(_riskRewardRatio)}',
             ),
             _ReviewRow(
               label: 'Max trades/day',
@@ -547,18 +495,14 @@ class _CreateStrategyScreenState
             ),
             _ReviewRow(
               label: 'Minimum AI score',
-              value:
-                  '${_minimumAiScore.round()}',
+              value: '${_minimumAiScore.round()}',
             ),
           ],
         ),
         const SizedBox(height: AppSpacing.xl),
         _ReviewCard(
           children: [
-            _BooleanReviewRow(
-              label: 'Major news filter',
-              enabled: _avoidNews,
-            ),
+            _BooleanReviewRow(label: 'Major news filter', enabled: _avoidNews),
             _BooleanReviewRow(
               label: 'Sideways market filter',
               enabled: _avoidSideways,
@@ -571,27 +515,16 @@ class _CreateStrategyScreenState
         ),
         const SizedBox(height: AppSpacing.xl),
         Container(
-          padding: const EdgeInsets.all(
-            AppSpacing.lg,
-          ),
+          padding: const EdgeInsets.all(AppSpacing.lg),
           decoration: BoxDecoration(
-            color:
-                AppColors.info.withValues(alpha: 0.08),
+            color: AppColors.info.withValues(alpha: 0.08),
             borderRadius: AppRadius.mdBorder,
-            border: Border.all(
-              color:
-                  AppColors.info.withValues(alpha: 0.18),
-            ),
+            border: Border.all(color: AppColors.info.withValues(alpha: 0.18)),
           ),
           child: const Row(
-            crossAxisAlignment:
-                CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                Icons.info_outline_rounded,
-                color: AppColors.info,
-                size: 20,
-              ),
+              Icon(Icons.info_outline_rounded, color: AppColors.info, size: 20),
               SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Text(
@@ -619,15 +552,11 @@ class _ProgressHeader extends StatelessWidget {
   final int currentStep;
   final List<String> titles;
 
-  const _ProgressHeader({
-    required this.currentStep,
-    required this.titles,
-  });
+  const _ProgressHeader({required this.currentStep, required this.titles});
 
   @override
   Widget build(BuildContext context) {
-    final progress =
-        (currentStep + 1) / titles.length;
+    final progress = (currentStep + 1) / titles.length;
 
     return Container(
       color: AppColors.surface,
@@ -674,25 +603,16 @@ class _StepHeading extends StatelessWidget {
   final String title;
   final String description;
 
-  const _StepHeading({
-    required this.title,
-    required this.description,
-  });
+  const _StepHeading({required this.title, required this.description});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: AppTextStyles.headlineMedium,
-        ),
+        Text(title, style: AppTextStyles.headlineMedium),
         const SizedBox(height: AppSpacing.sm),
-        Text(
-          description,
-          style: AppTextStyles.bodyMedium,
-        ),
+        Text(description, style: AppTextStyles.bodyMedium),
       ],
     );
   }
@@ -705,10 +625,7 @@ class _FieldLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: AppTextStyles.labelLarge,
-    );
+    return Text(text, style: AppTextStyles.labelLarge);
   }
 }
 
@@ -728,27 +645,18 @@ class _SettingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(
-        AppSpacing.cardPadding,
-      ),
+      padding: const EdgeInsets.all(AppSpacing.cardPadding),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: AppRadius.mdBorder,
-        border: Border.all(
-          color: AppColors.border,
-        ),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: AppTextStyles.titleMedium,
-                ),
-              ),
+              Expanded(child: Text(title, style: AppTextStyles.titleMedium)),
               Text(
                 value,
                 style: AppTextStyles.titleMedium.copyWith(
@@ -758,10 +666,7 @@ class _SettingCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.xs),
-          Text(
-            description,
-            style: AppTextStyles.bodySmall,
-          ),
+          Text(description, style: AppTextStyles.bodySmall),
           const SizedBox(height: AppSpacing.md),
           child,
         ],
@@ -786,45 +691,27 @@ class _FilterSwitch extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(
-        bottom: AppSpacing.md,
-      ),
-      padding: const EdgeInsets.all(
-        AppSpacing.lg,
-      ),
+      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: AppRadius.mdBorder,
-        border: Border.all(
-          color: AppColors.border,
-        ),
+        border: Border.all(color: AppColors.border),
       ),
       child: Row(
         children: [
           Expanded(
             child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: AppTextStyles.titleSmall,
-                ),
-                const SizedBox(
-                  height: AppSpacing.xs,
-                ),
-                Text(
-                  description,
-                  style: AppTextStyles.bodySmall,
-                ),
+                Text(title, style: AppTextStyles.titleSmall),
+                const SizedBox(height: AppSpacing.xs),
+                Text(description, style: AppTextStyles.bodySmall),
               ],
             ),
           ),
           const SizedBox(width: AppSpacing.md),
-          Switch(
-            value: value,
-            onChanged: onChanged,
-          ),
+          Switch(value: value, onChanged: onChanged),
         ],
       ),
     );
@@ -834,26 +721,18 @@ class _FilterSwitch extends StatelessWidget {
 class _ReviewCard extends StatelessWidget {
   final List<Widget> children;
 
-  const _ReviewCard({
-    required this.children,
-  });
+  const _ReviewCard({required this.children});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: AppRadius.mdBorder,
-        border: Border.all(
-          color: AppColors.border,
-        ),
+        border: Border.all(color: AppColors.border),
       ),
-      child: Column(
-        children: children,
-      ),
+      child: Column(children: children),
     );
   }
 }
@@ -862,27 +741,18 @@ class _ReviewRow extends StatelessWidget {
   final String label;
   final String value;
 
-  const _ReviewRow({
-    required this.label,
-    required this.value,
-  });
+  const _ReviewRow({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        vertical: AppSpacing.lg,
-      ),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
       child: Row(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
             width: 120,
-            child: Text(
-              label,
-              style: AppTextStyles.labelMedium,
-            ),
+            child: Text(label, style: AppTextStyles.labelMedium),
           ),
           Expanded(
             child: Text(
@@ -901,41 +771,25 @@ class _BooleanReviewRow extends StatelessWidget {
   final String label;
   final bool enabled;
 
-  const _BooleanReviewRow({
-    required this.label,
-    required this.enabled,
-  });
+  const _BooleanReviewRow({required this.label, required this.enabled});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        vertical: AppSpacing.lg,
-      ),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
       child: Row(
         children: [
-          Expanded(
-            child: Text(
-              label,
-              style: AppTextStyles.labelMedium,
-            ),
-          ),
+          Expanded(child: Text(label, style: AppTextStyles.labelMedium)),
           Icon(
-            enabled
-                ? Icons.check_circle_rounded
-                : Icons.cancel_outlined,
-            color: enabled
-                ? AppColors.success
-                : AppColors.neutral,
+            enabled ? Icons.check_circle_rounded : Icons.cancel_outlined,
+            color: enabled ? AppColors.success : AppColors.neutral,
             size: 20,
           ),
           const SizedBox(width: AppSpacing.xs),
           Text(
             enabled ? 'Enabled' : 'Disabled',
             style: AppTextStyles.labelLarge.copyWith(
-              color: enabled
-                  ? AppColors.success
-                  : AppColors.neutral,
+              color: enabled ? AppColors.success : AppColors.neutral,
             ),
           ),
         ],
@@ -970,11 +824,7 @@ class _BottomActions extends StatelessWidget {
       ),
       decoration: const BoxDecoration(
         color: AppColors.surface,
-        border: Border(
-          top: BorderSide(
-            color: AppColors.border,
-          ),
-        ),
+        border: Border(top: BorderSide(color: AppColors.border)),
       ),
       child: Row(
         children: [
@@ -990,22 +840,17 @@ class _BottomActions extends StatelessWidget {
           Expanded(
             flex: isFirstStep ? 1 : 2,
             child: FilledButton(
-              onPressed:
-                  isLastStep ? onSave : onNext,
+              onPressed: isLastStep ? onSave : onNext,
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: AppColors.textWhite,
-                padding: const EdgeInsets.symmetric(
-                  vertical: 15,
-                ),
+                padding: const EdgeInsets.symmetric(vertical: 15),
                 shape: const RoundedRectangleBorder(
                   borderRadius: AppRadius.mdBorder,
                 ),
               ),
               child: Text(
-                isLastStep
-                    ? 'Save Strategy'
-                    : 'Continue',
+                isLastStep ? 'Save Strategy' : 'Continue',
                 style: AppTextStyles.buttonLarge,
               ),
             ),
@@ -1015,4 +860,3 @@ class _BottomActions extends StatelessWidget {
     );
   }
 }
-

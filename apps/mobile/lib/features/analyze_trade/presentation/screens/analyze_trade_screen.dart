@@ -25,10 +25,7 @@ class _AnalyzeTradeScreenState extends State<AnalyzeTradeScreen> {
         backgroundColor: Colors.white,
         title: const Text(
           "AI Trade Analyzer",
-          style: TextStyle(
-            color: Colors.black,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
       ),
       body: SingleChildScrollView(
@@ -38,10 +35,7 @@ class _AnalyzeTradeScreenState extends State<AnalyzeTradeScreen> {
           children: [
             const Text(
               "Analyze your trade before execution",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
 
             const SizedBox(height: 25),
@@ -86,10 +80,7 @@ class _AnalyzeTradeScreenState extends State<AnalyzeTradeScreen> {
                 icon: const Icon(Icons.auto_awesome),
                 label: const Text(
                   "Analyze Trade",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.indigo,
@@ -115,20 +106,14 @@ class _AnalyzeTradeScreenState extends State<AnalyzeTradeScreen> {
                 children: [
                   Text(
                     "AI Preview",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
 
                   SizedBox(height: 20),
 
                   Row(
                     children: [
-                      Icon(
-                        Icons.psychology,
-                        color: Colors.indigo,
-                      ),
+                      Icon(Icons.psychology, color: Colors.indigo),
                       SizedBox(width: 10),
                       Text("Waiting for analysis..."),
                     ],

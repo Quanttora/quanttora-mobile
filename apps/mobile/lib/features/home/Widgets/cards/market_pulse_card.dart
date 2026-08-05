@@ -37,9 +37,7 @@ class MarketPulseCard extends StatelessWidget {
 
           const Text(
             "Live market overview",
-            style: TextStyle(
-              color: Colors.white60,
-            ),
+            style: TextStyle(color: Colors.white60),
           ),
 
           const SizedBox(height: 24),
@@ -102,24 +100,16 @@ class MarketPulseCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.green.withValues(alpha: .10),
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: Colors.green.withValues(alpha: .30),
-              ),
+              border: Border.all(color: Colors.green.withValues(alpha: .30)),
             ),
             child: const Row(
               children: [
-                Icon(
-                  Icons.psychology_alt,
-                  color: Colors.greenAccent,
-                ),
+                Icon(Icons.psychology_alt, color: Colors.greenAccent),
                 SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     "AI Market Bias : BULLISH\nWait for pullback confirmation before entering.",
-                    style: TextStyle(
-                      color: Colors.white,
-                      height: 1.4,
-                    ),
+                    style: TextStyle(color: Colors.white, height: 1.4),
                   ),
                 ),
               ],
@@ -157,11 +147,7 @@ class _PulseTile extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            icon,
-            color: color,
-            size: 24,
-          ),
+          Icon(icon, color: color, size: 24),
           const SizedBox(height: 12),
           Text(
             title,
@@ -182,10 +168,7 @@ class _PulseTile extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             change,
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(color: color, fontWeight: FontWeight.bold),
           ),
         ],
       ),

@@ -32,50 +32,30 @@ class AnalysisEngine {
     required SectorStrength sectorStrength,
   }) {
     // PRICE STRUCTURE
-    final trend = TrendEngine.analyze(
-      candles: candles,
-      direction: direction,
-    );
+    final trend = TrendEngine.analyze(candles: candles, direction: direction);
 
-    final ema = EMAEngine.analyze(
-      candles: candles,
-      direction: direction,
-    );
+    final ema = EMAEngine.analyze(candles: candles, direction: direction);
 
-    final vwap = VWAPEngine.analyze(
-      candles: candles,
-      direction: direction,
-    );
+    final vwap = VWAPEngine.analyze(candles: candles, direction: direction);
 
     // MOMENTUM / STRENGTH
-    final adx = ADXEngine.analyze(
-      candles: candles,
-    );
+    final adx = ADXEngine.analyze(candles: candles);
 
-    final rsi = RSIEngine.analyze(
-      candles: candles,
-      direction: direction,
-    );
+    final rsi = RSIEngine.analyze(candles: candles, direction: direction);
 
     // PARTICIPATION
-    final volume = VolumeEngine.analyze(
-      candles: candles,
-    );
+    final volume = VolumeEngine.analyze(candles: candles);
 
     // LIQUIDITY
     // Excluded from Q-Score until genuine
     // bid/ask market depth is available.
-    final liquidity =
-        LiquidityEngine.analyze();
+    final liquidity = LiquidityEngine.analyze();
 
     // MARKET VOLATILITY RISK
-    final risk = RiskEngine.analyze(
-      candles: candles,
-    );
+    final risk = RiskEngine.analyze(candles: candles);
 
     // DERIVATIVES
-    final option =
-        OptionChainEngine.analyze(
+    final option = OptionChainEngine.analyze(
       pcr: optionChain.pcr,
       maxCallOI: optionChain.maxCallOI,
       maxPutOI: optionChain.maxPutOI,
@@ -96,15 +76,13 @@ class AnalysisEngine {
     );
 
     // MARKET BREADTH
-    final breadth =
-        HeatMapEngine.analyze(
+    final breadth = HeatMapEngine.analyze(
       advancing: heatMap.advancing,
       declining: heatMap.declining,
     );
 
     // COMPOSITE MARKET HEALTH
-    final marketHealth =
-        MarketHealthEngine.analyze(
+    final marketHealth = MarketHealthEngine.analyze(
       trendScore: trend.score,
       emaScore: ema.score,
       adxScore: adx.score,
@@ -113,16 +91,14 @@ class AnalysisEngine {
     );
 
     // Direction-align raw OI strength.
-    final directionalOIScore =
-        QScoreEngine.directionalOIScore(
+    final directionalOIScore = QScoreEngine.directionalOIScore(
       bias: oi.bias,
       rawScore: oi.score,
       direction: direction,
     );
 
     // Direction-align market breadth.
-    final directionalBreadthScore =
-        QScoreEngine.directionalBreadthScore(
+    final directionalBreadthScore = QScoreEngine.directionalBreadthScore(
       advancing: heatMap.advancing,
       declining: heatMap.declining,
       direction: direction,
@@ -133,17 +109,13 @@ class AnalysisEngine {
         volume.status != 'Insufficient Data';
 
     final vwapAvailable =
-        vwap.status != 'Unavailable' &&
-        vwap.status != 'Insufficient Data';
+        vwap.status != 'Unavailable' && vwap.status != 'Insufficient Data';
 
-    final optionAvailable =
-        optionChain.pcr > 0;
+    final optionAvailable = optionChain.pcr > 0;
 
-    final breadthAvailable =
-        breadth.sentiment != 'Unavailable';
+    final breadthAvailable = breadth.sentiment != 'Unavailable';
 
-    final riskAvailable =
-        risk.level != 'Unknown';
+    final riskAvailable = risk.level != 'Unknown';
 
     // PERMANENT WEIGHTED Q-SCORE
     //
@@ -164,34 +136,13 @@ class AnalysisEngine {
     //
     // Unavailable inputs are excluded and
     // remaining weights are normalized.
-    final qScore =
-        QScoreEngine.calculate(
+    final qScore = QScoreEngine.calculate(
       inputs: [
-        QScoreInput(
-          score: trend.score,
-          weight: 15,
-          available: trend.score > 0,
-        ),
-        QScoreInput(
-          score: ema.score,
-          weight: 12,
-          available: ema.score > 0,
-        ),
-        QScoreInput(
-          score: vwap.score,
-          weight: 8,
-          available: vwapAvailable,
-        ),
-        QScoreInput(
-          score: adx.score,
-          weight: 10,
-          available: adx.score > 0,
-        ),
-        QScoreInput(
-          score: rsi.score,
-          weight: 10,
-          available: rsi.score > 0,
-        ),
+        QScoreInput(score: trend.score, weight: 15, available: trend.score > 0),
+        QScoreInput(score: ema.score, weight: 12, available: ema.score > 0),
+        QScoreInput(score: vwap.score, weight: 8, available: vwapAvailable),
+        QScoreInput(score: adx.score, weight: 10, available: adx.score > 0),
+        QScoreInput(score: rsi.score, weight: 10, available: rsi.score > 0),
         QScoreInput(
           score: volume.score,
           weight: 10,
@@ -212,26 +163,20 @@ class AnalysisEngine {
           weight: 8,
           available: breadthAvailable,
         ),
-        QScoreInput(
-          score: risk.score,
-          weight: 7,
-          available: riskAvailable,
-        ),
+        QScoreInput(score: risk.score, weight: 7, available: riskAvailable),
       ],
     );
 
-    final sectorText =
-        sectorStrength.name == '-'
-            ? 'Unavailable'
-            : '${sectorStrength.name} '
-                '${sectorStrength.strength.toStringAsFixed(2)}%';
+    final sectorText = sectorStrength.name == '-'
+        ? 'Unavailable'
+        : '${sectorStrength.name} '
+              '${sectorStrength.strength.toStringAsFixed(2)}%';
 
-    final heatMapText =
-        breadth.sentiment == 'Unavailable'
-            ? 'Unavailable'
-            : '${breadth.sentiment} '
-                '(${heatMap.advancing} up / '
-                '${heatMap.declining} down)';
+    final heatMapText = breadth.sentiment == 'Unavailable'
+        ? 'Unavailable'
+        : '${breadth.sentiment} '
+              '(${heatMap.advancing} up / '
+              '${heatMap.declining} down)';
 
     final reasons = <String>[
       trend.reason,
@@ -246,21 +191,15 @@ class AnalysisEngine {
     ];
 
     if (optionAvailable) {
-      reasons.add(
-        option.reason,
-      );
+      reasons.add(option.reason);
     }
 
     if (oi.available) {
-      reasons.add(
-        oi.reason,
-      );
+      reasons.add(oi.reason);
     }
 
     if (breadthAvailable) {
-      reasons.add(
-        breadth.reason,
-      );
+      reasons.add(breadth.reason);
     }
 
     if (sectorStrength.name != '-') {

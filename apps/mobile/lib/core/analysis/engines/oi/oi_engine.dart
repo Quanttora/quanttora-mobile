@@ -19,9 +19,7 @@ class OIEngine {
     required double callWriting,
     required double putWriting,
   }) {
-    final totalActivity =
-        callOIChange.abs() +
-        putOIChange.abs();
+    final totalActivity = callOIChange.abs() + putOIChange.abs();
 
     if (totalActivity == 0) {
       return const OIResult(
@@ -32,22 +30,15 @@ class OIEngine {
       );
     }
 
-    final putShare =
-        putOIChange.abs() /
-        totalActivity;
+    final putShare = putOIChange.abs() / totalActivity;
 
-    final callShare =
-        callOIChange.abs() /
-        totalActivity;
+    final callShare = callOIChange.abs() / totalActivity;
 
     if (putWriting > callWriting) {
       return OIResult(
         bias: 'Bullish',
-        score: (putShare * 100)
-            .round()
-            .clamp(0, 100),
-        reason:
-            'Put writing exceeds call writing in the live option chain.',
+        score: (putShare * 100).round().clamp(0, 100),
+        reason: 'Put writing exceeds call writing in the live option chain.',
         available: true,
       );
     }
@@ -55,11 +46,8 @@ class OIEngine {
     if (callWriting > putWriting) {
       return OIResult(
         bias: 'Bearish',
-        score: (callShare * 100)
-            .round()
-            .clamp(0, 100),
-        reason:
-            'Call writing exceeds put writing in the live option chain.',
+        score: (callShare * 100).round().clamp(0, 100),
+        reason: 'Call writing exceeds put writing in the live option chain.',
         available: true,
       );
     }
@@ -67,8 +55,7 @@ class OIEngine {
     return const OIResult(
       bias: 'Neutral',
       score: 50,
-      reason:
-          'Call and put writing are balanced.',
+      reason: 'Call and put writing are balanced.',
       available: true,
     );
   }

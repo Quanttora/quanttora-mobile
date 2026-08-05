@@ -19,9 +19,7 @@ class MarketIndicesSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (loading) {
-      return const LoadingCard(
-        message: "Loading Live Market...",
-      );
+      return const LoadingCard(message: "Loading Live Market...");
     }
 
     if (error != null) {
@@ -29,13 +27,10 @@ class MarketIndicesSection extends StatelessWidget {
     }
 
     if (data == null) {
-      return const ErrorCard(
-        message: "Market data unavailable",
-      );
+      return const ErrorCard(message: "Market data unavailable");
     }
 
-    final indices =
-        (data!["indices"] as Map<String, dynamic>?) ?? {};
+    final indices = (data!["indices"] as Map<String, dynamic>?) ?? {};
 
     return Column(
       children: [
@@ -50,29 +45,18 @@ class MarketIndicesSection extends StatelessWidget {
     );
   }
 
-  Widget _card(
-    dynamic quote,
-    String title,
-  ) {
+  Widget _card(dynamic quote, String title) {
     if (quote == null) {
-      return IndexCard(
-        name: title,
-        value: "--",
-        change: "--",
-        positive: true,
-      );
+      return IndexCard(name: title, value: "--", change: "--", positive: true);
     }
 
     final map = quote as Map<String, dynamic>;
 
-    final price =
-        (map["ltp"] ?? "--").toString();
+    final price = (map["ltp"] ?? "--").toString();
 
-    final change =
-        ((map["change"] ?? 0) as num).toDouble();
+    final change = ((map["change"] ?? 0) as num).toDouble();
 
-    final percent =
-        ((map["changePercent"] ?? 0) as num).toDouble();
+    final percent = ((map["changePercent"] ?? 0) as num).toDouble();
 
     return IndexCard(
       name: title,

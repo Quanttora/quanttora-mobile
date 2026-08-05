@@ -7,18 +7,10 @@ final supabaseClientProvider = Provider<SupabaseClient>(
   (ref) => Supabase.instance.client,
 );
 
-final authServiceProvider = Provider<AuthService>(
-  (ref) {
-    return AuthService(
-      ref.read(supabaseClientProvider),
-    );
-  },
-);
+final authServiceProvider = Provider<AuthService>((ref) {
+  return AuthService(ref.read(supabaseClientProvider));
+});
 
-final authStateProvider = StreamProvider<AuthState>(
-  (ref) {
-    return ref
-        .read(authServiceProvider)
-        .authStateChanges;
-  },
-);
+final authStateProvider = StreamProvider<AuthState>((ref) {
+  return ref.read(authServiceProvider).authStateChanges;
+});

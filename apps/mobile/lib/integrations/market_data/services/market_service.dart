@@ -8,10 +8,7 @@ class MarketService {
   Future<Response> getQuote(String symbol) async {
     return ApiClient.client.get(
       '/quote',
-      queryParameters: {
-        'symbol': symbol,
-        'apikey': ApiClient.apiKey,
-      },
+      queryParameters: {'symbol': symbol, 'apikey': ApiClient.apiKey},
     );
   }
 }

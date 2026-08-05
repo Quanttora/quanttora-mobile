@@ -25,18 +25,15 @@ class HeatMapEngine {
       );
     }
 
-    final bullishPercentage =
-        (advancing / total) * 100;
+    final bullishPercentage = (advancing / total) * 100;
 
-    final bearishPercentage =
-        (declining / total) * 100;
+    final bearishPercentage = (declining / total) * 100;
 
     if (advancing > declining) {
       return HeatMapResult(
         sentiment: 'Positive',
         score: bullishPercentage.round(),
-        reason:
-            '$advancing of $total tracked sectors are advancing.',
+        reason: '$advancing of $total tracked sectors are advancing.',
       );
     }
 
@@ -44,8 +41,7 @@ class HeatMapEngine {
       return HeatMapResult(
         sentiment: 'Negative',
         score: bearishPercentage.round(),
-        reason:
-            '$declining of $total tracked sectors are declining.',
+        reason: '$declining of $total tracked sectors are declining.',
       );
     }
 

@@ -11,9 +11,7 @@ class NewsResult {
 }
 
 class NewsEngine {
-  static NewsResult analyze({
-    required bool highImpactNews,
-  }) {
+  static NewsResult analyze({required bool highImpactNews}) {
     return NewsResult(
       highImpactNews: highImpactNews,
       score: highImpactNews ? 40 : 95,

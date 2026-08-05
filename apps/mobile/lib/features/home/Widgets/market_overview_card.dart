@@ -22,12 +22,8 @@ class MarketOverviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.screenPadding,
-      ),
-      padding: const EdgeInsets.all(
-        AppSpacing.cardPadding,
-      ),
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.screenPadding),
+      padding: const EdgeInsets.all(AppSpacing.cardPadding),
       decoration: AppCardTheme.primaryCard,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -35,10 +31,7 @@ class MarketOverviewCard extends StatelessWidget {
           Row(
             children: [
               const Expanded(
-                child: Text(
-                  'Market Overview',
-                  style: AppTextStyles.titleLarge,
-                ),
+                child: Text('Market Overview', style: AppTextStyles.titleLarge),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(
@@ -46,19 +39,15 @@ class MarketOverviewCard extends StatelessWidget {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: (isLive
-                          ? AppColors.success
-                          : Colors.grey)
-                      .withValues(alpha: .12),
-                  borderRadius:
-                      BorderRadius.circular(30),
+                  color: (isLive ? AppColors.success : Colors.grey).withValues(
+                    alpha: .12,
+                  ),
+                  borderRadius: BorderRadius.circular(30),
                 ),
                 child: Text(
                   isLive ? 'LIVE' : 'UNAVAILABLE',
                   style: TextStyle(
-                    color: isLive
-                        ? AppColors.success
-                        : Colors.grey,
+                    color: isLive ? AppColors.success : Colors.grey,
                     fontWeight: FontWeight.bold,
                     fontSize: 11,
                   ),
@@ -85,24 +74,21 @@ class MarketOverviewCard extends StatelessWidget {
 }
 
 class _MarketRow extends StatelessWidget {
-  const _MarketRow({
-    required this.index,
-  });
+  const _MarketRow({required this.index});
 
   final MarketIndex index;
 
   @override
   Widget build(BuildContext context) {
-    final unavailable =
-        index.value == '--';
+    final unavailable = index.value == '--';
 
     final positive = index.change >= 0;
 
     final color = unavailable
         ? Colors.grey
         : positive
-            ? AppColors.success
-            : AppColors.danger;
+        ? AppColors.success
+        : AppColors.danger;
 
     return Row(
       children: [
@@ -117,29 +103,20 @@ class _MarketRow extends StatelessWidget {
             unavailable
                 ? Icons.remove_rounded
                 : positive
-                    ? Icons.trending_up_rounded
-                    : Icons.trending_down_rounded,
+                ? Icons.trending_up_rounded
+                : Icons.trending_down_rounded,
             color: color,
           ),
         ),
 
         const SizedBox(width: 14),
 
-        Expanded(
-          child: Text(
-            index.name,
-            style: AppTextStyles.titleMedium,
-          ),
-        ),
+        Expanded(child: Text(index.name, style: AppTextStyles.titleMedium)),
 
         Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.end,
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Text(
-              index.value,
-              style: AppTextStyles.titleLarge,
-            ),
+            Text(index.value, style: AppTextStyles.titleLarge),
             const SizedBox(height: 4),
             Text(
               index.changeText,

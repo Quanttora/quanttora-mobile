@@ -19,7 +19,6 @@ class AIAnalysisScreen extends StatefulWidget {
 }
 
 class _AIAnalysisScreenState extends State<AIAnalysisScreen> {
-
   final List<String> steps = [
     "Market Structure",
     "Trend Strength",
@@ -44,78 +43,58 @@ class _AIAnalysisScreenState extends State<AIAnalysisScreen> {
   }
 
   void startScan() {
+    Timer.periodic(const Duration(milliseconds: 700), (timer) {
+      if (!mounted) return;
 
-    Timer.periodic(
-      const Duration(milliseconds: 700),
-      (timer) {
+      if (currentStep < steps.length - 1) {
+        setState(() {
+          currentStep++;
+        });
+      } else {
+        timer.cancel();
 
-        if (!mounted) return;
-
-        if (currentStep < steps.length - 1) {
-
-          setState(() {
-            currentStep++;
-          });
-
-        } else {
-
-          timer.cancel();
-
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => AIDecisionScreen(
-                market: widget.market,
-                direction: widget.direction,
-              ),
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => AIDecisionScreen(
+              market: widget.market,
+              direction: widget.direction,
             ),
-          );
-
-        }
-
-      },
-    );
+          ),
+        );
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
-
-      appBar: AppBar(
-        title: const Text("AI Analysis"),
-      ),
+      appBar: AppBar(title: const Text("AI Analysis")),
 
       body: ListView.builder(
-
         padding: const EdgeInsets.all(20),
 
         itemCount: steps.length,
 
         itemBuilder: (_, index) {
-
           final completed = index < currentStep;
           final scanning = index == currentStep;
 
           return Card(
-
             child: ListTile(
-
               leading: completed
-                  ? const Icon(Icons.check_circle,color:Colors.green)
+                  ? const Icon(Icons.check_circle, color: Colors.green)
                   : scanning
                   ? const SizedBox(
-                width:24,
-                height:24,
-                child:CircularProgressIndicator(strokeWidth:3),
-              )
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 3),
+                    )
                   : const Icon(Icons.schedule),
 
               title: Text(
                 steps[index],
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
 
               subtitle: Text(
@@ -125,17 +104,10 @@ class _AIAnalysisScreenState extends State<AIAnalysisScreen> {
                     ? "Scanning..."
                     : "Waiting",
               ),
-
             ),
-
           );
-
         },
-
       ),
-
     );
-
   }
-
 }

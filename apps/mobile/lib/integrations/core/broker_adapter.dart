@@ -20,20 +20,11 @@ abstract class BrokerAdapter {
 
   Future<BrokerResponse<List<BrokerOrder>>> fetchOrders();
 
-  Future<BrokerResponse<String>> placeOrder(
-    BrokerOrder order,
-  );
+  Future<BrokerResponse<String>> placeOrder(BrokerOrder order);
 
-  Future<BrokerResponse<bool>> modifyOrder(
-    String orderId,
-    BrokerOrder order,
-  );
+  Future<BrokerResponse<bool>> modifyOrder(String orderId, BrokerOrder order);
 
-  Future<BrokerResponse<bool>> cancelOrder(
-    String orderId,
-  );
+  Future<BrokerResponse<bool>> cancelOrder(String orderId);
 
-  Future<BrokerResponse<double>> getLTP(
-    String symbol,
-  );
+  Future<BrokerResponse<double>> getLTP(String symbol);
 }

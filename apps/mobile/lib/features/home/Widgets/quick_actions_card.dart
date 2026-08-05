@@ -22,20 +22,13 @@ class QuickActionsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.screenPadding,
-      ),
-      padding: const EdgeInsets.all(
-        AppSpacing.cardPadding,
-      ),
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.screenPadding),
+      padding: const EdgeInsets.all(AppSpacing.cardPadding),
       decoration: AppCardTheme.primaryCard,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Quick Actions",
-            style: AppTextStyles.titleLarge,
-          ),
+          const Text("Quick Actions", style: AppTextStyles.titleLarge),
 
           const SizedBox(height: 18),
 
@@ -112,10 +105,7 @@ class _ActionButton extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(18),
         child: Padding(
-          padding: const EdgeInsets.symmetric(
-            vertical: 22,
-            horizontal: 16,
-          ),
+          padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 16),
           child: Column(
             children: [
               Container(
@@ -125,15 +115,11 @@ class _ActionButton extends StatelessWidget {
                   color: color,
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(
-                  icon,
-                  color: Colors.white,
-                  size: 26,
-                ),
+                child: Icon(icon, color: Colors.white, size: 26),
               ),
 
               const SizedBox(height: 14),
-                            Text(
+              Text(
                 title,
                 style: AppTextStyles.titleMedium,
                 textAlign: TextAlign.center,

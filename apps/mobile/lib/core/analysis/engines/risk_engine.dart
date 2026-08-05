@@ -17,24 +17,18 @@ class RiskResult {
 }
 
 class RiskEngine {
-  static RiskResult analyze({
-    required List<Candle> candles,
-    int period = 14,
-  }) {
+  static RiskResult analyze({required List<Candle> candles, int period = 14}) {
     if (candles.length < period + 1) {
       return const RiskResult(
         level: 'Unknown',
         score: 0,
-        reason:
-            'Not enough candle data to evaluate market-condition risk.',
+        reason: 'Not enough candle data to evaluate market-condition risk.',
         averageRangePercent: 0,
         currentRangePercent: 0,
       );
     }
 
-    final recent = candles.sublist(
-      candles.length - period,
-    );
+    final recent = candles.sublist(candles.length - period);
 
     double totalRangePercent = 0;
 
@@ -43,30 +37,22 @@ class RiskEngine {
         continue;
       }
 
-      final rangePercent =
-          ((candle.high - candle.low) /
-                  candle.close) *
-              100;
+      final rangePercent = ((candle.high - candle.low) / candle.close) * 100;
 
       totalRangePercent += rangePercent;
     }
 
-    final averageRangePercent =
-        totalRangePercent / recent.length;
+    final averageRangePercent = totalRangePercent / recent.length;
 
     final latest = candles.last;
 
     final currentRangePercent = latest.close > 0
-        ? ((latest.high - latest.low) /
-                latest.close) *
-            100
+        ? ((latest.high - latest.low) / latest.close) * 100
         : 0.0;
 
-    final relativeExpansion =
-        averageRangePercent > 0
-            ? currentRangePercent /
-                averageRangePercent
-            : 0.0;
+    final relativeExpansion = averageRangePercent > 0
+        ? currentRangePercent / averageRangePercent
+        : 0.0;
 
     final String level;
     final int score;
@@ -90,18 +76,15 @@ class RiskEngine {
     } else {
       level = 'Low';
       score = 85;
-      reason =
-          'Current price range is below the recent volatility average.';
+      reason = 'Current price range is below the recent volatility average.';
     }
 
     return RiskResult(
       level: level,
       score: score,
       reason: reason,
-      averageRangePercent:
-          averageRangePercent,
-      currentRangePercent:
-          currentRangePercent,
+      averageRangePercent: averageRangePercent,
+      currentRangePercent: currentRangePercent,
     );
   }
 }

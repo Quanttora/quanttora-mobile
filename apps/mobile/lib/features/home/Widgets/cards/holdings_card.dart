@@ -3,10 +3,7 @@ import 'package:flutter/material.dart';
 class HoldingsCard extends StatelessWidget {
   final List<dynamic> holdings;
 
-  const HoldingsCard({
-    super.key,
-    required this.holdings,
-  });
+  const HoldingsCard({super.key, required this.holdings});
 
   @override
   Widget build(BuildContext context) {
@@ -26,15 +23,12 @@ class HoldingsCard extends StatelessWidget {
 
     return Card(
       elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(22),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             Row(
               children: [
                 const Icon(
@@ -60,9 +54,7 @@ class HoldingsCard extends StatelessWidget {
                   ),
                   child: Text(
                     "${holdings.length} Stocks",
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ),
               ],
@@ -72,12 +64,10 @@ class HoldingsCard extends StatelessWidget {
 
             Row(
               children: [
-
                 Expanded(
                   child: _SummaryTile(
                     title: "Portfolio Value",
-                    value:
-                        "₹${totalValue.toStringAsFixed(2)}",
+                    value: "₹${totalValue.toStringAsFixed(2)}",
                   ),
                 ),
 
@@ -86,11 +76,8 @@ class HoldingsCard extends StatelessWidget {
                 Expanded(
                   child: _SummaryTile(
                     title: "Overall P&L",
-                    value:
-                        "₹${totalPnL.toStringAsFixed(2)}",
-                    valueColor: totalPnL >= 0
-                        ? Colors.green
-                        : Colors.red,
+                    value: "₹${totalPnL.toStringAsFixed(2)}",
+                    valueColor: totalPnL >= 0 ? Colors.green : Colors.red,
                   ),
                 ),
               ],
@@ -108,12 +95,7 @@ class HoldingsCard extends StatelessWidget {
                 ),
                 child: Column(
                   children: const [
-
-                    Icon(
-                      Icons.pie_chart_outline,
-                      size: 70,
-                      color: Colors.grey,
-                    ),
+                    Icon(Icons.pie_chart_outline, size: 70, color: Colors.grey),
 
                     SizedBox(height: 18),
 
@@ -137,30 +119,22 @@ class HoldingsCard extends StatelessWidget {
             else
               ListView.separated(
                 shrinkWrap: true,
-                physics:
-                    const NeverScrollableScrollPhysics(),
+                physics: const NeverScrollableScrollPhysics(),
                 itemCount: holdings.length,
-                separatorBuilder: (_, __) =>
-                    const SizedBox(height: 14),
+                separatorBuilder: (_, __) => const SizedBox(height: 14),
                 itemBuilder: (_, index) {
                   final stock = holdings[index];
 
-                  final company =
-                      stock["company_name"] ?? "";
+                  final company = stock["company_name"] ?? "";
 
                   final symbol =
-                      stock["trading_symbol"] ??
-                          stock["tradingsymbol"] ??
-                          "";
+                      stock["trading_symbol"] ?? stock["tradingsymbol"] ?? "";
 
-                  final qty =
-                      (stock["quantity"] ?? 0).toDouble();
+                  final qty = (stock["quantity"] ?? 0).toDouble();
 
-                  final ltp =
-                      (stock["last_price"] ?? 0).toDouble();
+                  final ltp = (stock["last_price"] ?? 0).toDouble();
 
-                  final pnl =
-                      (stock["pnl"] ?? 0).toDouble();
+                  final pnl = (stock["pnl"] ?? 0).toDouble();
 
                   final value = qty * ltp;
 
@@ -200,16 +174,10 @@ class _SummaryTile extends StatelessWidget {
         color: Colors.grey.shade100,
         borderRadius: BorderRadius.circular(18),
       ),
-            child: Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              color: Colors.grey,
-              fontSize: 13,
-            ),
-          ),
+          Text(title, style: const TextStyle(color: Colors.grey, fontSize: 13)),
           const SizedBox(height: 8),
           Text(
             value,
@@ -250,23 +218,17 @@ class _HoldingTile extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: Colors.grey.shade300,
-        ),
+        border: Border.all(color: Colors.grey.shade300),
       ),
       child: Column(
         children: [
-
           Row(
             children: [
-
               CircleAvatar(
                 radius: 22,
                 backgroundColor: Colors.blue.shade50,
                 child: Text(
-                  symbol.isNotEmpty
-                      ? symbol.substring(0, 1)
-                      : "?",
+                  symbol.isNotEmpty ? symbol.substring(0, 1) : "?",
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Colors.blue,
@@ -278,10 +240,8 @@ class _HoldingTile extends StatelessWidget {
 
               Expanded(
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-
                     Text(
                       company,
                       maxLines: 1,
@@ -294,21 +254,14 @@ class _HoldingTile extends StatelessWidget {
 
                     const SizedBox(height: 4),
 
-                    Text(
-                      symbol,
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
+                    Text(symbol, style: TextStyle(color: Colors.grey.shade600)),
                   ],
                 ),
               ),
 
               Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-
                   Text(
                     "₹${value.toStringAsFixed(2)}",
                     style: const TextStyle(
@@ -324,9 +277,7 @@ class _HoldingTile extends StatelessWidget {
                         ? "+₹${pnl.toStringAsFixed(2)}"
                         : "-₹${pnl.abs().toStringAsFixed(2)}",
                     style: TextStyle(
-                      color: isProfit
-                          ? Colors.green
-                          : Colors.red,
+                      color: isProfit ? Colors.green : Colors.red,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -343,7 +294,6 @@ class _HoldingTile extends StatelessWidget {
 
           Row(
             children: [
-
               Expanded(
                 child: _InfoTile(
                   title: "Quantity",
@@ -376,32 +326,22 @@ class _InfoTile extends StatelessWidget {
   final String title;
   final String value;
 
-  const _InfoTile({
-    required this.title,
-    required this.value,
-  });
+  const _InfoTile({required this.title, required this.value});
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-
         Text(
           title,
-          style: TextStyle(
-            color: Colors.grey.shade600,
-            fontSize: 12,
-          ),
+          style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
         ),
 
         const SizedBox(height: 6),
 
         Text(
           value,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 15,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
         ),
       ],
     );

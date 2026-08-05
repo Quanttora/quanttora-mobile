@@ -5,11 +5,7 @@ class QButton extends StatelessWidget {
   final String text;
   final VoidCallback onPressed;
 
-  const QButton({
-    super.key,
-    required this.text,
-    required this.onPressed,
-  });
+  const QButton({super.key, required this.text, required this.onPressed});
 
   @override
   Widget build(BuildContext context) {
@@ -27,10 +23,7 @@ class QButton extends StatelessWidget {
         ),
         child: Text(
           text,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
       ),
     );

@@ -20,14 +20,15 @@ class DecisionEngine {
     required this.psychology,
   });
 
-    DecisionResult evaluate() {
+  DecisionResult evaluate() {
     final marketScore = market.calculateScore();
     final momentumScore = momentum.calculateScore();
     final riskScore = risk.calculateScore();
     final strategyScore = strategy.calculateScore();
     final psychologyScore = psychology.calculateScore();
 
-    final total = marketScore +
+    final total =
+        marketScore +
         momentumScore +
         riskScore +
         strategyScore +

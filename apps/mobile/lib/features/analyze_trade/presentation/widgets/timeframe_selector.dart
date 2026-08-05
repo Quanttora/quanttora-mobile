@@ -26,10 +26,7 @@ class TimeframeSelector extends StatelessWidget {
       children: [
         const Text(
           "Select Timeframe",
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-          ),
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 12),
         SizedBox(
@@ -52,14 +49,10 @@ class TimeframeSelector extends StatelessWidget {
                     vertical: 12,
                   ),
                   decoration: BoxDecoration(
-                    color: isSelected
-                        ? Colors.indigo
-                        : Colors.white,
+                    color: isSelected ? Colors.indigo : Colors.white,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: isSelected
-                          ? Colors.indigo
-                          : Colors.grey.shade300,
+                      color: isSelected ? Colors.indigo : Colors.grey.shade300,
                     ),
                     boxShadow: [
                       BoxShadow(
@@ -74,9 +67,7 @@ class TimeframeSelector extends StatelessWidget {
                       timeframe,
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: isSelected
-                            ? Colors.white
-                            : Colors.black87,
+                        color: isSelected ? Colors.white : Colors.black87,
                       ),
                     ),
                   ),

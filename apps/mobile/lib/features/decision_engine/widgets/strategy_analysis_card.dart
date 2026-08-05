@@ -5,42 +5,28 @@ import '../../../core/decision_engine/decision_result.dart';
 class StrategyAnalysisCard extends StatelessWidget {
   final DecisionResult result;
 
-  const StrategyAnalysisCard({
-    super.key,
-    required this.result,
-  });
+  const StrategyAnalysisCard({super.key, required this.result});
 
   @override
   Widget build(BuildContext context) {
     return Card(
       elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: Padding(
         padding: const EdgeInsets.all(22),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             const Row(
               children: [
-
-                Icon(
-                  Icons.auto_graph_rounded,
-                  color: Color(0xFF7C3AED),
-                ),
+                Icon(Icons.auto_graph_rounded, color: Color(0xFF7C3AED)),
 
                 SizedBox(width: 10),
 
                 Text(
                   "Strategy Analysis",
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
-
               ],
             ),
 
@@ -48,12 +34,8 @@ class StrategyAnalysisCard extends StatelessWidget {
 
             Row(
               children: [
-
                 const Expanded(
-                  child: Text(
-                    "Strategy Score",
-                    style: TextStyle(fontSize: 16),
-                  ),
+                  child: Text("Strategy Score", style: TextStyle(fontSize: 16)),
                 ),
 
                 Text(
@@ -63,7 +45,6 @@ class StrategyAnalysisCard extends StatelessWidget {
                     color: Color(0xFF7C3AED),
                   ),
                 ),
-
               ],
             ),
 
@@ -83,36 +64,32 @@ class StrategyAnalysisCard extends StatelessWidget {
 
             const Text(
               "Engine Reasons",
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontWeight: FontWeight.bold),
             ),
 
             const SizedBox(height: 12),
 
-            ...result.reasons.skip(5).take(4).map(
-              (reason) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  children: [
+            ...result.reasons
+                .skip(5)
+                .take(4)
+                .map(
+                  (reason) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.check_circle,
+                          size: 18,
+                          color: Colors.green,
+                        ),
 
-                    const Icon(
-                      Icons.check_circle,
-                      size: 18,
-                      color: Colors.green,
+                        const SizedBox(width: 8),
+
+                        Expanded(child: Text(reason)),
+                      ],
                     ),
-
-                    const SizedBox(width: 8),
-
-                    Expanded(
-                      child: Text(reason),
-                    ),
-
-                  ],
+                  ),
                 ),
-              ),
-            ),
-
           ],
         ),
       ),

@@ -7,33 +7,22 @@ class QuickActionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: Padding(
         padding: const EdgeInsets.all(22),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: const [
-
             Row(
               children: [
-
-                Icon(
-                  Icons.flash_on_rounded,
-                  color: Color(0xFFF59E0B),
-                ),
+                Icon(Icons.flash_on_rounded, color: Color(0xFFF59E0B)),
 
                 SizedBox(width: 10),
 
                 Text(
                   "Quick Actions",
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
-
               ],
             ),
 
@@ -41,7 +30,6 @@ class QuickActionCard extends StatelessWidget {
 
             Row(
               children: [
-
                 Expanded(
                   child: _ActionTile(
                     icon: Icons.analytics_outlined,
@@ -59,7 +47,6 @@ class QuickActionCard extends StatelessWidget {
                     color: Colors.green,
                   ),
                 ),
-
               ],
             ),
 
@@ -67,7 +54,6 @@ class QuickActionCard extends StatelessWidget {
 
             Row(
               children: [
-
                 Expanded(
                   child: _ActionTile(
                     icon: Icons.menu_book_rounded,
@@ -85,10 +71,8 @@ class QuickActionCard extends StatelessWidget {
                     color: Colors.orange,
                   ),
                 ),
-
               ],
             ),
-
           ],
         ),
       ),
@@ -97,7 +81,6 @@ class QuickActionCard extends StatelessWidget {
 }
 
 class _ActionTile extends StatelessWidget {
-
   final IconData icon;
   final String title;
   final Color color;
@@ -121,22 +104,11 @@ class _ActionTile extends StatelessWidget {
         ),
         child: Column(
           children: [
-
-            Icon(
-              icon,
-              color: color,
-              size: 34,
-            ),
+            Icon(icon, color: color, size: 34),
 
             SizedBox(height: 10),
 
-            Text(
-              title,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-
+            Text(title, style: TextStyle(fontWeight: FontWeight.bold)),
           ],
         ),
       ),

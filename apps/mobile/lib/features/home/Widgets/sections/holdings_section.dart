@@ -19,9 +19,7 @@ class HoldingsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (loading) {
-      return const LoadingCard(
-        message: "Loading Holdings...",
-      );
+      return const LoadingCard(message: "Loading Holdings...");
     }
 
     if (error != null) {
@@ -29,13 +27,9 @@ class HoldingsSection extends StatelessWidget {
     }
 
     if (holdings == null || holdings!.isEmpty) {
-      return const ErrorCard(
-        message: "No holdings found.",
-      );
+      return const ErrorCard(message: "No holdings found.");
     }
 
-    return HoldingsCard(
-      holdings: holdings!,
-    );
+    return HoldingsCard(holdings: holdings!);
   }
 }

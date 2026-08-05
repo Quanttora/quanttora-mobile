@@ -5,10 +5,7 @@ import '../../theme/app_colors.dart';
 class ConfidenceGauge extends StatelessWidget {
   final int score;
 
-  const ConfidenceGauge({
-    super.key,
-    required this.score,
-  });
+  const ConfidenceGauge({super.key, required this.score});
 
   @override
   Widget build(BuildContext context) {
@@ -42,10 +39,7 @@ class ConfidenceGauge extends StatelessWidget {
           children: [
             Text(
               "$score",
-              style: const TextStyle(
-                fontSize: 42,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 42, fontWeight: FontWeight.bold),
             ),
             const Text("AI Score"),
           ],

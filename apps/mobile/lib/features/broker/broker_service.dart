@@ -19,15 +19,13 @@ class BrokerService {
     return jsonDecode(response.body);
   }
 
-  Future<Map<String, dynamic>> getDashboard() =>
-      _get('/broker/dashboard');
+  Future<Map<String, dynamic>> getDashboard() => _get('/broker/dashboard');
 
   Future<Map<String, dynamic>> getMarketIndices() =>
       _get('/broker/market-indices');
 
   List<dynamic> extractHoldings(Map<String, dynamic> dashboard) {
-    if (dashboard["holdings"] is Map &&
-        dashboard["holdings"]["data"] is List) {
+    if (dashboard["holdings"] is Map && dashboard["holdings"]["data"] is List) {
       return dashboard["holdings"]["data"];
     }
     return [];
@@ -42,16 +40,14 @@ class BrokerService {
   }
 
   List<dynamic> extractOrders(Map<String, dynamic> dashboard) {
-    if (dashboard["orders"] is Map &&
-        dashboard["orders"]["data"] is List) {
+    if (dashboard["orders"] is Map && dashboard["orders"]["data"] is List) {
       return dashboard["orders"]["data"];
     }
     return [];
   }
 
   List<dynamic> extractTrades(Map<String, dynamic> dashboard) {
-    if (dashboard["trades"] is Map &&
-        dashboard["trades"]["data"] is List) {
+    if (dashboard["trades"] is Map && dashboard["trades"]["data"] is List) {
       return dashboard["trades"]["data"];
     }
     return [];
@@ -60,10 +56,7 @@ class BrokerService {
   Future<void> connectBroker() async {
     final uri = Uri.parse('$baseUrl/auth/upstox/login');
 
-    final launched = await launchUrl(
-      uri,
-      mode: LaunchMode.externalApplication,
-    );
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
 
     if (!launched) {
       throw Exception('Unable to launch Upstox Login');
@@ -71,9 +64,7 @@ class BrokerService {
   }
 
   Future<void> disconnectBroker() async {
-    final response = await http.post(
-      Uri.parse('$baseUrl/broker/disconnect'),
-    );
+    final response = await http.post(Uri.parse('$baseUrl/broker/disconnect'));
 
     if (response.statusCode != 200) {
       throw Exception('Unable to disconnect broker');

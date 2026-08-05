@@ -48,57 +48,37 @@ class EMAEngine {
       );
     }
 
-    final closes = candles
-        .map((candle) => candle.close)
-        .toList();
+    final closes = candles.map((candle) => candle.close).toList();
 
-    final ema22 = _calculateEMA(
-      closes,
-      22,
-    );
+    final ema22 = _calculateEMA(closes, 22);
 
-    final ema33 = _calculateEMA(
-      closes,
-      33,
-    );
+    final ema33 = _calculateEMA(closes, 33);
 
-    final currentPrice =
-        candles.last.close;
+    final currentPrice = candles.last.close;
 
-    final ema22Above33 =
-        ema22 > ema33;
+    final ema22Above33 = ema22 > ema33;
 
-    final ema22Below33 =
-        ema22 < ema33;
+    final ema22Below33 = ema22 < ema33;
 
-    final priceAbove22 =
-        currentPrice > ema22;
+    final priceAbove22 = currentPrice > ema22;
 
-    final priceBelow22 =
-        currentPrice < ema22;
+    final priceBelow22 = currentPrice < ema22;
 
-    final normalizedDirection =
-        direction.trim().toUpperCase();
+    final normalizedDirection = direction.trim().toUpperCase();
 
-    final isCall =
-        normalizedDirection == 'CALL';
+    final isCall = normalizedDirection == 'CALL';
 
-    final isPut =
-        normalizedDirection == 'PUT';
+    final isPut = normalizedDirection == 'PUT';
 
-    final bullishAlignment =
-        ema22Above33 &&
-        priceAbove22;
+    final bullishAlignment = ema22Above33 && priceAbove22;
 
-    final bearishAlignment =
-        ema22Below33 &&
-        priceBelow22;
+    final bearishAlignment = ema22Below33 && priceBelow22;
 
     final aligned = isCall
         ? bullishAlignment
         : isPut
-            ? bearishAlignment
-            : false;
+        ? bearishAlignment
+        : false;
 
     int score;
     String reason;
@@ -108,35 +88,28 @@ class EMAEngine {
         score = 95;
         reason =
             'Bullish EMA alignment: price is above EMA 22 and EMA 22 is above EMA 33.';
-      } else if (ema22Above33 ||
-          priceAbove22) {
+      } else if (ema22Above33 || priceAbove22) {
         score = 65;
-        reason =
-            'Partial bullish EMA alignment detected.';
+        reason = 'Partial bullish EMA alignment detected.';
       } else {
         score = 35;
-        reason =
-            'EMA structure does not support the CALL direction.';
+        reason = 'EMA structure does not support the CALL direction.';
       }
     } else if (isPut) {
       if (bearishAlignment) {
         score = 95;
         reason =
             'Bearish EMA alignment: price is below EMA 22 and EMA 22 is below EMA 33.';
-      } else if (ema22Below33 ||
-          priceBelow22) {
+      } else if (ema22Below33 || priceBelow22) {
         score = 65;
-        reason =
-            'Partial bearish EMA alignment detected.';
+        reason = 'Partial bearish EMA alignment detected.';
       } else {
         score = 35;
-        reason =
-            'EMA structure does not support the PUT direction.';
+        reason = 'EMA structure does not support the PUT direction.';
       }
     } else {
       score = 0;
-      reason =
-          'Unsupported trade direction for EMA analysis.';
+      reason = 'Unsupported trade direction for EMA analysis.';
     }
 
     return EMAResult(
@@ -153,10 +126,7 @@ class EMAEngine {
     );
   }
 
-  static double _calculateEMA(
-    List<double> values,
-    int period,
-  ) {
+  static double _calculateEMA(List<double> values, int period) {
     if (values.length < period) {
       return 0;
     }
@@ -169,18 +139,10 @@ class EMAEngine {
 
     double ema = sum / period;
 
-    final multiplier =
-        2.0 / (period + 1);
+    final multiplier = 2.0 / (period + 1);
 
-    for (
-      int i = period;
-      i < values.length;
-      i++
-    ) {
-      ema =
-          ((values[i] - ema) *
-                  multiplier) +
-              ema;
+    for (int i = period; i < values.length; i++) {
+      ema = ((values[i] - ema) * multiplier) + ema;
     }
 
     return ema;

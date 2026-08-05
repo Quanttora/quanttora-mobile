@@ -6,42 +6,28 @@ import 'score_bar.dart';
 class QScoreBreakdown extends StatelessWidget {
   final DecisionResult result;
 
-  const QScoreBreakdown({
-    super.key,
-    required this.result,
-  });
+  const QScoreBreakdown({super.key, required this.result});
 
   @override
   Widget build(BuildContext context) {
     return Card(
       elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: Padding(
         padding: const EdgeInsets.all(22),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             const Row(
               children: [
-
-                Icon(
-                  Icons.analytics_rounded,
-                  color: Color(0xFF2563EB),
-                ),
+                Icon(Icons.analytics_rounded, color: Color(0xFF2563EB)),
 
                 SizedBox(width: 10),
 
                 Text(
                   "Q-Score™ Breakdown",
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
-
               ],
             ),
 
@@ -86,14 +72,10 @@ class QScoreBreakdown extends StatelessWidget {
 
             Row(
               children: [
-
                 const Expanded(
                   child: Text(
                     "Overall Rating",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                 ),
 
@@ -101,19 +83,14 @@ class QScoreBreakdown extends StatelessWidget {
                   result.totalScore >= 90
                       ? "★★★★★"
                       : result.totalScore >= 75
-                          ? "★★★★☆"
-                          : result.totalScore >= 60
-                              ? "★★★☆☆"
-                              : "★★☆☆☆",
-                  style: const TextStyle(
-                    fontSize: 24,
-                    color: Colors.amber,
-                  ),
+                      ? "★★★★☆"
+                      : result.totalScore >= 60
+                      ? "★★★☆☆"
+                      : "★★☆☆☆",
+                  style: const TextStyle(fontSize: 24, color: Colors.amber),
                 ),
-
               ],
             ),
-
           ],
         ),
       ),

@@ -2,9 +2,7 @@ import 'score_breakdown.dart';
 import 'score_item.dart';
 
 class ExplainableAIEngine {
-
   static ScoreBreakdown generate({
-
     required int trend,
 
     required int ema,
@@ -20,11 +18,8 @@ class ExplainableAIEngine {
     required int riskPenalty,
 
     required int globalPenalty,
-
   }) {
-
     final items = [
-
       ScoreItem(
         title: "Trend Alignment",
         score: trend,
@@ -102,10 +97,6 @@ class ExplainableAIEngine {
       grade = "C";
     }
 
-    return ScoreBreakdown(
-      items: items,
-      finalScore: total,
-      grade: grade,
-    );
+    return ScoreBreakdown(items: items, finalScore: total, grade: grade);
   }
 }

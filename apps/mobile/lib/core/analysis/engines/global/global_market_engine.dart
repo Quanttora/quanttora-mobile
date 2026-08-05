@@ -1,9 +1,7 @@
 import 'global_market_result.dart';
 
 class GlobalMarketEngine {
-
   static GlobalMarketResult analyze({
-
     required double sp500,
 
     required double nasdaq,
@@ -21,9 +19,7 @@ class GlobalMarketEngine {
     required bool rbiEvent,
 
     required bool majorNews,
-
   }) {
-
     int score = 100;
 
     List<String> warnings = [];
@@ -65,8 +61,8 @@ class GlobalMarketEngine {
     final sentiment = score >= 80
         ? "Positive"
         : score >= 60
-            ? "Neutral"
-            : "Risky";
+        ? "Neutral"
+        : "Risky";
 
     return GlobalMarketResult(
       riskDetected: score < 60,

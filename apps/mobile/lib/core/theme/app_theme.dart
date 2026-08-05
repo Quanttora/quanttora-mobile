@@ -18,23 +18,21 @@ class AppTheme {
     scrolledUnderElevation: 0,
     centerTitle: false,
     toolbarHeight: AppConstants.appBarHeight,
-    iconTheme: IconThemeData(
-      color: AppColors.textPrimary,
-      size: 22,
-    ),
+    iconTheme: IconThemeData(color: AppColors.textPrimary, size: 22),
     titleTextStyle: AppTextStyles.titleLarge,
   );
 
   static ThemeData get lightTheme {
-    final colorScheme = ColorScheme.fromSeed(
-      seedColor: AppColors.primary,
-      brightness: Brightness.light,
-    ).copyWith(
-      primary: AppColors.primary,
-      secondary: AppColors.secondary,
-      surface: AppColors.surface,
-      error: AppColors.danger,
-    );
+    final colorScheme =
+        ColorScheme.fromSeed(
+          seedColor: AppColors.primary,
+          brightness: Brightness.light,
+        ).copyWith(
+          primary: AppColors.primary,
+          secondary: AppColors.secondary,
+          surface: AppColors.surface,
+          error: AppColors.danger,
+        );
 
     return ThemeData(
       useMaterial3: true,
@@ -57,15 +55,11 @@ class AppTheme {
       inputDecorationTheme: AppInputTheme.inputDecorationTheme,
 
       navigationBarTheme: AppNavigationTheme.navigationBarTheme,
-      bottomNavigationBarTheme:
-          AppNavigationTheme.bottomNavigationBarTheme,
+      bottomNavigationBarTheme: AppNavigationTheme.bottomNavigationBarTheme,
 
       dividerColor: AppColors.divider,
 
-      iconTheme: const IconThemeData(
-        color: AppColors.textPrimary,
-        size: 22,
-      ),
+      iconTheme: const IconThemeData(color: AppColors.textPrimary, size: 22),
 
       textTheme: const TextTheme(
         displayLarge: AppTextStyles.displayLarge,

@@ -36,8 +36,7 @@ class RSIEngine {
     final start = candles.length - period;
 
     for (int i = start; i < candles.length; i++) {
-      final change =
-          candles[i].close - candles[i - 1].close;
+      final change = candles[i].close - candles[i - 1].close;
 
       if (change > 0) {
         gains += change;
@@ -68,8 +67,7 @@ class RSIEngine {
       if (rsi >= 50 && rsi <= 70) {
         score = 90;
         status = 'Bullish Momentum';
-        reason =
-            'RSI ${rsi.toStringAsFixed(1)} supports the CALL direction.';
+        reason = 'RSI ${rsi.toStringAsFixed(1)} supports the CALL direction.';
       } else if (rsi > 70) {
         score = 60;
         status = 'Overbought';
@@ -85,13 +83,11 @@ class RSIEngine {
       if (rsi >= 30 && rsi < 50) {
         score = 90;
         status = 'Bearish Momentum';
-        reason =
-            'RSI ${rsi.toStringAsFixed(1)} supports the PUT direction.';
+        reason = 'RSI ${rsi.toStringAsFixed(1)} supports the PUT direction.';
       } else if (rsi < 30) {
         score = 60;
         status = 'Oversold';
-        reason =
-            'RSI ${rsi.toStringAsFixed(1)} indicates oversold conditions.';
+        reason = 'RSI ${rsi.toStringAsFixed(1)} indicates oversold conditions.';
       } else {
         score = 40;
         status = 'Weak Bearish Momentum';
@@ -100,11 +96,6 @@ class RSIEngine {
       }
     }
 
-    return RSIResult(
-      value: rsi,
-      score: score,
-      status: status,
-      reason: reason,
-    );
+    return RSIResult(value: rsi, score: score, status: status, reason: reason);
   }
 }

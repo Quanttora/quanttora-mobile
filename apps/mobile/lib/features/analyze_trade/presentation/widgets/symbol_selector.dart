@@ -25,10 +25,7 @@ class SymbolSelector extends StatelessWidget {
       children: [
         const Text(
           'Select Symbol',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-          ),
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 12),
         Wrap(
@@ -47,14 +44,10 @@ class SymbolSelector extends StatelessWidget {
                   vertical: 12,
                 ),
                 decoration: BoxDecoration(
-                  color: isSelected
-                      ? Colors.indigo
-                      : Colors.white,
+                  color: isSelected ? Colors.indigo : Colors.white,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: isSelected
-                        ? Colors.indigo
-                        : Colors.grey.shade300,
+                    color: isSelected ? Colors.indigo : Colors.grey.shade300,
                   ),
                   boxShadow: [
                     BoxShadow(
@@ -68,9 +61,7 @@ class SymbolSelector extends StatelessWidget {
                   symbol,
                   style: TextStyle(
                     fontWeight: FontWeight.w700,
-                    color: isSelected
-                        ? Colors.white
-                        : Colors.black87,
+                    color: isSelected ? Colors.white : Colors.black87,
                   ),
                 ),
               ),

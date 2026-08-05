@@ -7,33 +7,22 @@ class AICoachCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: Padding(
         padding: const EdgeInsets.all(22),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             const Row(
               children: [
-
-                Icon(
-                  Icons.psychology_alt_rounded,
-                  color: Color(0xFF7C3AED),
-                ),
+                Icon(Icons.psychology_alt_rounded, color: Color(0xFF7C3AED)),
 
                 SizedBox(width: 10),
 
                 Text(
                   "AI Coach",
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
-
               ],
             ),
 
@@ -41,9 +30,7 @@ class AICoachCard extends StatelessWidget {
 
             const Text(
               "Personal guidance based on your trading behaviour.",
-              style: TextStyle(
-                color: Colors.grey,
-              ),
+              style: TextStyle(color: Colors.grey),
             ),
 
             const SizedBox(height: 20),
@@ -57,10 +44,7 @@ class AICoachCard extends StatelessWidget {
               ),
               child: const Text(
                 "💡 You usually make better entries after waiting for confirmation. Avoid impulsive breakout entries today.",
-                style: TextStyle(
-                  fontSize: 16,
-                  height: 1.5,
-                ),
+                style: TextStyle(fontSize: 16, height: 1.5),
               ),
             ),
 
@@ -68,7 +52,6 @@ class AICoachCard extends StatelessWidget {
 
             const Row(
               children: [
-
                 Expanded(
                   child: _StatCard(
                     title: "Discipline",
@@ -96,10 +79,8 @@ class AICoachCard extends StatelessWidget {
                     color: Colors.blue,
                   ),
                 ),
-
               ],
             ),
-
           ],
         ),
       ),
@@ -128,7 +109,6 @@ class _StatCard extends StatelessWidget {
       ),
       child: Column(
         children: [
-
           Text(
             value,
             style: TextStyle(
@@ -140,13 +120,7 @@ class _StatCard extends StatelessWidget {
 
           const SizedBox(height: 6),
 
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 13,
-            ),
-          ),
-
+          Text(title, style: const TextStyle(fontSize: 13)),
         ],
       ),
     );

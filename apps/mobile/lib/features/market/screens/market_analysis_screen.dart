@@ -15,16 +15,13 @@ class MarketAnalysisScreen extends StatelessWidget {
         centerTitle: true,
         title: const Text(
           "Market Analysis",
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
 
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: const [
-
           MarketHealthCard(
             health: 82,
             status: "Healthy",
@@ -33,7 +30,6 @@ class MarketAnalysisScreen extends StatelessWidget {
             liquidity: "High",
             volatility: "Low",
           ),
-
         ],
       ),
     );

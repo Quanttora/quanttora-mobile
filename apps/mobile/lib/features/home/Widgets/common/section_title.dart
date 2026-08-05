@@ -32,10 +32,7 @@ class SectionTitle extends StatelessWidget {
               onTap: onTap,
               borderRadius: BorderRadius.circular(8),
               child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 6,
-                  vertical: 4,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                 child: Text(
                   actionText!,
                   style: const TextStyle(

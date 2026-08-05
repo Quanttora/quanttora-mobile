@@ -11,8 +11,7 @@ class InstrumentSelectionScreen extends StatefulWidget {
       _InstrumentSelectionScreenState();
 }
 
-class _InstrumentSelectionScreenState
-    extends State<InstrumentSelectionScreen> {
+class _InstrumentSelectionScreenState extends State<InstrumentSelectionScreen> {
   final List<String> instruments = [
     "NIFTY 50",
     "BANK NIFTY",
@@ -26,10 +25,7 @@ class _InstrumentSelectionScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Select Instrument"),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text("Select Instrument"), centerTitle: true),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -37,20 +33,14 @@ class _InstrumentSelectionScreenState
           children: [
             const Text(
               "Choose Trading Instrument",
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
             ),
 
             const SizedBox(height: 8),
 
             const Text(
               "Select the market you want Quanttora AI to analyze.",
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-              ),
+              style: TextStyle(fontSize: 16, color: Colors.grey),
             ),
 
             const SizedBox(height: 30),
@@ -60,8 +50,7 @@ class _InstrumentSelectionScreenState
                 itemCount: instruments.length,
                 itemBuilder: (context, index) {
                   final instrument = instruments[index];
-                  final selected =
-                      instrument == selectedInstrument;
+                  final selected = instrument == selectedInstrument;
 
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 16),
@@ -79,8 +68,7 @@ class _InstrumentSelectionScreenState
                           color: selected
                               ? const Color(0xFF2563EB)
                               : Colors.white,
-                          borderRadius:
-                              BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(20),
                           border: Border.all(
                             color: selected
                                 ? const Color(0xFF2563EB)
@@ -98,9 +86,7 @@ class _InstrumentSelectionScreenState
                           children: [
                             Icon(
                               Icons.show_chart_rounded,
-                              color: selected
-                                  ? Colors.white
-                                  : Colors.blue,
+                              color: selected ? Colors.white : Colors.blue,
                             ),
 
                             const SizedBox(width: 16),
@@ -111,9 +97,7 @@ class _InstrumentSelectionScreenState
                                 style: TextStyle(
                                   fontSize: 18,
                                   fontWeight: FontWeight.bold,
-                                  color: selected
-                                      ? Colors.white
-                                      : Colors.black,
+                                  color: selected ? Colors.white : Colors.black,
                                 ),
                               ),
                             ),
@@ -137,23 +121,18 @@ class _InstrumentSelectionScreenState
               height: 56,
               child: ElevatedButton(
                 onPressed: () {
-                  SessionManager.instance
-                      .updateInstrument(selectedInstrument);
+                  SessionManager.instance.updateInstrument(selectedInstrument);
 
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) =>
-                          const TradingModeScreen(),
+                      builder: (_) => const TradingModeScreen(),
                     ),
                   );
                 },
                 child: const Text(
                   "CONTINUE",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
             ),

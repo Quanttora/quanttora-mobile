@@ -63,11 +63,7 @@ class SupabaseStrategyRepository implements StrategyRepository {
         .order('createdAt', ascending: false);
 
     return (response as List)
-        .map(
-          (e) => StrategyModel.fromMap(
-            Map<String, dynamic>.from(e),
-          ),
-        )
+        .map((e) => StrategyModel.fromMap(Map<String, dynamic>.from(e)))
         .toList();
   }
 
@@ -81,11 +77,7 @@ class SupabaseStrategyRepository implements StrategyRepository {
         .order('createdAt', ascending: false);
 
     return (response as List)
-        .map(
-          (e) => StrategyModel.fromMap(
-            Map<String, dynamic>.from(e),
-          ),
-        )
+        .map((e) => StrategyModel.fromMap(Map<String, dynamic>.from(e)))
         .toList();
   }
 
@@ -102,9 +94,7 @@ class SupabaseStrategyRepository implements StrategyRepository {
       return null;
     }
 
-    return StrategyModel.fromMap(
-      Map<String, dynamic>.from(response),
-    );
+    return StrategyModel.fromMap(Map<String, dynamic>.from(response));
   }
 
   @override

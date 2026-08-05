@@ -76,8 +76,7 @@ class StrategyRuleModel {
       ruleType: ruleType ?? this.ruleType,
       leftSource: leftSource ?? this.leftSource,
       leftValue: leftValue ?? this.leftValue,
-      comparisonOperator:
-          comparisonOperator ?? this.comparisonOperator,
+      comparisonOperator: comparisonOperator ?? this.comparisonOperator,
       rightSource: rightSource ?? this.rightSource,
       rightValue: rightValue ?? this.rightValue,
       isEnabled: isEnabled ?? this.isEnabled,

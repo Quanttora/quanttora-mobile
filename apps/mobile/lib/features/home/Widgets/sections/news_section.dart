@@ -19,15 +19,11 @@ class NewsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (loading) {
-      return const LoadingCard(
-        message: "Loading Market News...",
-      );
+      return const LoadingCard(message: "Loading Market News...");
     }
 
     if (error != null) {
-      return ErrorCard(
-        message: error!,
-      );
+      return ErrorCard(message: error!);
     }
 
     return const NewsCard();

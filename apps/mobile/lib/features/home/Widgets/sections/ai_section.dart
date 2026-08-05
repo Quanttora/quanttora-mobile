@@ -19,21 +19,15 @@ class AiSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (loading) {
-      return const LoadingCard(
-        message: "Analyzing Market...",
-      );
+      return const LoadingCard(message: "Analyzing Market...");
     }
 
     if (error != null) {
-      return ErrorCard(
-        message: error!,
-      );
+      return ErrorCard(message: error!);
     }
 
     if (aiData == null) {
-      return const ErrorCard(
-        message: "AI analysis unavailable",
-      );
+      return const ErrorCard(message: "AI analysis unavailable");
     }
 
     return const AICoachCard();

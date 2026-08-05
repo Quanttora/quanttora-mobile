@@ -3,10 +3,7 @@ import 'package:flutter/material.dart';
 class PositionsCard extends StatelessWidget {
   final List<dynamic> positions;
 
-  const PositionsCard({
-    super.key,
-    required this.positions,
-  });
+  const PositionsCard({super.key, required this.positions});
 
   @override
   Widget build(BuildContext context) {
@@ -45,10 +42,7 @@ class PositionsCard extends StatelessWidget {
               const Expanded(
                 child: Text(
                   "Open Positions",
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                 ),
               ),
               Container(
@@ -79,9 +73,7 @@ class PositionsCard extends StatelessWidget {
                 child: _SummaryTile(
                   title: "Open P&L",
                   value: "₹${totalPnl.toStringAsFixed(2)}",
-                  color: totalPnl >= 0
-                      ? Colors.green
-                      : Colors.red,
+                  color: totalPnl >= 0 ? Colors.green : Colors.red,
                   icon: Icons.currency_rupee,
                 ),
               ),
@@ -90,9 +82,7 @@ class PositionsCard extends StatelessWidget {
                 child: _SummaryTile(
                   title: "Today's MTM",
                   value: "₹${totalMtm.toStringAsFixed(2)}",
-                  color: totalMtm >= 0
-                      ? Colors.green
-                      : Colors.red,
+                  color: totalMtm >= 0 ? Colors.green : Colors.red,
                   icon: Icons.trending_up,
                 ),
               ),
@@ -119,10 +109,7 @@ class PositionsCard extends StatelessWidget {
                   SizedBox(height: 16),
                   Text(
                     "No Open Positions",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 20,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
                   ),
                   SizedBox(height: 8),
                   Text(
@@ -137,34 +124,22 @@ class PositionsCard extends StatelessWidget {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: positions.length,
-              separatorBuilder: (_, __) =>
-                  const SizedBox(height: 14),
+              separatorBuilder: (_, __) => const SizedBox(height: 14),
               itemBuilder: (_, index) {
                 final item = positions[index];
 
                 final symbol =
-                    item['trading_symbol'] ??
-                    item['tradingsymbol'] ??
-                    '';
+                    item['trading_symbol'] ?? item['tradingsymbol'] ?? '';
 
-                final product =
-                    item['product'] ?? '';
+                final product = item['product'] ?? '';
 
-                final qty =
-                    ((item['quantity'] ?? 0) as num)
-                        .toDouble();
+                final qty = ((item['quantity'] ?? 0) as num).toDouble();
 
-                final ltp =
-                    ((item['last_price'] ?? 0) as num)
-                        .toDouble();
+                final ltp = ((item['last_price'] ?? 0) as num).toDouble();
 
-                final pnl =
-                    ((item['pnl'] ?? 0) as num)
-                        .toDouble();
+                final pnl = ((item['pnl'] ?? 0) as num).toDouble();
 
-                final mtm =
-                    ((item['day_pnl'] ?? 0) as num)
-                        .toDouble();
+                final mtm = ((item['day_pnl'] ?? 0) as num).toDouble();
 
                 return _PositionTile(
                   symbol: symbol,
@@ -204,8 +179,7 @@ class _SummaryTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(icon, color: color),
           const SizedBox(height: 10),
@@ -230,6 +204,7 @@ class _SummaryTile extends StatelessWidget {
     );
   }
 }
+
 class _PositionTile extends StatelessWidget {
   final String symbol;
   final String product;
@@ -256,9 +231,7 @@ class _PositionTile extends StatelessWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: Colors.grey.shade300,
-        ),
+        border: Border.all(color: Colors.grey.shade300),
       ),
       child: Column(
         children: [
@@ -266,12 +239,9 @@ class _PositionTile extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 22,
-                backgroundColor:
-                    Colors.deepPurple.withValues(alpha: .10),
+                backgroundColor: Colors.deepPurple.withValues(alpha: .10),
                 child: Text(
-                  symbol.isEmpty
-                      ? "?"
-                      : symbol.substring(0, 1),
+                  symbol.isEmpty ? "?" : symbol.substring(0, 1),
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     color: Colors.deepPurple,
@@ -283,8 +253,7 @@ class _PositionTile extends StatelessWidget {
 
               Expanded(
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       symbol,
@@ -298,17 +267,14 @@ class _PositionTile extends StatelessWidget {
 
                     Text(
                       product,
-                      style: TextStyle(
-                        color: Colors.grey.shade600,
-                      ),
+                      style: TextStyle(color: Colors.grey.shade600),
                     ),
                   ],
                 ),
               ),
 
               Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
                     "₹${pnl.toStringAsFixed(2)}",
@@ -352,10 +318,7 @@ class _PositionTile extends StatelessWidget {
                 ),
               ),
               Expanded(
-                child: _InfoTile(
-                  title: "Product",
-                  value: product,
-                ),
+                child: _InfoTile(title: "Product", value: product),
               ),
             ],
           ),
@@ -369,10 +332,7 @@ class _InfoTile extends StatelessWidget {
   final String title;
   final String value;
 
-  const _InfoTile({
-    required this.title,
-    required this.value,
-  });
+  const _InfoTile({required this.title, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -380,18 +340,12 @@ class _InfoTile extends StatelessWidget {
       children: [
         Text(
           title,
-          style: TextStyle(
-            color: Colors.grey.shade600,
-            fontSize: 12,
-          ),
+          style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
         ),
         const SizedBox(height: 6),
         Text(
           value,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 15,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
         ),
       ],
     );

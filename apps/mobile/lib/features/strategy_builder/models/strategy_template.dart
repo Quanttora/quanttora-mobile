@@ -47,26 +47,18 @@ class StrategyModel {
     };
   }
 
-  factory StrategyModel.fromMap(
-    Map<String, dynamic> map,
-  ) {
+  factory StrategyModel.fromMap(Map<String, dynamic> map) {
     return StrategyModel(
       id: map["id"],
       name: map["name"],
       market: map["market"],
       tradingMode: map["tradingMode"],
-      indicators:
-          List<String>.from(map["indicators"]),
-      riskPerTrade:
-          (map["riskPerTrade"] as num).toDouble(),
-      minimumRiskReward:
-          map["minimumRiskReward"],
-      maximumDailyLoss:
-          (map["maximumDailyLoss"] as num)
-              .toDouble(),
+      indicators: List<String>.from(map["indicators"]),
+      riskPerTrade: (map["riskPerTrade"] as num).toDouble(),
+      minimumRiskReward: map["minimumRiskReward"],
+      maximumDailyLoss: (map["maximumDailyLoss"] as num).toDouble(),
       maximumTrades: map["maximumTrades"],
-      createdAt:
-          DateTime.parse(map["createdAt"]),
+      createdAt: DateTime.parse(map["createdAt"]),
     );
   }
 
@@ -86,22 +78,13 @@ class StrategyModel {
       id: id ?? this.id,
       name: name ?? this.name,
       market: market ?? this.market,
-      tradingMode:
-          tradingMode ?? this.tradingMode,
-      indicators:
-          indicators ?? this.indicators,
-      riskPerTrade:
-          riskPerTrade ?? this.riskPerTrade,
-      minimumRiskReward:
-          minimumRiskReward ??
-              this.minimumRiskReward,
-      maximumDailyLoss:
-          maximumDailyLoss ??
-              this.maximumDailyLoss,
-      maximumTrades:
-          maximumTrades ?? this.maximumTrades,
-      createdAt:
-          createdAt ?? this.createdAt,
+      tradingMode: tradingMode ?? this.tradingMode,
+      indicators: indicators ?? this.indicators,
+      riskPerTrade: riskPerTrade ?? this.riskPerTrade,
+      minimumRiskReward: minimumRiskReward ?? this.minimumRiskReward,
+      maximumDailyLoss: maximumDailyLoss ?? this.maximumDailyLoss,
+      maximumTrades: maximumTrades ?? this.maximumTrades,
+      createdAt: createdAt ?? this.createdAt,
     );
   }
 }

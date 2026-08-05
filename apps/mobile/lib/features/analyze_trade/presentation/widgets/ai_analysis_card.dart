@@ -24,18 +24,11 @@ class AiAnalysisCard extends StatelessWidget {
         children: [
           Row(
             children: const [
-              Icon(
-                Icons.auto_awesome,
-                color: Colors.indigo,
-                size: 30,
-              ),
+              Icon(Icons.auto_awesome, color: Colors.indigo, size: 30),
               SizedBox(width: 10),
               Text(
                 "AI Analysis",
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -65,12 +58,7 @@ class AiAnalysisCard extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    Text(
-                      "Confidence",
-                      style: TextStyle(
-                        color: Colors.grey,
-                      ),
-                    ),
+                    Text("Confidence", style: TextStyle(color: Colors.grey)),
                   ],
                 ),
               ],
@@ -80,20 +68,14 @@ class AiAnalysisCard extends StatelessWidget {
           const SizedBox(height: 30),
 
           Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 20,
-              vertical: 14,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             decoration: BoxDecoration(
               color: Colors.green.shade50,
               borderRadius: BorderRadius.circular(14),
             ),
             child: const Row(
               children: [
-                Icon(
-                  Icons.check_circle,
-                  color: Colors.green,
-                ),
+                Icon(Icons.check_circle, color: Colors.green),
                 SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -113,10 +95,7 @@ class AiAnalysisCard extends StatelessWidget {
 
           const Text(
             "AI Checklist",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
 
           const SizedBox(height: 15),
@@ -155,10 +134,7 @@ class AiAnalysisCard extends StatelessWidget {
 
           const Text(
             "AI Summary",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
 
           const SizedBox(height: 10),
@@ -167,10 +143,7 @@ class AiAnalysisCard extends StatelessWidget {
             "Trend, momentum and volume are aligned. "
             "Current market conditions support your strategy. "
             "Risk-reward ratio meets your trading constitution.",
-            style: TextStyle(
-              color: Colors.grey.shade700,
-              height: 1.5,
-            ),
+            style: TextStyle(color: Colors.grey.shade700, height: 1.5),
           ),
         ],
       ),
@@ -195,26 +168,17 @@ class _ChecklistTile extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
-          Icon(
-            Icons.check_circle,
-            color: color,
-            size: 20,
-          ),
+          Icon(Icons.check_circle, color: color, size: 20),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               title,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
           Text(
             value,
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(color: color, fontWeight: FontWeight.bold),
           ),
         ],
       ),

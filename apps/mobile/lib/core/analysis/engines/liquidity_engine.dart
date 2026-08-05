@@ -31,8 +31,7 @@ class LiquidityEngine {
       return const LiquidityResult(
         status: 'Unavailable',
         score: 0,
-        reason:
-            'Real bid-ask market depth is unavailable for this instrument.',
+        reason: 'Real bid-ask market depth is unavailable for this instrument.',
         available: false,
       );
     }
@@ -51,21 +50,17 @@ class LiquidityEngine {
 
     final spread = askPrice - bidPrice;
 
-    final spreadPercent =
-        (spread / midPrice) * 100;
+    final spreadPercent = (spread / midPrice) * 100;
 
-    final totalDepth =
-        bidQuantity + askQuantity;
+    final totalDepth = bidQuantity + askQuantity;
 
     final int score;
     final String status;
 
-    if (spreadPercent <= 0.05 &&
-        totalDepth >= 1000) {
+    if (spreadPercent <= 0.05 && totalDepth >= 1000) {
       score = 95;
       status = 'Excellent';
-    } else if (spreadPercent <= 0.10 &&
-        totalDepth >= 500) {
+    } else if (spreadPercent <= 0.10 && totalDepth >= 500) {
       score = 85;
       status = 'Good';
     } else if (spreadPercent <= 0.25) {

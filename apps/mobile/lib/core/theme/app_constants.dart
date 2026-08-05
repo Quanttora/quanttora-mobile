@@ -3,9 +3,7 @@ class AppConstants {
 
   static const appName = "Quanttora";
 
-  static const animationDuration = Duration(
-    milliseconds: 300,
-  );
+  static const animationDuration = Duration(milliseconds: 300);
 
   static const cardElevation = 0.0;
 

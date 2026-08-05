@@ -17,14 +17,9 @@ class StrategyScreen extends ConsumerWidget {
     await ref.read(strategyListProvider.future);
   }
 
-  Future<void> _openCreateStrategy(
-    BuildContext context,
-    WidgetRef ref,
-  ) async {
+  Future<void> _openCreateStrategy(BuildContext context, WidgetRef ref) async {
     final created = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(
-        builder: (_) => const CreateStrategyScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const CreateStrategyScreen()),
     );
 
     if (created == true) {
@@ -43,10 +38,7 @@ class StrategyScreen extends ConsumerWidget {
         surfaceTintColor: AppColors.background,
         elevation: 0,
         titleSpacing: AppSpacing.screenPadding,
-        title: const Text(
-          'Strategies',
-          style: AppTextStyles.headlineSmall,
-        ),
+        title: const Text('Strategies', style: AppTextStyles.headlineSmall),
       ),
       body: SafeArea(
         top: false,
@@ -63,13 +55,11 @@ class StrategyScreen extends ConsumerWidget {
               onRefresh: () => _refresh(ref),
               child: data.isEmpty
                   ? _EmptyState(
-                      onCreate: () =>
-                          _openCreateStrategy(context, ref),
+                      onCreate: () => _openCreateStrategy(context, ref),
                     )
                   : _StrategyList(
                       strategies: data,
-                      onCreate: () =>
-                          _openCreateStrategy(context, ref),
+                      onCreate: () => _openCreateStrategy(context, ref),
                     ),
             );
           },
@@ -83,15 +73,13 @@ class _StrategyList extends StatelessWidget {
   final List<StrategyModel> strategies;
   final VoidCallback onCreate;
 
-  const _StrategyList({
-    required this.strategies,
-    required this.onCreate,
-  });
+  const _StrategyList({required this.strategies, required this.onCreate});
 
   @override
   Widget build(BuildContext context) {
-    final activeCount =
-        strategies.where((strategy) => strategy.isActive).length;
+    final activeCount = strategies
+        .where((strategy) => strategy.isActive)
+        .length;
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -108,16 +96,11 @@ class _StrategyList extends StatelessWidget {
           onCreate: onCreate,
         ),
         const SizedBox(height: AppSpacing.sectionSpacing),
-        const Text(
-          'My Strategies',
-          style: AppTextStyles.titleLarge,
-        ),
+        const Text('My Strategies', style: AppTextStyles.titleLarge),
         const SizedBox(height: AppSpacing.md),
         ...strategies.map(
           (strategy) => Padding(
-            padding: const EdgeInsets.only(
-              bottom: AppSpacing.md,
-            ),
+            padding: const EdgeInsets.only(bottom: AppSpacing.md),
             child: _StrategyCard(strategy: strategy),
           ),
         ),
@@ -181,9 +164,7 @@ class _StrategyHeader extends StatelessWidget {
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.surface,
                 foregroundColor: AppColors.primary,
-                padding: const EdgeInsets.symmetric(
-                  vertical: 14,
-                ),
+                padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: const RoundedRectangleBorder(
                   borderRadius: AppRadius.mdBorder,
                 ),
@@ -191,9 +172,7 @@ class _StrategyHeader extends StatelessWidget {
               icon: const Icon(Icons.add_rounded),
               label: const Text(
                 'Create Strategy',
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                ),
+                style: TextStyle(fontWeight: FontWeight.w700),
               ),
             ),
           ),
@@ -206,9 +185,7 @@ class _StrategyHeader extends StatelessWidget {
 class _StrategyCard extends StatelessWidget {
   final StrategyModel strategy;
 
-  const _StrategyCard({
-    required this.strategy,
-  });
+  const _StrategyCard({required this.strategy});
 
   @override
   Widget build(BuildContext context) {
@@ -217,9 +194,7 @@ class _StrategyCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: AppRadius.mdBorder,
-        border: Border.all(
-          color: AppColors.border,
-        ),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -231,10 +206,7 @@ class _StrategyCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      strategy.name,
-                      style: AppTextStyles.titleMedium,
-                    ),
+                    Text(strategy.name, style: AppTextStyles.titleMedium),
                     if (strategy.description.trim().isNotEmpty) ...[
                       const SizedBox(height: AppSpacing.xs),
                       Text(
@@ -248,9 +220,7 @@ class _StrategyCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: AppSpacing.md),
-              _StatusBadge(
-                isActive: strategy.isActive,
-              ),
+              _StatusBadge(isActive: strategy.isActive),
             ],
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -264,28 +234,22 @@ class _StrategyCard extends StatelessWidget {
               ),
               _InfoChip(
                 icon: Icons.shield_outlined,
-                label:
-                    '1:${_formatRatio(strategy.riskRewardRatio)} R:R',
+                label: '1:${_formatRatio(strategy.riskRewardRatio)} R:R',
               ),
               _InfoChip(
                 icon: Icons.repeat_rounded,
-                label:
-                    '${strategy.maxTradesPerDay} trades/day',
+                label: '${strategy.maxTradesPerDay} trades/day',
               ),
               if (strategy.minimumAiScore > 0)
                 _InfoChip(
                   icon: Icons.psychology_alt_outlined,
-                  label:
-                      'AI ${strategy.minimumAiScore}+',
+                  label: 'AI ${strategy.minimumAiScore}+',
                 ),
             ],
           ),
           if (strategy.instruments.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.lg),
-            const Divider(
-              height: 1,
-              color: AppColors.divider,
-            ),
+            const Divider(height: 1, color: AppColors.divider),
             const SizedBox(height: AppSpacing.md),
             Text(
               strategy.instruments.join(' • '),
@@ -311,20 +275,14 @@ class _StrategyCard extends StatelessWidget {
 class _StatusBadge extends StatelessWidget {
   final bool isActive;
 
-  const _StatusBadge({
-    required this.isActive,
-  });
+  const _StatusBadge({required this.isActive});
 
   @override
   Widget build(BuildContext context) {
-    final color =
-        isActive ? AppColors.success : AppColors.neutral;
+    final color = isActive ? AppColors.success : AppColors.neutral;
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 6,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.10),
         borderRadius: AppRadius.pillBorder,
@@ -345,18 +303,12 @@ class _InfoChip extends StatelessWidget {
   final IconData icon;
   final String label;
 
-  const _InfoChip({
-    required this.icon,
-    required this.label,
-  });
+  const _InfoChip({required this.icon, required this.label});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 7,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: const BoxDecoration(
         color: AppColors.surfaceAlt,
         borderRadius: AppRadius.pillBorder,
@@ -364,11 +316,7 @@ class _InfoChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            size: 14,
-            color: AppColors.textSecondary,
-          ),
+          Icon(icon, size: 14, color: AppColors.textSecondary),
           const SizedBox(width: 5),
           Text(
             label,
@@ -385,9 +333,7 @@ class _InfoChip extends StatelessWidget {
 class _EmptyState extends StatelessWidget {
   final VoidCallback onCreate;
 
-  const _EmptyState({
-    required this.onCreate,
-  });
+  const _EmptyState({required this.onCreate});
 
   @override
   Widget build(BuildContext context) {
@@ -433,9 +379,7 @@ class _LoadingState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: CircularProgressIndicator(),
-    );
+    return const Center(child: CircularProgressIndicator());
   }
 }
 
@@ -443,18 +387,13 @@ class _ErrorState extends StatelessWidget {
   final String message;
   final VoidCallback onRetry;
 
-  const _ErrorState({
-    required this.message,
-    required this.onRetry,
-  });
+  const _ErrorState({required this.message, required this.onRetry});
 
   @override
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(
-          AppSpacing.screenPadding,
-        ),
+        padding: const EdgeInsets.all(AppSpacing.screenPadding),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -475,10 +414,7 @@ class _ErrorState extends StatelessWidget {
               style: AppTextStyles.bodySmall,
             ),
             const SizedBox(height: AppSpacing.xl),
-            OutlinedButton(
-              onPressed: onRetry,
-              child: const Text('Try Again'),
-            ),
+            OutlinedButton(onPressed: onRetry, child: const Text('Try Again')),
           ],
         ),
       ),

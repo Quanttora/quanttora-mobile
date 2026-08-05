@@ -39,11 +39,9 @@ class VWAPEngine {
         continue;
       }
 
-      final typicalPrice =
-          (candle.high + candle.low + candle.close) / 3;
+      final typicalPrice = (candle.high + candle.low + candle.close) / 3;
 
-      cumulativePriceVolume +=
-          typicalPrice * candle.volume;
+      cumulativePriceVolume += typicalPrice * candle.volume;
 
       cumulativeVolume += candle.volume;
     }
@@ -54,19 +52,18 @@ class VWAPEngine {
         value: 0,
         score: 0,
         status: 'Volume Unavailable',
-        reason: 'VWAP cannot be calculated because candle volume is unavailable.',
+        reason:
+            'VWAP cannot be calculated because candle volume is unavailable.',
       );
     }
 
-    final vwap =
-        cumulativePriceVolume / cumulativeVolume;
+    final vwap = cumulativePriceVolume / cumulativeVolume;
 
     final currentPrice = candles.last.close;
 
     final aboveVWAP = currentPrice > vwap;
 
-    final isCall =
-        direction.toUpperCase() == 'CALL';
+    final isCall = direction.toUpperCase() == 'CALL';
 
     int score;
     String status;

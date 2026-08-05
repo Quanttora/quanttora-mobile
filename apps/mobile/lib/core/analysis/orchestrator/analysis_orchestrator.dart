@@ -10,19 +10,16 @@ class AnalysisOrchestrator {
     required String market,
     required String direction,
   }) async {
-    final marketDataService =
-        MarketDataService();
+    final marketDataService = MarketDataService();
 
     // FETCH REAL MARKET SNAPSHOT
-    final snapshot =
-        await marketDataService.fetchSnapshot(
+    final snapshot = await marketDataService.fetchSnapshot(
       market: market,
       timeframe: '3 min',
     );
 
     // RUN ANALYSIS USING REAL MARKET DATA
-    final AnalysisResult analysis =
-        AnalysisEngine.analyze(
+    final AnalysisResult analysis = AnalysisEngine.analyze(
       market: market,
       direction: direction,
       candles: snapshot.candles,

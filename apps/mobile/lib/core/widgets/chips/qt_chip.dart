@@ -25,14 +25,8 @@ class QtChip extends StatelessWidget {
         color: selected ? Colors.white : Colors.black87,
         fontWeight: FontWeight.bold,
       ),
-      side: BorderSide(
-        color: selected
-            ? Colors.indigo
-            : Colors.grey.shade300,
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      side: BorderSide(color: selected ? Colors.indigo : Colors.grey.shade300),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
     );
   }
 }

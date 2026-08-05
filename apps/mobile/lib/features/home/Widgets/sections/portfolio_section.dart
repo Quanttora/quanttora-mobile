@@ -19,9 +19,7 @@ class PortfolioSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (loading) {
-      return const LoadingCard(
-        message: "Loading Portfolio...",
-      );
+      return const LoadingCard(message: "Loading Portfolio...");
     }
 
     if (error != null) {
@@ -29,20 +27,14 @@ class PortfolioSection extends StatelessWidget {
     }
 
     if (portfolio == null) {
-      return const ErrorCard(
-        message: "Portfolio data unavailable",
-      );
+      return const ErrorCard(message: "Portfolio data unavailable");
     }
 
     return PortfolioSummaryCard(
-      availableMargin:
-          ((portfolio!["availableMargin"] ?? 0) as num).toDouble(),
-      usedMargin:
-          ((portfolio!["usedMargin"] ?? 0) as num).toDouble(),
-      broker:
-          (portfolio!["broker"] ?? "Upstox").toString(),
-      connected:
-          (portfolio!["connected"] ?? true) as bool,
+      availableMargin: ((portfolio!["availableMargin"] ?? 0) as num).toDouble(),
+      usedMargin: ((portfolio!["usedMargin"] ?? 0) as num).toDouble(),
+      broker: (portfolio!["broker"] ?? "Upstox").toString(),
+      connected: (portfolio!["connected"] ?? true) as bool,
     );
   }
 }

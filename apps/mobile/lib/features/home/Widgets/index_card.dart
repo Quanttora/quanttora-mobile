@@ -16,11 +16,11 @@ class IndexCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent =
-        positive ? const Color(0xFF16A34A) : const Color(0xFFDC2626);
+    final accent = positive ? const Color(0xFF16A34A) : const Color(0xFFDC2626);
 
-    final background =
-        positive ? const Color(0xFFF0FDF4) : const Color(0xFFFEF2F2);
+    final background = positive
+        ? const Color(0xFFF0FDF4)
+        : const Color(0xFFFEF2F2);
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 350),
@@ -30,9 +30,7 @@ class IndexCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: accent.withOpacity(.12),
-        ),
+        border: Border.all(color: accent.withOpacity(.12)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(.05),
@@ -84,10 +82,7 @@ class IndexCard extends StatelessWidget {
             ),
           ),
           Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 10,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
               color: background,
               borderRadius: BorderRadius.circular(30),

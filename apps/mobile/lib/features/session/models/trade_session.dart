@@ -74,18 +74,15 @@ class TradeSession {
       tradingMode: tradingMode ?? this.tradingMode,
       strategyId: strategyId ?? this.strategyId,
       strategy: strategy ?? this.strategy,
-      strategyTimeframe:
-          strategyTimeframe ?? this.strategyTimeframe,
-      strategyInstruments:
-          strategyInstruments ?? this.strategyInstruments,
+      strategyTimeframe: strategyTimeframe ?? this.strategyTimeframe,
+      strategyInstruments: strategyInstruments ?? this.strategyInstruments,
       strategyMinimumAiScore:
           strategyMinimumAiScore ?? this.strategyMinimumAiScore,
       strategyRiskRewardRatio:
           strategyRiskRewardRatio ?? this.strategyRiskRewardRatio,
       strategyMaxTradesPerDay:
           strategyMaxTradesPerDay ?? this.strategyMaxTradesPerDay,
-      strategyAvoidNews:
-          strategyAvoidNews ?? this.strategyAvoidNews,
+      strategyAvoidNews: strategyAvoidNews ?? this.strategyAvoidNews,
       strategyAvoidSideways:
           strategyAvoidSideways ?? this.strategyAvoidSideways,
       strategyAvoidLowVolume:

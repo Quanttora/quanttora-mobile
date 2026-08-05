@@ -15,10 +15,7 @@ class ADXResult {
 }
 
 class ADXEngine {
-  static ADXResult analyze({
-    required List<Candle> candles,
-    int period = 14,
-  }) {
+  static ADXResult analyze({required List<Candle> candles, int period = 14}) {
     if (candles.length < (period * 2) + 1) {
       return const ADXResult(
         value: 0,
@@ -37,10 +34,8 @@ class ADXEngine {
       final previous = candles[i - 1];
 
       final highLow = current.high - current.low;
-      final highClose =
-          (current.high - previous.close).abs();
-      final lowClose =
-          (current.low - previous.close).abs();
+      final highClose = (current.high - previous.close).abs();
+      final lowClose = (current.low - previous.close).abs();
 
       final trueRange = [
         highLow,
@@ -48,21 +43,13 @@ class ADXEngine {
         lowClose,
       ].reduce((a, b) => a > b ? a : b);
 
-      final upMove =
-          current.high - previous.high;
+      final upMove = current.high - previous.high;
 
-      final downMove =
-          previous.low - current.low;
+      final downMove = previous.low - current.low;
 
-      final plusDM =
-          upMove > downMove && upMove > 0
-              ? upMove
-              : 0.0;
+      final plusDM = upMove > downMove && upMove > 0 ? upMove : 0.0;
 
-      final minusDM =
-          downMove > upMove && downMove > 0
-              ? downMove
-              : 0.0;
+      final minusDM = downMove > upMove && downMove > 0 ? downMove : 0.0;
 
       trueRanges.add(trueRange);
       plusDMs.add(plusDM);
@@ -83,31 +70,22 @@ class ADXEngine {
 
     for (int i = period; i < trueRanges.length; i++) {
       if (i > period) {
-        smoothedTR =
-            smoothedTR -
-            (smoothedTR / period) +
-            trueRanges[i];
+        smoothedTR = smoothedTR - (smoothedTR / period) + trueRanges[i];
 
         smoothedPlusDM =
-            smoothedPlusDM -
-            (smoothedPlusDM / period) +
-            plusDMs[i];
+            smoothedPlusDM - (smoothedPlusDM / period) + plusDMs[i];
 
         smoothedMinusDM =
-            smoothedMinusDM -
-            (smoothedMinusDM / period) +
-            minusDMs[i];
+            smoothedMinusDM - (smoothedMinusDM / period) + minusDMs[i];
       }
 
       if (smoothedTR <= 0) {
         continue;
       }
 
-      final plusDI =
-          100 * (smoothedPlusDM / smoothedTR);
+      final plusDI = 100 * (smoothedPlusDM / smoothedTR);
 
-      final minusDI =
-          100 * (smoothedMinusDM / smoothedTR);
+      final minusDI = 100 * (smoothedMinusDM / smoothedTR);
 
       final diTotal = plusDI + minusDI;
 
@@ -116,9 +94,7 @@ class ADXEngine {
         continue;
       }
 
-      final dx =
-          100 *
-          ((plusDI - minusDI).abs() / diTotal);
+      final dx = 100 * ((plusDI - minusDI).abs() / diTotal);
 
       dxValues.add(dx);
     }
@@ -141,9 +117,7 @@ class ADXEngine {
     adx /= period;
 
     for (int i = period; i < dxValues.length; i++) {
-      adx =
-          ((adx * (period - 1)) + dxValues[i]) /
-          period;
+      adx = ((adx * (period - 1)) + dxValues[i]) / period;
     }
 
     final int score;
@@ -158,8 +132,7 @@ class ADXEngine {
     } else if (adx >= 20) {
       score = 70;
       status = 'Developing Trend';
-      reason =
-          'ADX ${adx.toStringAsFixed(1)} indicates a developing trend.';
+      reason = 'ADX ${adx.toStringAsFixed(1)} indicates a developing trend.';
     } else {
       score = 40;
       status = 'Weak / Sideways';
@@ -167,11 +140,6 @@ class ADXEngine {
           'ADX ${adx.toStringAsFixed(1)} indicates a weak or sideways market.';
     }
 
-    return ADXResult(
-      value: adx,
-      score: score,
-      status: status,
-      reason: reason,
-    );
+    return ADXResult(value: adx, score: score, status: status, reason: reason);
   }
 }

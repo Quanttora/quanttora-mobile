@@ -9,8 +9,7 @@ class AuthService {
 
   Session? get currentSession => _client.auth.currentSession;
 
-  Stream<AuthState> get authStateChanges =>
-      _client.auth.onAuthStateChange;
+  Stream<AuthState> get authStateChanges => _client.auth.onAuthStateChange;
 
   Future<AuthResponse> signUp({
     required String email,
@@ -21,17 +20,13 @@ class AuthService {
     final normalizedName = fullName.trim();
 
     if (normalizedName.isEmpty) {
-      throw const AuthException(
-        'Full name is required.',
-      );
+      throw const AuthException('Full name is required.');
     }
 
     return _client.auth.signUp(
       email: normalizedEmail,
       password: password,
-      data: {
-        'full_name': normalizedName,
-      },
+      data: {'full_name': normalizedName},
     );
   }
 
@@ -49,11 +44,7 @@ class AuthService {
     return _client.auth.signOut();
   }
 
-  Future<void> resetPassword({
-    required String email,
-  }) {
-    return _client.auth.resetPasswordForEmail(
-      email.trim().toLowerCase(),
-    );
+  Future<void> resetPassword({required String email}) {
+    return _client.auth.resetPasswordForEmail(email.trim().toLowerCase());
   }
 }

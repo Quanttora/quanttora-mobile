@@ -51,48 +51,34 @@ class OptionChainEngine {
         'PCR ${pcr.toStringAsFixed(2)} supports bearish positioning.',
       );
     } else {
-      reasons.add(
-        'PCR ${pcr.toStringAsFixed(2)} is broadly neutral.',
-      );
+      reasons.add('PCR ${pcr.toStringAsFixed(2)} is broadly neutral.');
     }
 
     // OPTION VOLUME
     if (putVolume > callVolume) {
       bullishPoints += 2;
-      reasons.add(
-        'Put-side volume is stronger than call-side volume.',
-      );
+      reasons.add('Put-side volume is stronger than call-side volume.');
     } else if (callVolume > putVolume) {
       bearishPoints += 2;
-      reasons.add(
-        'Call-side volume is stronger than put-side volume.',
-      );
+      reasons.add('Call-side volume is stronger than put-side volume.');
     }
 
     // OI CHANGE
     if (putOIChange > callOIChange) {
       bullishPoints += 2;
-      reasons.add(
-        'Put OI build-up is stronger than Call OI build-up.',
-      );
+      reasons.add('Put OI build-up is stronger than Call OI build-up.');
     } else if (callOIChange > putOIChange) {
       bearishPoints += 2;
-      reasons.add(
-        'Call OI build-up is stronger than Put OI build-up.',
-      );
+      reasons.add('Call OI build-up is stronger than Put OI build-up.');
     }
 
     // WRITING
     if (putWriting > callWriting) {
       bullishPoints += 3;
-      reasons.add(
-        'Put writing is stronger than Call writing.',
-      );
+      reasons.add('Put writing is stronger than Call writing.');
     } else if (callWriting > putWriting) {
       bearishPoints += 3;
-      reasons.add(
-        'Call writing is stronger than Put writing.',
-      );
+      reasons.add('Call writing is stronger than Put writing.');
     }
 
     String bias;
@@ -105,24 +91,19 @@ class OptionChainEngine {
       bias = 'Neutral';
     }
 
-    final normalizedDirection =
-        direction.trim().toUpperCase();
+    final normalizedDirection = direction.trim().toUpperCase();
 
-    final wantsBullish =
-        normalizedDirection == 'CALL';
+    final wantsBullish = normalizedDirection == 'CALL';
 
-    final wantsBearish =
-        normalizedDirection == 'PUT';
+    final wantsBearish = normalizedDirection == 'PUT';
 
     int score;
 
     if (bias == 'Neutral') {
       score = 55;
-    } else if (
-        (bias == 'Bullish' && wantsBullish) ||
+    } else if ((bias == 'Bullish' && wantsBullish) ||
         (bias == 'Bearish' && wantsBearish)) {
-      final strength =
-          (bullishPoints - bearishPoints).abs();
+      final strength = (bullishPoints - bearishPoints).abs();
 
       score = 70 + (strength * 3);
 
@@ -130,8 +111,7 @@ class OptionChainEngine {
         score = 95;
       }
     } else {
-      final strength =
-          (bullishPoints - bearishPoints).abs();
+      final strength = (bullishPoints - bearishPoints).abs();
 
       score = 45 - (strength * 3);
 
@@ -140,15 +120,9 @@ class OptionChainEngine {
       }
     }
 
-    final callResistance =
-        maxCallOI > 0
-            ? maxCallOI.toStringAsFixed(0)
-            : '-';
+    final callResistance = maxCallOI > 0 ? maxCallOI.toStringAsFixed(0) : '-';
 
-    final putSupport =
-        maxPutOI > 0
-            ? maxPutOI.toStringAsFixed(0)
-            : '-';
+    final putSupport = maxPutOI > 0 ? maxPutOI.toStringAsFixed(0) : '-';
 
     reasons.add(
       'Major Call OI resistance: $callResistance; '
