@@ -8,6 +8,9 @@ class DecisionPolicy {
     required int minimumAiScore,
     required bool avoidSidewaysMarket,
     required bool avoidLowVolume,
+    required bool avoidNews,
+    required bool newsDataAvailable,
+    required bool highImpactNews,
     required String trend,
     required String volume,
     required int tradesToday,
@@ -55,6 +58,20 @@ class DecisionPolicy {
         );
       } else {
         passedRules.add('Volume filter passed.');
+      }
+    }
+
+    // NEWS SAFETY GATE
+    if (avoidNews) {
+      if (!newsDataAvailable) {
+        blockingReasons.add(
+          'Reliable news-safety data is unavailable, so the '
+          'strategy news rule cannot be verified.',
+        );
+      } else if (highImpactNews) {
+        blockingReasons.add('High-impact market-moving news risk detected.');
+      } else {
+        passedRules.add('News safety filter passed.');
       }
     }
 

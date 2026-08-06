@@ -4,6 +4,7 @@ import '../../../core/analysis/analysis_engine.dart';
 import '../../../core/analysis/policy/decision_policy.dart';
 import '../../../core/analysis/policy/policy_result.dart';
 import '../../../core/services/market_data_service.dart';
+import '../../../core/services/news_safety_service.dart';
 import '../../session/services/session_manager.dart';
 import '../../trade_history/services/trade_history_service.dart';
 import '../models/analysis_result.dart';
@@ -26,6 +27,8 @@ class _AIDecisionScreenState extends State<AIDecisionScreen> {
   final MarketDataService _marketDataService = MarketDataService();
 
   final TradeHistoryService _tradeHistoryService = TradeHistoryService();
+
+  final NewsSafetyService _newsSafetyService = NewsSafetyService();
 
   AnalysisResult? _result;
   PolicyResult? _policyResult;
@@ -89,11 +92,36 @@ class _AIDecisionScreenState extends State<AIDecisionScreen> {
         strategyId: session.strategyId,
       );
 
+      // REAL NEWS SAFETY CONNECTION
+      //
+      // If the selected strategy has Avoid News enabled,
+      // Quanttora asks the backend /news/safety endpoint.
+      //
+      // If Avoid News is disabled, the news gate is bypassed.
+      final NewsSafetyResult newsSafety;
+
+      if (session.strategyAvoidNews) {
+        newsSafety = await _newsSafetyService.evaluate();
+      } else {
+        newsSafety = const NewsSafetyResult(
+          dataAvailable: true,
+          highImpactNews: false,
+          reason: 'News safety filter is disabled for this strategy.',
+          matchedHeadlines: [],
+        );
+      }
+
       final policyResult = DecisionPolicy.evaluate(
         aiConfidence: result.confidence,
         minimumAiScore: session.strategyMinimumAiScore,
         avoidSidewaysMarket: session.strategyAvoidSideways,
         avoidLowVolume: session.strategyAvoidLowVolume,
+        avoidNews: session.strategyAvoidNews,
+
+        // REAL NEWS SAFETY VALUES
+        newsDataAvailable: newsSafety.dataAvailable,
+        highImpactNews: newsSafety.highImpactNews,
+
         trend: result.trend,
         volume: result.volume,
         tradesToday: tradesToday,
@@ -275,7 +303,9 @@ class _AIDecisionScreenState extends State<AIDecisionScreen> {
             'Strategy Rules Passed',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
+
           const SizedBox(height: 12),
+
           ...policy.passedRules.map(
             (rule) => Card(
               child: ListTile(
@@ -284,6 +314,7 @@ class _AIDecisionScreenState extends State<AIDecisionScreen> {
               ),
             ),
           ),
+
           const SizedBox(height: 25),
         ],
 
@@ -292,7 +323,9 @@ class _AIDecisionScreenState extends State<AIDecisionScreen> {
             'Trade Blocking Reasons',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
+
           const SizedBox(height: 12),
+
           ...policy.blockingReasons.map(
             (reason) => Card(
               child: ListTile(
@@ -301,6 +334,7 @@ class _AIDecisionScreenState extends State<AIDecisionScreen> {
               ),
             ),
           ),
+
           const SizedBox(height: 25),
         ],
 
