@@ -27,10 +27,7 @@ class HomeHeader extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xff0F172A),
-            Color(0xff1E3A8A),
-          ],
+          colors: [Color(0xff0F172A), Color(0xff1E3A8A)],
         ),
       ),
       child: Column(
@@ -68,10 +65,7 @@ class HomeHeader extends StatelessWidget {
           const SizedBox(height: 24),
           Text(
             _greeting(),
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 15,
-            ),
+            style: const TextStyle(color: Colors.white70, fontSize: 15),
           ),
           const SizedBox(height: 6),
           const Text(
@@ -107,11 +101,7 @@ class HomeHeader extends StatelessWidget {
     );
   }
 
-  Widget _statCard(
-    String title,
-    String value,
-    IconData icon,
-  ) {
+  Widget _statCard(String title, String value, IconData icon) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -121,11 +111,7 @@ class HomeHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            icon,
-            color: Colors.white70,
-            size: 22,
-          ),
+          Icon(icon, color: Colors.white70, size: 22),
           const SizedBox(height: 12),
           Text(
             value,
@@ -138,10 +124,7 @@ class HomeHeader extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             title,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 13,
-            ),
+            style: const TextStyle(color: Colors.white70, fontSize: 13),
           ),
         ],
       ),

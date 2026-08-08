@@ -1,6 +1,1 @@
-enum MarketStatus {
-  preOpen,
-  open,
-  closed,
-  holiday,
-}
+enum MarketStatus { preOpen, open, closed, holiday }

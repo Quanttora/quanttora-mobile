@@ -2,10 +2,7 @@ class RiskRules {
   final double riskRewardRatio;
   final double riskPercent;
 
-  const RiskRules({
-    required this.riskRewardRatio,
-    required this.riskPercent,
-  });
+  const RiskRules({required this.riskRewardRatio, required this.riskPercent});
 
   int calculateScore() {
     int score = 0;

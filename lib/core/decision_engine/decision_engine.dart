@@ -20,39 +20,6 @@ class DecisionEngine {
     required this.psychology,
   });
 
-  static DecisionResult demoResult() {
-    return DecisionEngine(
-      market: const MarketRules(
-        priceAboveEma22: true,
-        ema22AboveEma33: true,
-        higherHigh: true,
-        higherLow: true,
-        aboveVwap: true,
-      ),
-      momentum: const MomentumRules(
-        adxAbove25: true,
-        rsiHealthy: true,
-        volumeAboveAverage: true,
-        strongCandle: false,
-      ),
-      risk: const RiskRules(
-        riskRewardRatio: 3,
-        riskPercent: 2,
-      ),
-      strategy: const StrategyRules(
-        breakout: true,
-        retest: false,
-        liquiditySweep: true,
-        confirmationCandle: true,
-      ),
-      psychology: const PsychologyRules(
-        tradesToday: 1,
-        revengeTrading: false,
-        dailyLossLimitHit: false,
-      ),
-    ).evaluate();
-  }
-
   DecisionResult evaluate() {
     final marketScore = market.calculateScore();
     final momentumScore = momentum.calculateScore();
@@ -60,7 +27,8 @@ class DecisionEngine {
     final strategyScore = strategy.calculateScore();
     final psychologyScore = psychology.calculateScore();
 
-    final total = marketScore +
+    final total =
+        marketScore +
         momentumScore +
         riskScore +
         strategyScore +

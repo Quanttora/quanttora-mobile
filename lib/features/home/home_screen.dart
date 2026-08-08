@@ -1,20 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
-import 'package:mobile/features/broker/broker_service.dart';
+import '../../core/services/market_data_service.dart';
+import '../../core/widgets/responsive_container.dart';
 
-import 'widgets/common/section_title.dart';
-
-import 'widgets/sections/ai_section.dart';
-import 'widgets/sections/broker_section.dart';
-import 'widgets/sections/holdings_section.dart';
-import 'widgets/sections/home_header.dart';
-import 'widgets/sections/market_indices_section.dart';
-import 'widgets/sections/news_section.dart';
-import 'widgets/sections/orders_section.dart';
-import 'widgets/sections/portfolio_section.dart';
-import 'widgets/sections/positions_section.dart';
-import 'widgets/sections/trades_section.dart';
-import 'widgets/sections/watchlist_section.dart';
+import 'widgets/market_overview_card.dart';
+import 'widgets/quick_actions_card.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -24,259 +16,198 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  final BrokerService _brokerService = BrokerService();
+  final MarketDataService _marketService = MarketDataService();
 
   bool _loading = true;
-  String? _error;
+  bool _marketConnected = false;
 
-  Map<String, dynamic>? _marketIndices;
-  Map<String, dynamic>? _portfolio;
-  Map<String, dynamic>? _brokerProfile;
-  Map<String, dynamic>? _aiData;
+  Timer? _timer;
 
-  List<dynamic> _holdings = [];
-  List<dynamic> _positions = [];
-  List<dynamic> _orders = [];
-  List<dynamic> _trades = [];
-  List<dynamic> _watchlist = [];
-  List<dynamic> _news = [];
+  MarketIndex _nifty = const MarketIndex(
+    name: 'NIFTY 50',
+    value: '--',
+    change: 0,
+    changeText: 'Unavailable',
+  );
+
+  MarketIndex _sensex = const MarketIndex(
+    name: 'SENSEX',
+    value: '--',
+    change: 0,
+    changeText: 'Unavailable',
+  );
+
+  MarketIndex _bankNifty = const MarketIndex(
+    name: 'BANK NIFTY',
+    value: '--',
+    change: 0,
+    changeText: 'Unavailable',
+  );
 
   @override
   void initState() {
     super.initState();
+
     _loadDashboard();
+
+    _timer = Timer.periodic(
+      const Duration(seconds: 5),
+      (_) => _loadDashboard(),
+    );
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
   }
 
   Future<void> _loadDashboard() async {
-  setState(() {
-    _loading = true;
-    _error = null;
-  });
+    try {
+      final dashboard = await _marketService.fetchMarketDashboard();
 
-  try {
-    final dashboard =
-        await _brokerService.getDashboard();
+      final indices =
+          dashboard['indices'] as Map<String, dynamic>? ?? <String, dynamic>{};
 
-    _marketIndices =
-        await _brokerService.getMarketIndices();
+      final connected = dashboard['connected'] == true;
 
-    _portfolio = {
-      "availableMargin": ((dashboard["funds"]?["available_margin"] ?? 0)
-              as num)
-          .toDouble(),
-      "usedMargin":
-          ((dashboard["funds"]?["used_margin"] ?? 0) as num)
-              .toDouble(),
-      "broker": "Upstox",
-      "connected": dashboard["connected"] ?? false,
-    };
+      final nifty = _buildMarketIndex(name: 'NIFTY 50', data: indices['nifty']);
 
-    _brokerProfile = {
-      "user_name":
-          dashboard["profile"]?["user_name"] ?? "--",
-      "email":
-          dashboard["profile"]?["email"] ?? "--",
-      "user_id":
-          dashboard["profile"]?["user_id"] ?? "--",
-    };
+      final sensex = _buildMarketIndex(name: 'SENSEX', data: indices['sensex']);
 
-    _holdings = await _brokerService.getHoldings();
-    _positions = await _brokerService.getPositions();
-    _orders = await _brokerService.getOrders();
-    _trades = await _brokerService.getTrades();
+      final bankNifty = _buildMarketIndex(
+        name: 'BANK NIFTY',
+        data: indices['bankNifty'],
+      );
 
-    _watchlist = [];
-    _news = [];
+      if (!mounted) return;
 
-    _aiData = {
-      "score": 82,
-      "trend": "Bullish",
-      "confidence": 91.4,
-      "message":
-          "Momentum remains positive. Prefer high-quality setups and maintain disciplined risk management.",
-    };
-  } catch (e) {
-    _error = e.toString();
+      setState(() {
+        _nifty = nifty;
+        _sensex = sensex;
+        _bankNifty = bankNifty;
+        _marketConnected = connected;
+        _loading = false;
+      });
+    } catch (error) {
+      debugPrint('Home dashboard market data error: $error');
+
+      if (!mounted) return;
+
+      setState(() {
+        _marketConnected = false;
+        _loading = false;
+      });
+    }
   }
 
-  if (!mounted) return;
+  MarketIndex _buildMarketIndex({required String name, required dynamic data}) {
+    if (data is! Map) {
+      return MarketIndex(
+        name: name,
+        value: '--',
+        change: 0,
+        changeText: 'Unavailable',
+      );
+    }
 
-  setState(() {
-    _loading = false;
-  });
-}
+    final ltp = _toDouble(data['ltp']);
+    final previousClose = _toDouble(data['change']);
+
+    if (ltp <= 0) {
+      return MarketIndex(
+        name: name,
+        value: '--',
+        change: 0,
+        changeText: 'Unavailable',
+      );
+    }
+
+    double change = 0;
+    double changePercent = 0;
+
+    if (previousClose > 0) {
+      change = ltp - previousClose;
+      changePercent = (change / previousClose) * 100;
+    }
+
+    final prefix = change > 0 ? '+' : '';
+
+    return MarketIndex(
+      name: name,
+      value: ltp.toStringAsFixed(2),
+      change: change,
+      changeText: previousClose > 0
+          ? '$prefix${change.toStringAsFixed(2)} '
+                '($prefix${changePercent.toStringAsFixed(2)}%)'
+          : 'Price available',
+    );
+  }
+
+  double _toDouble(dynamic value) {
+    if (value is num) {
+      return value.toDouble();
+    }
+
+    return double.tryParse(value?.toString() ?? '') ?? 0;
+  }
 
   @override
   Widget build(BuildContext context) {
-        return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FB),
+    if (_loading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    return Scaffold(
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _loadDashboard,
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          child: ResponsiveContainer(
+            child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.symmetric(vertical: 20),
               children: [
-                const HomeHeader(),
-
-                const SizedBox(height: 24),
-
-                const SectionTitle(
-                  title: "Market Indices",
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Quanttora',
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        _marketConnected
+                            ? 'Market data connected'
+                            : 'Market data unavailable',
+                        style: TextStyle(
+                          color: _marketConnected ? Colors.green : Colors.grey,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
 
-                const SizedBox(height: 12),
+                const SizedBox(height: 20),
 
-                MarketIndicesSection(
-                  loading: _loading,
-                  error: _error,
-                  data: _marketIndices,
+                MarketOverviewCard(
+                  nifty: _nifty,
+                  sensex: _sensex,
+                  bankNifty: _bankNifty,
+                  isLive: _marketConnected,
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 18),
 
-                const SectionTitle(
-                  title: "Broker Account",
-                ),
+                const QuickActionsCard(),
 
-                const SizedBox(height: 12),
-
-                BrokerSection(
-                  loading: _loading,
-                  connected: _brokerProfile != null,
-                  broker: "Upstox",
-                  userName:
-                      _brokerProfile?["user_name"] ?? "--",
-                  email:
-                      _brokerProfile?["email"] ?? "--",
-                  userId:
-                      _brokerProfile?["user_id"] ?? "--",
-                  availableMargin:
-                      ((_portfolio?["availableMargin"] ?? 0)
-                              as num)
-                          .toDouble(),
-                  usedMargin:
-                      ((_portfolio?["usedMargin"] ?? 0)
-                              as num)
-                          .toDouble(),
-                  onConnect: () {},
-                ),
-
-                const SizedBox(height: 24),
-
-                const SectionTitle(
-                  title: "Portfolio",
-                ),
-
-                const SizedBox(height: 12),
-
-                PortfolioSection(
-                  loading: _loading,
-                  error: _error,
-                  portfolio: _portfolio,
-                ),
-
-                const SizedBox(height: 24),
-
-                const SectionTitle(
-                  title: "AI Coach",
-                ),
-
-                const SizedBox(height: 12),
-
-                AiSection(
-                  loading: _loading,
-                  error: _error,
-                  aiData: _aiData,
-                ),
-
-                const SizedBox(height: 24),
-                                const SectionTitle(
-                  title: "Holdings",
-                ),
-
-                const SizedBox(height: 12),
-
-                HoldingsSection(
-                  loading: _loading,
-                  error: _error,
-                  holdings: _holdings,
-                ),
-
-                const SizedBox(height: 24),
-
-                const SectionTitle(
-                  title: "Open Positions",
-                ),
-
-                const SizedBox(height: 12),
-
-                PositionsSection(
-                  loading: _loading,
-                  error: _error,
-                  positions: _positions,
-                ),
-
-                const SizedBox(height: 24),
-
-                const SectionTitle(
-                  title: "Today's Orders",
-                ),
-
-                const SizedBox(height: 12),
-
-                OrdersSection(
-                  loading: _loading,
-                  error: _error,
-                  orders: _orders,
-                ),
-
-                const SizedBox(height: 24),
-
-                const SectionTitle(
-                  title: "Today's Trades",
-                ),
-
-                const SizedBox(height: 12),
-
-                TradesSection(
-                  loading: _loading,
-                  error: _error,
-                  trades: _trades,
-                ),
-
-                const SizedBox(height: 24),
-
-                const SectionTitle(
-                  title: "Watchlist",
-                ),
-
-                const SizedBox(height: 12),
-
-                WatchlistSection(
-                  loading: _loading,
-                  error: _error,
-                  watchlist: _watchlist,
-                ),
-
-                const SizedBox(height: 24),
-
-                const SectionTitle(
-                  title: "Market News",
-                ),
-
-                const SizedBox(height: 12),
-
-                NewsSection(
-                  loading: _loading,
-                  error: _error,
-                  news: _news,
-                ),
-
-                const SizedBox(height: 32),
-                              ],
+                const SizedBox(height: 30),
+              ],
             ),
           ),
         ),

@@ -3,19 +3,13 @@ import 'package:flutter/material.dart';
 class LoadingCard extends StatelessWidget {
   final String message;
 
-  const LoadingCard({
-    super.key,
-    this.message = "Loading...",
-  });
+  const LoadingCard({super.key, this.message = "Loading..."});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(
-        horizontal: 20,
-        vertical: 28,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -32,9 +26,7 @@ class LoadingCard extends StatelessWidget {
           const SizedBox(
             width: 34,
             height: 34,
-            child: CircularProgressIndicator(
-              strokeWidth: 3,
-            ),
+            child: CircularProgressIndicator(strokeWidth: 3),
           ),
           const SizedBox(height: 16),
           Text(

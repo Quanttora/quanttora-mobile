@@ -14,6 +14,14 @@ class AnalysisResult {
 
   final String liquidity;
 
+  final String liquiditySweep;
+
+  final int liquiditySweepScore;
+
+  final String smartMoney;
+
+  final int smartMoneyScore;
+
   final String volatility;
 
   final String sectorStrength;
@@ -33,6 +41,10 @@ class AnalysisResult {
     required this.momentum,
     required this.volume,
     required this.liquidity,
+    required this.liquiditySweep,
+    required this.liquiditySweepScore,
+    required this.smartMoney,
+    required this.smartMoneyScore,
     required this.volatility,
     required this.sectorStrength,
     required this.heatMap,

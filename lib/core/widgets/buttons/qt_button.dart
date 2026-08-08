@@ -35,10 +35,7 @@ class QtButton extends StatelessWidget {
             : Icon(icon ?? Icons.arrow_forward),
         label: Text(
           title,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         style: ElevatedButton.styleFrom(
           elevation: 0,

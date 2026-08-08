@@ -1,9 +1,4 @@
-enum DecisionVerdict {
-  execute,
-  wait,
-  highRisk,
-  avoid,
-}
+enum DecisionVerdict { execute, wait, highRisk, avoid }
 
 class DecisionResult {
   final int totalScore;
@@ -45,6 +40,5 @@ class DecisionResult {
     }
   }
 
-  bool get canTrade =>
-      verdict == DecisionVerdict.execute;
+  bool get canTrade => verdict == DecisionVerdict.execute;
 }

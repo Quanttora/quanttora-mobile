@@ -19,25 +19,17 @@ class PositionsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (loading) {
-      return const LoadingCard(
-        message: "Loading Positions...",
-      );
+      return const LoadingCard(message: "Loading Positions...");
     }
 
     if (error != null) {
-      return ErrorCard(
-        message: error!,
-      );
+      return ErrorCard(message: error!);
     }
 
     if (positions == null || positions!.isEmpty) {
-      return const ErrorCard(
-        message: "No open positions.",
-      );
+      return const ErrorCard(message: "No open positions.");
     }
 
-    return PositionsCard(
-      positions: positions!,
-    );
+    return PositionsCard(positions: positions!);
   }
 }

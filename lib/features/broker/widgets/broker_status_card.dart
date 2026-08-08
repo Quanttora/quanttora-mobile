@@ -46,10 +46,7 @@ class BrokerStatusCard extends StatelessWidget {
               children: [
                 const Row(
                   children: [
-                    Icon(
-                      Icons.check_circle,
-                      color: Colors.green,
-                    ),
+                    Icon(Icons.check_circle, color: Colors.green),
                     SizedBox(width: 8),
                     Text(
                       "Broker Connected",
@@ -75,9 +72,7 @@ class BrokerStatusCard extends StatelessWidget {
                 const Divider(height: 30),
                 Text(
                   "Available Margin",
-                  style: TextStyle(
-                    color: Colors.grey.shade700,
-                  ),
+                  style: TextStyle(color: Colors.grey.shade700),
                 ),
                 const SizedBox(height: 5),
                 Text(
@@ -91,9 +86,7 @@ class BrokerStatusCard extends StatelessWidget {
                 const SizedBox(height: 18),
                 Text(
                   "Used Margin",
-                  style: TextStyle(
-                    color: Colors.grey.shade700,
-                  ),
+                  style: TextStyle(color: Colors.grey.shade700),
                 ),
                 const SizedBox(height: 5),
                 Text(
@@ -116,10 +109,7 @@ class BrokerStatusCard extends StatelessWidget {
                 const SizedBox(height: 10),
                 const Text(
                   "No Broker Connected",
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                 ),
                 const SizedBox(height: 15),
                 FilledButton(

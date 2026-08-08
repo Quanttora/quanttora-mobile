@@ -3,10 +3,7 @@ import 'package:flutter/material.dart';
 class OrdersCard extends StatelessWidget {
   final List<dynamic> orders;
 
-  const OrdersCard({
-    super.key,
-    required this.orders,
-  });
+  const OrdersCard({super.key, required this.orders});
 
   @override
   Widget build(BuildContext context) {
@@ -37,10 +34,7 @@ class OrdersCard extends StatelessWidget {
               const Expanded(
                 child: Text(
                   "Today's Orders",
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                 ),
               ),
               Container(
@@ -83,10 +77,7 @@ class OrdersCard extends StatelessWidget {
                   SizedBox(height: 16),
                   Text(
                     "No Orders Today",
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                   ),
                   SizedBox(height: 8),
                   Text(
@@ -96,47 +87,35 @@ class OrdersCard extends StatelessWidget {
                 ],
               ),
             )
-            else
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: orders.length,
-                separatorBuilder: (_, __) =>
-                    const SizedBox(height: 14),
-                itemBuilder: (_, index) {
-                  final order = orders[index];
+          else
+            ListView.separated(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: orders.length,
+              separatorBuilder: (_, __) => const SizedBox(height: 14),
+              itemBuilder: (_, index) {
+                final order = orders[index];
 
-                  final symbol =
-                      order["trading_symbol"] ??
-                      order["tradingsymbol"] ??
-                      "";
+                final symbol =
+                    order["trading_symbol"] ?? order["tradingsymbol"] ?? "";
 
-                  final side =
-                      order["transaction_type"] ??
-                      order["side"] ??
-                      "";
+                final side = order["transaction_type"] ?? order["side"] ?? "";
 
-                  final status =
-                      order["status"] ??
-                      "";
+                final status = order["status"] ?? "";
 
-                  final qty =
-                      ((order["quantity"] ?? 0) as num)
-                          .toDouble();
+                final qty = ((order["quantity"] ?? 0) as num).toDouble();
 
-                  final price =
-                      ((order["price"] ?? 0) as num)
-                          .toDouble();
+                final price = ((order["price"] ?? 0) as num).toDouble();
 
-                  return _OrderTile(
-                    symbol: symbol,
-                    side: side,
-                    status: status,
-                    quantity: qty,
-                    price: price,
-                  );
-                },
-              ),
+                return _OrderTile(
+                  symbol: symbol,
+                  side: side,
+                  status: status,
+                  quantity: qty,
+                  price: price,
+                );
+              },
+            ),
         ],
       ),
     );
@@ -166,22 +145,19 @@ class _OrderTile extends StatelessWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: Colors.grey.shade300,
-        ),
+        border: Border.all(color: Colors.grey.shade300),
       ),
       child: Row(
         children: [
           CircleAvatar(
             radius: 22,
-            backgroundColor:
-                (buy ? Colors.green : Colors.red)
-                    .withValues(alpha: .10),
+            backgroundColor: (buy ? Colors.green : Colors.red).withValues(
+              alpha: .10,
+            ),
             child: Text(
               symbol.isEmpty ? "?" : symbol[0],
               style: TextStyle(
-                color:
-                    buy ? Colors.green : Colors.red,
+                color: buy ? Colors.green : Colors.red,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -191,8 +167,7 @@ class _OrderTile extends StatelessWidget {
 
           Expanded(
             child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   symbol,
@@ -202,16 +177,13 @@ class _OrderTile extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  "$side • Qty ${quantity.toStringAsFixed(0)}",
-                ),
+                Text("$side • Qty ${quantity.toStringAsFixed(0)}"),
               ],
             ),
           ),
 
           Column(
-            crossAxisAlignment:
-                CrossAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
                 "₹${price.toStringAsFixed(2)}",

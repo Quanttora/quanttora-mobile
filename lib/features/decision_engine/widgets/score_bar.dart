@@ -22,10 +22,8 @@ class ScoreBar extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 18),
       child: Column(
         children: [
-
           Row(
             children: [
-
               Expanded(
                 child: Text(
                   title,
@@ -38,12 +36,8 @@ class ScoreBar extends StatelessWidget {
 
               Text(
                 "$score / $maxScore",
-                style: TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(color: color, fontWeight: FontWeight.bold),
               ),
-
             ],
           ),
 
@@ -58,7 +52,6 @@ class ScoreBar extends StatelessWidget {
               backgroundColor: Colors.grey.shade300,
             ),
           ),
-
         ],
       ),
     );

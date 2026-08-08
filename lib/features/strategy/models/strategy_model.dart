@@ -1,5 +1,6 @@
 class StrategyModel {
   final String id;
+  final String userId;
   final String name;
   final String description;
   final String timeframe;
@@ -16,6 +17,7 @@ class StrategyModel {
 
   const StrategyModel({
     required this.id,
+    required this.userId,
     required this.name,
     required this.description,
     required this.timeframe,
@@ -33,6 +35,7 @@ class StrategyModel {
 
   StrategyModel copyWith({
     String? id,
+    String? userId,
     String? name,
     String? description,
     String? timeframe,
@@ -49,6 +52,7 @@ class StrategyModel {
   }) {
     return StrategyModel(
       id: id ?? this.id,
+      userId: userId ?? this.userId,
       name: name ?? this.name,
       description: description ?? this.description,
       timeframe: timeframe ?? this.timeframe,
@@ -68,6 +72,7 @@ class StrategyModel {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'user_id': userId,
       'name': name,
       'description': description,
       'timeframe': timeframe,
@@ -87,6 +92,7 @@ class StrategyModel {
   factory StrategyModel.fromMap(Map<String, dynamic> map) {
     return StrategyModel(
       id: map['id'] ?? '',
+      userId: map['user_id'] ?? '',
       name: map['name'] ?? '',
       description: map['description'] ?? '',
       timeframe: map['timeframe'] ?? '',

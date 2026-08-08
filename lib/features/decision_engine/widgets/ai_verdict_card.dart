@@ -5,10 +5,7 @@ import '../../../core/decision_engine/decision_result.dart';
 class AIVerdictCard extends StatelessWidget {
   final DecisionResult result;
 
-  const AIVerdictCard({
-    super.key,
-    required this.result,
-  });
+  const AIVerdictCard({super.key, required this.result});
 
   Color get verdictColor {
     switch (result.verdict) {
@@ -40,28 +37,19 @@ class AIVerdictCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           children: [
             const Text(
               "AI VERDICT",
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
 
             const SizedBox(height: 24),
 
-            Icon(
-              verdictIcon,
-              color: verdictColor,
-              size: 70,
-            ),
+            Icon(verdictIcon, color: verdictColor, size: 70),
 
             const SizedBox(height: 16),
 
@@ -78,9 +66,7 @@ class AIVerdictCard extends StatelessWidget {
 
             Text(
               "Q-Score ${result.totalScore}/100",
-              style: const TextStyle(
-                fontSize: 18,
-              ),
+              style: const TextStyle(fontSize: 18),
             ),
 
             const SizedBox(height: 30),
@@ -89,10 +75,7 @@ class AIVerdictCard extends StatelessWidget {
               alignment: Alignment.centerLeft,
               child: Text(
                 "Reasons",
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
             ),
 
@@ -103,15 +86,9 @@ class AIVerdictCard extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: 10),
                 child: Row(
                   children: [
-                    Icon(
-                      Icons.check_circle,
-                      color: verdictColor,
-                      size: 20,
-                    ),
+                    Icon(Icons.check_circle, color: verdictColor, size: 20),
                     const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(reason),
-                    ),
+                    Expanded(child: Text(reason)),
                   ],
                 ),
               ),

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:mobile/features/home/home_screen.dart';
 import 'package:mobile/features/strategy/presentation/screens/strategy_screen.dart';
-import 'package:mobile/features/trade_analysis/screens/trade_analysis_screen.dart';
+import 'package:mobile/features/trading_mode/screens/trading_mode_screen.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -41,76 +41,105 @@ class _AppShellState extends State<AppShell> {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7FC),
 
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _pages,
-      ),
+      body: IndexedStack(index: _selectedIndex, children: _pages),
 
-      floatingActionButtonLocation:
-          FloatingActionButtonLocation.centerDocked,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
 
-      floatingActionButton: SizedBox(
-        width: 220,
-        height: 60,
-        child: FloatingActionButton.extended(
-          backgroundColor: const Color(0xFF155EEF),
-          elevation: 8,
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const TradeAnalysisScreen(),
+      // Analyze Trade button appears ONLY on Home.
+      floatingActionButton: _selectedIndex == 0
+          ? Container(
+              height: 62,
+              constraints: const BoxConstraints(maxWidth: 280),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF155EEF).withValues(alpha: .35),
+                    blurRadius: 24,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
               ),
-            );
-          },
-          icon: const Icon(Icons.analytics_rounded),
-          label: const Text(
-            "ANALYZE TRADE",
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.bold,
-            ),
+              child: FloatingActionButton.extended(
+                heroTag: "analyze",
+                elevation: 0,
+                backgroundColor: const Color(0xFF155EEF),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const TradingModeScreen(),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.auto_awesome_rounded, size: 24),
+                label: const Text(
+                  "Analyze Trade",
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                ),
+              ),
+            )
+          : null,
+
+      bottomNavigationBar: SafeArea(
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          height: 74,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: .08),
+                blurRadius: 24,
+                offset: const Offset(0, 10),
+              ),
+            ],
           ),
-        ),
-      ),
+          child: Row(
+            children: [
+              Expanded(
+                child: _NavItem(
+                  icon: Icons.home_rounded,
+                  title: "Home",
+                  selected: _selectedIndex == 0,
+                  onTap: () => _changeTab(0),
+                ),
+              ),
 
-      bottomNavigationBar: BottomAppBar(
-        height: 75,
-        shape: const CircularNotchedRectangle(),
-        notchMargin: 8,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _NavItem(
-              icon: Icons.home_rounded,
-              title: "Home",
-              selected: _selectedIndex == 0,
-              onTap: () => _changeTab(0),
-            ),
+              Expanded(
+                child: _NavItem(
+                  icon: Icons.auto_graph_rounded,
+                  title: "Strategy",
+                  selected: _selectedIndex == 1,
+                  onTap: () => _changeTab(1),
+                ),
+              ),
 
-            _NavItem(
-              icon: Icons.auto_graph_rounded,
-              title: "Strategy",
-              selected: _selectedIndex == 1,
-              onTap: () => _changeTab(1),
-            ),
+              const SizedBox(width: 90),
 
-            const SizedBox(width: 50),
+              Expanded(
+                child: _NavItem(
+                  icon: Icons.smart_toy_rounded,
+                  title: "AI",
+                  selected: _selectedIndex == 2,
+                  onTap: () => _changeTab(2),
+                ),
+              ),
 
-            _NavItem(
-              icon: Icons.smart_toy_rounded,
-              title: "AI",
-              selected: _selectedIndex == 2,
-              onTap: () => _changeTab(2),
-            ),
-
-            _NavItem(
-              icon: Icons.person_rounded,
-              title: "Profile",
-              selected: _selectedIndex == 3,
-              onTap: () => _changeTab(3),
-            ),
-          ],
+              Expanded(
+                child: _NavItem(
+                  icon: Icons.person_rounded,
+                  title: "Profile",
+                  selected: _selectedIndex == 3,
+                  onTap: () => _changeTab(3),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -118,11 +147,6 @@ class _AppShellState extends State<AppShell> {
 }
 
 class _NavItem extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final bool selected;
-  final VoidCallback onTap;
-
   const _NavItem({
     required this.icon,
     required this.title,
@@ -130,38 +154,49 @@ class _NavItem extends StatelessWidget {
     required this.onTap,
   });
 
+  final IconData icon;
+  final String title;
+  final bool selected;
+  final VoidCallback onTap;
+
   @override
   Widget build(BuildContext context) {
-    final color = selected ? const Color(0xFF155EEF) : Colors.grey;
+    final color = selected ? const Color(0xFF155EEF) : Colors.grey.shade500;
 
     return InkWell(
+      borderRadius: BorderRadius.circular(18),
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: SizedBox(
-        width: 70,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: selected
+                  ? const Color(0xFF155EEF).withValues(alpha: .10)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+
+          const SizedBox(height: 4),
+
+          Text(
+            title,
+            style: TextStyle(
               color: color,
+              fontSize: 11,
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
             ),
-            const SizedBox(height: 4),
-            Text(
-              title,
-              style: TextStyle(
-                color: color,
-                fontSize: 12,
-                fontWeight:
-                    selected ? FontWeight.bold : FontWeight.normal,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
+
 class AIScreen extends StatelessWidget {
   const AIScreen({super.key});
 
@@ -169,41 +204,53 @@ class AIScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7FC),
-      appBar: AppBar(
-        title: const Text("Quanttora AI"),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text("Quanttora AI"), centerTitle: true),
       body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Card(
-            elevation: 2,
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: const [
-                  Icon(
-                    Icons.smart_toy_rounded,
-                    size: 70,
-                    color: Color(0xFF155EEF),
-                  ),
-                  SizedBox(height: 20),
-                  Text(
-                    "Quanttora AI",
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    "AI modules will be available here.",
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 520),
+          margin: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(28),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: .06),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
               ),
-            ),
+            ],
+          ),
+          child: const Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircleAvatar(
+                radius: 38,
+                backgroundColor: Color(0xFFEAF2FF),
+                child: Icon(
+                  Icons.smart_toy_rounded,
+                  size: 42,
+                  color: Color(0xFF155EEF),
+                ),
+              ),
+
+              SizedBox(height: 20),
+
+              Text(
+                "Quanttora AI",
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+              ),
+
+              SizedBox(height: 10),
+
+              Text(
+                "AI Scanner, Trade Assistant,\n"
+                "Market Insights and Decision Engine\n"
+                "will appear here.",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 15, color: Colors.black54),
+              ),
+            ],
           ),
         ),
       ),
@@ -218,41 +265,53 @@ class ProfileScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7FC),
-      appBar: AppBar(
-        title: const Text("Profile"),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text("Profile"), centerTitle: true),
       body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Card(
-            elevation: 2,
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: const [
-                  Icon(
-                    Icons.person_rounded,
-                    size: 70,
-                    color: Color(0xFF155EEF),
-                  ),
-                  SizedBox(height: 20),
-                  Text(
-                    "Profile",
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    "User profile settings will appear here.",
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 520),
+          margin: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(28),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: .06),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
               ),
-            ),
+            ],
+          ),
+          child: const Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircleAvatar(
+                radius: 38,
+                backgroundColor: Color(0xFFEAF2FF),
+                child: Icon(
+                  Icons.person_rounded,
+                  size: 42,
+                  color: Color(0xFF155EEF),
+                ),
+              ),
+
+              SizedBox(height: 20),
+
+              Text(
+                "Profile",
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+              ),
+
+              SizedBox(height: 10),
+
+              Text(
+                "Account, Broker Connections,\n"
+                "Subscription and Settings\n"
+                "will appear here.",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 15, color: Colors.black54),
+              ),
+            ],
           ),
         ),
       ),

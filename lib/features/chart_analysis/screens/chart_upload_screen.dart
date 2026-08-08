@@ -6,10 +6,7 @@ class ChartUploadScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("AI Trade Analyzer"),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text("AI Trade Analyzer"), centerTitle: true),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -27,10 +24,7 @@ class ChartUploadScreen extends StatelessWidget {
 
               const Text(
                 "Upload Your Chart",
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
               ),
 
               const SizedBox(height: 10),
@@ -38,10 +32,7 @@ class ChartUploadScreen extends StatelessWidget {
               const Text(
                 "Upload a TradingView or broker chart screenshot.\nQuanttora AI will analyze your setup.",
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey,
-                ),
+                style: TextStyle(fontSize: 16, color: Colors.grey),
               ),
 
               const SizedBox(height: 40),
@@ -50,10 +41,7 @@ class ChartUploadScreen extends StatelessWidget {
                 child: Container(
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    border: Border.all(
-                      color: Colors.blue,
-                      width: 2,
-                    ),
+                    border: Border.all(color: Colors.blue, width: 2),
                     borderRadius: BorderRadius.circular(20),
                     color: const Color(0xFFF7F9FC),
                   ),
@@ -80,9 +68,7 @@ class ChartUploadScreen extends StatelessWidget {
 
                       Text(
                         "PNG • JPG • JPEG",
-                        style: TextStyle(
-                          color: Colors.grey,
-                        ),
+                        style: TextStyle(color: Colors.grey),
                       ),
                     ],
                   ),
@@ -99,10 +85,7 @@ class ChartUploadScreen extends StatelessWidget {
                   icon: const Icon(Icons.image),
                   label: const Text(
                     "SELECT IMAGE",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                 ),
               ),

@@ -11,9 +11,7 @@ class ConstitutionResult {
     this.blockReason,
   });
 
-  int get passedRules =>
-      rules.where((rule) => rule.isPassed).length;
+  int get passedRules => rules.where((rule) => rule.isPassed).length;
 
-  int get failedRules =>
-      rules.where((rule) => !rule.isPassed).length;
+  int get failedRules => rules.where((rule) => !rule.isPassed).length;
 }

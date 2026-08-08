@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/decision_engine/decision_result.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_radius.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/theme/app_text_styles.dart';
 import '../../../core/widgets/quanttora_card.dart';
@@ -9,181 +10,112 @@ import '../../../core/widgets/quanttora_card.dart';
 class DecisionScoreCard extends StatelessWidget {
   final DecisionResult result;
 
-  const DecisionScoreCard({
-    super.key,
-    required this.result,
-  });
+  const DecisionScoreCard({super.key, required this.result});
 
   @override
   Widget build(BuildContext context) {
+    final score = result.totalScore.clamp(0, 100);
+    final verdictColor = _getVerdictColor(result.verdict);
+
     return QuanttoraCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          const Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.psychology_alt_rounded,
                 color: AppColors.primary,
                 size: 28,
               ),
-              const SizedBox(width: 10),
-              Text(
-                "AI Decision Score",
-                style: AppTextStyles.heading,
+              SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: Text(
+                  'AI Decision Score',
+                  style: AppTextStyles.titleLarge,
+                ),
               ),
             ],
           ),
-
-          const SizedBox(height: 25),
-
+          const SizedBox(height: AppSpacing.xxl),
           Row(
             children: [
-              Expanded(
-                flex: 2,
-                child: Center(
-                  child: SizedBox(
-                    width: 150,
-                    height: 150,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        SizedBox(
-                          width: 150,
-                          height: 150,
-                          child: CircularProgressIndicator(
-                            value: result.totalScore / 100,
-                            strokeWidth: 12,
-                            backgroundColor: Colors.grey.shade200,
-                            valueColor: const AlwaysStoppedAnimation(
-                              AppColors.primary,
-                            ),
-                          ),
-                        ),
-                        Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              result.totalScore.toString(),
-                              style: const TextStyle(
-                                fontSize: 42,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const Text(
-                              "/100",
-                              style: TextStyle(
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(width: 24),
-
-              Expanded(
-                flex: 3,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              SizedBox(
+                width: 132,
+                height: 132,
+                child: Stack(
+                  alignment: Alignment.center,
                   children: [
-                    _infoTile(
-                      Icons.show_chart_rounded,
-                      "Market Health",
-                      "87 /100",
-                      Colors.green,
+                    SizedBox(
+                      width: 132,
+                      height: 132,
+                      child: CircularProgressIndicator(
+                        value: score / 100,
+                        strokeWidth: 11,
+                        backgroundColor: AppColors.surfaceAlt,
+                        valueColor: const AlwaysStoppedAnimation<Color>(
+                          AppColors.primary,
+                        ),
+                      ),
                     ),
-                    const SizedBox(height: 14),
-                    _infoTile(
-                      Icons.auto_graph,
-                      "Strategy Match",
-                      "94%",
-                      Colors.blue,
-                    ),
-                    const SizedBox(height: 14),
-                    _infoTile(
-                      Icons.security,
-                      "Risk Level",
-                      "LOW",
-                      Colors.orange,
-                    ),
-                    const SizedBox(height: 14),
-                    _infoTile(
-                      Icons.gpp_good,
-                      "Verdict",
-                      result.verdictText,
-                      _getVerdictColor(result.verdict),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          score.toString(),
+                          style: AppTextStyles.headlineLarge,
+                        ),
+                        const Text('/100', style: AppTextStyles.bodySmall),
+                      ],
                     ),
                   ],
                 ),
               ),
+              const SizedBox(width: AppSpacing.xxl),
+              Expanded(
+                child: _VerdictPanel(
+                  verdict: result.verdictText,
+                  rating: _getRating(score),
+                  color: verdictColor,
+                ),
+              ),
             ],
           ),
-
-          const SizedBox(height: AppSpacing.lg),
-
+          const SizedBox(height: AppSpacing.xxl),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.all(AppSpacing.lg),
             decoration: BoxDecoration(
-              color: Colors.blue.shade50,
-              borderRadius: BorderRadius.circular(16),
+              color: verdictColor.withValues(alpha: 0.08),
+              borderRadius: AppRadius.mdBorder,
+              border: Border.all(color: verdictColor.withValues(alpha: 0.16)),
             ),
-            child: Text(
-              "AI Insight\n\n${_getRating(result.totalScore)}. Market conditions are aligned with your selected strategy. Maintain discipline and execute only if all checklist items remain valid.",
-              style: AppTextStyles.body,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.insights_rounded, color: verdictColor, size: 21),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Quanttora Assessment',
+                        style: AppTextStyles.titleSmall,
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        _getAssessment(result.verdict, score),
+                        style: AppTextStyles.bodySmall,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _infoTile(
-    IconData icon,
-    String title,
-    String value,
-    Color color,
-  ) {
-    return Row(
-      children: [
-        CircleAvatar(
-          radius: 20,
-          backgroundColor: color.withValues(alpha: .12),
-          child: Icon(
-            icon,
-            color: color,
-            size: 20,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  color: Colors.grey,
-                  fontSize: 13,
-                ),
-              ),
-              Text(
-                value,
-                style: TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              ),
-            ],
-          ),
-        )
-      ],
     );
   }
 
@@ -201,9 +133,65 @@ class DecisionScoreCard extends StatelessWidget {
   }
 
   String _getRating(int score) {
-    if (score >= 90) return "Excellent trading opportunity";
-    if (score >= 75) return "Good quality setup";
-    if (score >= 60) return "Trade with caution";
-    return "Avoid this trade";
+    if (score >= 90) {
+      return 'Excellent setup';
+    }
+
+    if (score >= 75) {
+      return 'Good quality setup';
+    }
+
+    if (score >= 60) {
+      return 'Caution required';
+    }
+
+    return 'Weak setup';
+  }
+
+  String _getAssessment(DecisionVerdict verdict, int score) {
+    switch (verdict) {
+      case DecisionVerdict.execute:
+        return 'The current decision engine returned an execute verdict with a score of $score/100. Confirm your strategy and risk rules before placing any trade.';
+
+      case DecisionVerdict.wait:
+        return 'The current decision engine returned a wait verdict with a score of $score/100. Conditions do not currently justify execution.';
+
+      case DecisionVerdict.highRisk:
+        return 'The current decision engine classified this setup as high risk with a score of $score/100. Do not treat the score alone as permission to trade.';
+
+      case DecisionVerdict.avoid:
+        return 'The current decision engine returned an avoid verdict with a score of $score/100. The setup does not currently satisfy the required conditions.';
+    }
+  }
+}
+
+class _VerdictPanel extends StatelessWidget {
+  final String verdict;
+  final String rating;
+  final Color color;
+
+  const _VerdictPanel({
+    required this.verdict,
+    required this.rating,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Verdict', style: AppTextStyles.labelMedium),
+        const SizedBox(height: AppSpacing.xs),
+        Text(
+          verdict,
+          style: AppTextStyles.headlineSmall.copyWith(color: color),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        const Text('Score quality', style: AppTextStyles.labelMedium),
+        const SizedBox(height: AppSpacing.xs),
+        Text(rating, style: AppTextStyles.titleSmall),
+      ],
+    );
   }
 }

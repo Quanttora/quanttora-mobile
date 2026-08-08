@@ -15,19 +15,43 @@ class HeatMapEngine {
     required int advancing,
     required int declining,
   }) {
+    final total = advancing + declining;
 
-    if (advancing > declining) {
+    if (total == 0) {
       return const HeatMapResult(
-        sentiment: "Positive",
-        score: 90,
-        reason: "Market breadth is positive.",
+        sentiment: 'Unavailable',
+        score: 0,
+        reason: 'Real sector breadth data is unavailable.',
       );
     }
 
-    return const HeatMapResult(
-      sentiment: "Negative",
-      score: 65,
-      reason: "Declining stocks dominate.",
+    final bullishPercentage = (advancing / total) * 100;
+
+    final bearishPercentage = (declining / total) * 100;
+
+    if (advancing > declining) {
+      return HeatMapResult(
+        sentiment: 'Positive',
+        score: bullishPercentage.round(),
+        reason: '$advancing of $total tracked sectors are advancing.',
+      );
+    }
+
+    if (declining > advancing) {
+      return HeatMapResult(
+        sentiment: 'Negative',
+        score: bearishPercentage.round(),
+        reason: '$declining of $total tracked sectors are declining.',
+      );
+    }
+
+    return HeatMapResult(
+      sentiment: 'Neutral',
+      score: 50,
+      reason:
+          'Sector breadth is evenly split: '
+          '$advancing advancing and '
+          '$declining declining.',
     );
   }
 }

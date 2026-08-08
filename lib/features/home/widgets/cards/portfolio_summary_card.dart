@@ -14,8 +14,7 @@ class PortfolioSummaryCard extends StatelessWidget {
     required this.connected,
   });
 
-  double get totalPortfolio =>
-      availableMargin + usedMargin;
+  double get totalPortfolio => availableMargin + usedMargin;
 
   String _money(double value) {
     return "₹${value.toStringAsFixed(2)}";
@@ -24,8 +23,7 @@ class PortfolioSummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final pnl = availableMargin - usedMargin;
-    final pnlColor =
-        pnl >= 0 ? Colors.green : Colors.red;
+    final pnlColor = pnl >= 0 ? Colors.green : Colors.red;
 
     return Container(
       padding: const EdgeInsets.all(22),
@@ -41,8 +39,7 @@ class PortfolioSummaryCard extends StatelessWidget {
         ],
       ),
       child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
@@ -55,39 +52,25 @@ class PortfolioSummaryCard extends StatelessWidget {
               const Expanded(
                 child: Text(
                   "Portfolio Summary",
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                 ),
               ),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(
+                padding: const EdgeInsets.symmetric(
                   horizontal: 10,
                   vertical: 5,
                 ),
                 decoration: BoxDecoration(
                   color: connected
-                      ? Colors.green.withValues(
-                          alpha: .12,
-                        )
-                      : Colors.red.withValues(
-                          alpha: .12,
-                        ),
-                  borderRadius:
-                      BorderRadius.circular(20),
+                      ? Colors.green.withValues(alpha: .12)
+                      : Colors.red.withValues(alpha: .12),
+                  borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  connected
-                      ? broker.toUpperCase()
-                      : "DISCONNECTED",
+                  connected ? broker.toUpperCase() : "DISCONNECTED",
                   style: TextStyle(
-                    color: connected
-                        ? Colors.green
-                        : Colors.red,
-                    fontWeight:
-                        FontWeight.bold,
+                    color: connected ? Colors.green : Colors.red,
+                    fontWeight: FontWeight.bold,
                     fontSize: 12,
                   ),
                 ),
@@ -102,17 +85,14 @@ class PortfolioSummaryCard extends StatelessWidget {
               children: [
                 const Text(
                   "Portfolio Value",
-                  style: TextStyle(
-                    color: Colors.grey,
-                  ),
+                  style: TextStyle(color: Colors.grey),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   _money(totalPortfolio),
                   style: const TextStyle(
                     fontSize: 34,
-                    fontWeight:
-                        FontWeight.bold,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ],
@@ -126,21 +106,16 @@ class PortfolioSummaryCard extends StatelessWidget {
               Expanded(
                 child: _Tile(
                   title: "Available",
-                  value: _money(
-                    availableMargin,
-                  ),
+                  value: _money(availableMargin),
                   color: Colors.green,
-                  icon: Icons
-                      .account_balance_wallet,
+                  icon: Icons.account_balance_wallet,
                 ),
               ),
               const SizedBox(width: 14),
               Expanded(
                 child: _Tile(
                   title: "Used",
-                  value: _money(
-                    usedMargin,
-                  ),
+                  value: _money(usedMargin),
                   color: Colors.orange,
                   icon: Icons.payments,
                 ),
@@ -149,7 +124,7 @@ class PortfolioSummaryCard extends StatelessWidget {
           ),
 
           const SizedBox(height: 14),
-                    _Tile(
+          _Tile(
             title: "Today's P&L",
             value: _money(pnl),
             color: pnlColor,
@@ -183,13 +158,9 @@ class _Tile extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            icon,
-            color: color,
-          ),
+          Icon(icon, color: color),
           const SizedBox(height: 10),
           Text(
             title,

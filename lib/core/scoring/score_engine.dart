@@ -19,8 +19,7 @@ class ScoreEngine {
       reasons.addAll(indicator.reasons);
     }
 
-    final double percentage =
-        maxScore == 0 ? 0 : (totalScore / maxScore) * 100;
+    final double percentage = maxScore == 0 ? 0 : (totalScore / maxScore) * 100;
 
     return QScore(
       score: totalScore,

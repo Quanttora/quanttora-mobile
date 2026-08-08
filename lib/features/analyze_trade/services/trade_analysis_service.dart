@@ -45,16 +45,14 @@ class TradeAnalysisService {
 
     if (score >= 80) {
       verdict = "EXECUTE";
-      summary =
-          "All major conditions are aligned. Trade quality is excellent.";
+      summary = "All major conditions are aligned. Trade quality is excellent.";
     } else if (score >= 60) {
       verdict = "WAIT";
       summary =
           "Most conditions are satisfied. Wait for stronger confirmation.";
     } else {
       verdict = "AVOID";
-      summary =
-          "Multiple conditions failed. Avoid entering this trade.";
+      summary = "Multiple conditions failed. Avoid entering this trade.";
     }
 
     return TradeAnalysisResult(

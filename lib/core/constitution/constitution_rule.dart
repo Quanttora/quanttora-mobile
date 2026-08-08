@@ -1,7 +1,4 @@
-enum ConstitutionStatus {
-  pass,
-  fail,
-}
+enum ConstitutionStatus { pass, fail }
 
 class ConstitutionRule {
   final String id;

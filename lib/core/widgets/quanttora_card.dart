@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 
 class QuanttoraCard extends StatelessWidget {
@@ -23,25 +24,21 @@ class QuanttoraCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final resolvedRadius = borderRadius == null
+        ? AppRadius.mdBorder
+        : BorderRadius.circular(borderRadius!);
+
     final card = Container(
       width: double.infinity,
-      padding: padding ??
-          const EdgeInsets.all(
-            AppSpacing.cardPadding,
-          ),
+      padding: padding ?? const EdgeInsets.all(AppSpacing.cardPadding),
       decoration: BoxDecoration(
         color: backgroundColor ?? AppColors.surface,
-        borderRadius: BorderRadius.circular(
-          borderRadius ?? AppSpacing.cardRadius,
-        ),
-        border: Border.all(
-          color: AppColors.border,
-          width: 1,
-        ),
+        borderRadius: resolvedRadius,
+        border: Border.all(color: AppColors.border, width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 12,
+            color: Colors.black.withValues(alpha: elevation > 0 ? 0.06 : 0.04),
+            blurRadius: elevation > 0 ? 16 : 12,
             offset: const Offset(0, 4),
           ),
         ],
@@ -55,13 +52,7 @@ class QuanttoraCard extends StatelessWidget {
 
     return Material(
       color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(
-          borderRadius ?? AppSpacing.cardRadius,
-        ),
-        onTap: onTap,
-        child: card,
-      ),
+      child: InkWell(borderRadius: resolvedRadius, onTap: onTap, child: card),
     );
   }
 }

@@ -42,9 +42,9 @@ class ConstitutionEngine {
     ];
 
     final failedRule = rules.cast<ConstitutionRule?>().firstWhere(
-          (rule) => rule!.status == ConstitutionStatus.fail,
-          orElse: () => null,
-        );
+      (rule) => rule!.status == ConstitutionStatus.fail,
+      orElse: () => null,
+    );
 
     return ConstitutionResult(
       canAnalyze: failedRule == null,

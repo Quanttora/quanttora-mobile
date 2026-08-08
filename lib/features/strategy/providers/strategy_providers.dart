@@ -9,7 +9,5 @@ final strategyRepositoryProvider = Provider<StrategyRepository>((ref) {
 });
 
 final strategyServiceProvider = Provider<StrategyService>((ref) {
-  return StrategyService(
-    ref.read(strategyRepositoryProvider),
-  );
+  return StrategyService(ref.read(strategyRepositoryProvider));
 });

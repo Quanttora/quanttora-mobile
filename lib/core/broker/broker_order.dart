@@ -1,13 +1,6 @@
-enum OrderType {
-  market,
-  limit,
-  stopLoss,
-}
+enum OrderType { market, limit, stopLoss }
 
-enum OrderSide {
-  buy,
-  sell,
-}
+enum OrderSide { buy, sell }
 
 class BrokerOrder {
   final String symbol;

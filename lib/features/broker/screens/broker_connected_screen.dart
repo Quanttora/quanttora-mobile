@@ -15,10 +15,7 @@ class BrokerConnectedScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Broker Connected"),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text("Broker Connected"), centerTitle: true),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -32,18 +29,11 @@ class BrokerConnectedScreen extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
-                    Icons.verified,
-                    color: Colors.green,
-                    size: 70,
-                  ),
+                  const Icon(Icons.verified, color: Colors.green, size: 70),
                   const SizedBox(height: 20),
                   const Text(
                     "Broker Connected",
-                    style: TextStyle(
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 30),
                   ListTile(
@@ -62,10 +52,7 @@ class BrokerConnectedScreen extends StatelessWidget {
                     subtitle: Text(email),
                   ),
                   const ListTile(
-                    leading: Icon(
-                      Icons.check_circle,
-                      color: Colors.green,
-                    ),
+                    leading: Icon(Icons.check_circle, color: Colors.green),
                     title: Text("Status"),
                     subtitle: Text("CONNECTED"),
                   ),
@@ -78,7 +65,7 @@ class BrokerConnectedScreen extends StatelessWidget {
                       },
                       child: const Text("Continue"),
                     ),
-                  )
+                  ),
                 ],
               ),
             ),

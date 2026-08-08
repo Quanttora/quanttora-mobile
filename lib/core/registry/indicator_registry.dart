@@ -3,8 +3,7 @@ import '../indicators/indicator.dart';
 class IndicatorRegistry {
   IndicatorRegistry._();
 
-  static final IndicatorRegistry instance =
-      IndicatorRegistry._();
+  static final IndicatorRegistry instance = IndicatorRegistry._();
 
   final Map<String, Indicator> _indicators = {};
 

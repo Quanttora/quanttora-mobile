@@ -25,18 +25,12 @@ class PremiumAppBar extends StatelessWidget {
             children: [
               Text(
                 _greeting(),
-                style: const TextStyle(
-                  fontSize: 15,
-                  color: Colors.grey,
-                ),
+                style: const TextStyle(fontSize: 15, color: Colors.grey),
               ),
               const SizedBox(height: 4),
               const Text(
                 "Quanttora",
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
               ),
             ],
           ),
@@ -55,10 +49,7 @@ class PremiumAppBar extends StatelessWidget {
               ),
             ],
           ),
-          child: const Icon(
-            Icons.notifications_none_rounded,
-            size: 28,
-          ),
+          child: const Icon(Icons.notifications_none_rounded, size: 28),
         ),
       ],
     );

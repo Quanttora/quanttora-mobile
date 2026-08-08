@@ -12,10 +12,7 @@ class HeroAiCard extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xffD4AF37),
-            Color(0xffA87D18),
-          ],
+          colors: [Color(0xffD4AF37), Color(0xffA87D18)],
         ),
         boxShadow: const [
           BoxShadow(
@@ -31,10 +28,7 @@ class HeroAiCard extends StatelessWidget {
         children: [
           Row(
             children: const [
-              Icon(
-                Icons.auto_awesome,
-                color: Colors.black,
-              ),
+              Icon(Icons.auto_awesome, color: Colors.black),
               SizedBox(width: 8),
               Text(
                 "QUANTTORA AI",
@@ -59,10 +53,7 @@ class HeroAiCard extends StatelessWidget {
           const SizedBox(height: 10),
           const Text(
             "Validate your strategy with AI before risking your capital.",
-            style: TextStyle(
-              color: Colors.black87,
-              fontSize: 15,
-            ),
+            style: TextStyle(color: Colors.black87, fontSize: 15),
           ),
           const SizedBox(height: 24),
           SizedBox(
@@ -80,12 +71,10 @@ class HeroAiCard extends StatelessWidget {
               icon: const Icon(Icons.analytics_outlined),
               label: const Text(
                 "Analyze Trade",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
-          )
+          ),
         ],
       ),
     );

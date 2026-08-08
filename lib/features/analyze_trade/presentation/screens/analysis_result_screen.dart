@@ -15,7 +15,6 @@ class AnalysisResultScreen extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(24),
@@ -25,7 +24,6 @@ class AnalysisResultScreen extends StatelessWidget {
               ),
               child: Column(
                 children: [
-
                   const Text(
                     "AI CONFIDENCE",
                     style: TextStyle(
@@ -40,7 +38,6 @@ class AnalysisResultScreen extends StatelessWidget {
                   Stack(
                     alignment: Alignment.center,
                     children: [
-
                       SizedBox(
                         width: 170,
                         height: 170,
@@ -54,7 +51,6 @@ class AnalysisResultScreen extends StatelessWidget {
 
                       const Column(
                         children: [
-
                           Text(
                             "92",
                             style: TextStyle(
@@ -65,14 +61,10 @@ class AnalysisResultScreen extends StatelessWidget {
 
                           Text(
                             "Excellent",
-                            style: TextStyle(
-                              color: Colors.grey,
-                            ),
+                            style: TextStyle(color: Colors.grey),
                           ),
-
                         ],
-                      )
-
+                      ),
                     ],
                   ),
 
@@ -95,8 +87,7 @@ class AnalysisResultScreen extends StatelessWidget {
                         fontSize: 18,
                       ),
                     ),
-                  )
-
+                  ),
                 ],
               ),
             ),
@@ -154,7 +145,6 @@ class AnalysisResultScreen extends StatelessWidget {
 
             const Row(
               children: [
-
                 Expanded(
                   child: _LevelCard(
                     title: "ENTRY",
@@ -182,7 +172,6 @@ class AnalysisResultScreen extends StatelessWidget {
                     color: Colors.green,
                   ),
                 ),
-
               ],
             ),
 
@@ -195,14 +184,11 @@ class AnalysisResultScreen extends StatelessWidget {
                 icon: const Icon(Icons.play_arrow),
                 label: const Text(
                   "Execute Trade",
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 onPressed: () {},
               ),
-            )
-
+            ),
           ],
         ),
       ),
@@ -214,10 +200,7 @@ class AnalysisResultScreen extends StatelessWidget {
       alignment: Alignment.centerLeft,
       child: Text(
         title,
-        style: const TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-        ),
+        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -227,10 +210,7 @@ class _ResultTile extends StatelessWidget {
   final String title;
   final bool passed;
 
-  const _ResultTile(
-    this.title,
-    this.passed,
-  );
+  const _ResultTile(this.title, this.passed);
 
   @override
   Widget build(BuildContext context) {
@@ -239,12 +219,8 @@ class _ResultTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       child: ListTile(
         leading: Icon(
-          passed
-              ? Icons.check_circle
-              : Icons.cancel,
-          color: passed
-              ? Colors.green
-              : Colors.red,
+          passed ? Icons.check_circle : Icons.cancel,
+          color: passed ? Colors.green : Colors.red,
         ),
         title: Text(title),
       ),
@@ -257,11 +233,7 @@ class _ReasonTile extends StatelessWidget {
   final Color color;
   final String text;
 
-  const _ReasonTile(
-    this.icon,
-    this.color,
-    this.text,
-  );
+  const _ReasonTile(this.icon, this.color, this.text);
 
   @override
   Widget build(BuildContext context) {
@@ -296,18 +268,12 @@ class _LevelCard extends StatelessWidget {
         children: [
           Text(
             title,
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(color: color, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 10),
           Text(
             value,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
           ),
         ],
       ),

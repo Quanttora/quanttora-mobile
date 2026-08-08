@@ -21,17 +21,14 @@ class GreetingCard extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xff081C3A),
-            Color(0xff155EEF),
-          ],
+          colors: [Color(0xff081C3A), Color(0xff155EEF)],
         ),
         boxShadow: [
           BoxShadow(
             color: Colors.blue.withValues(alpha: 0.18),
             blurRadius: 30,
             offset: const Offset(0, 14),
-          )
+          ),
         ],
       ),
       child: Row(
@@ -61,10 +58,7 @@ class GreetingCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 const Text(
                   "Trade with Intelligence",
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 16,
-                  ),
+                  style: TextStyle(color: Colors.white70, fontSize: 16),
                 ),
                 const SizedBox(height: 22),
                 Container(
@@ -79,11 +73,7 @@ class GreetingCard extends StatelessWidget {
                   child: const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(
-                        Icons.circle,
-                        color: Colors.greenAccent,
-                        size: 10,
-                      ),
+                      Icon(Icons.circle, color: Colors.greenAccent, size: 10),
                       SizedBox(width: 8),
                       Text(
                         "Market Opens in 12 min",
@@ -94,7 +84,7 @@ class GreetingCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                )
+                ),
               ],
             ),
           ),
@@ -110,7 +100,7 @@ class GreetingCard extends StatelessWidget {
               color: Colors.white,
               size: 42,
             ),
-          )
+          ),
         ],
       ),
     );

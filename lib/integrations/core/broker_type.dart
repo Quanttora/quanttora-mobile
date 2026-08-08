@@ -1,9 +1,1 @@
-enum BrokerType {
-  angelOne,
-  dhan,
-  zerodha,
-  upstox,
-  fyers,
-  paytmMoney,
-  groww,
-}
+enum BrokerType { angelOne, dhan, zerodha, upstox, fyers, paytmMoney, groww }

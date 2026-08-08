@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../../core/services/market_data_service.dart';
+import '../../session/services/session_manager.dart';
 import 'ai_decision_screen.dart';
 
 class AIAnalysisScreen extends StatefulWidget {
@@ -19,6 +21,7 @@ class AIAnalysisScreen extends StatefulWidget {
 }
 
 class _AIAnalysisScreenState extends State<AIAnalysisScreen> {
+  final MarketDataService _marketDataService = MarketDataService();
 
   final List<String> steps = [
     "Market Structure",
@@ -37,105 +40,148 @@ class _AIAnalysisScreenState extends State<AIAnalysisScreen> {
 
   int currentStep = 0;
 
+  bool _dataReady = false;
+  String? _error;
+
+  String get _strategyTimeframe {
+    final timeframe = SessionManager.instance.session.strategyTimeframe.trim();
+
+    if (timeframe.isEmpty) {
+      return '3 min';
+    }
+
+    return timeframe;
+  }
+
   @override
   void initState() {
     super.initState();
-    startScan();
+    _startAnalysis();
   }
 
-  void startScan() {
+  Future<void> _startAnalysis() async {
+    try {
+      final snapshot = await _marketDataService.fetchSnapshot(
+        market: widget.market,
+        timeframe: _strategyTimeframe,
+      );
 
-    Timer.periodic(
-      const Duration(milliseconds: 700),
-      (timer) {
+      if (!mounted) return;
 
-        if (!mounted) return;
+      if (snapshot.candles.isEmpty) {
+        setState(() {
+          _error = "Market candle data unavailable.";
+        });
+        return;
+      }
 
-        if (currentStep < steps.length - 1) {
+      setState(() {
+        _dataReady = true;
+      });
 
-          setState(() {
-            currentStep++;
-          });
+      _startScan();
+    } catch (e) {
+      if (!mounted) return;
 
-        } else {
+      setState(() {
+        _error = "Unable to load market data. Check broker connection.";
+      });
+    }
+  }
 
-          timer.cancel();
+  void _startScan() {
+    Timer.periodic(const Duration(milliseconds: 700), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
 
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => AIDecisionScreen(
-                market: widget.market,
-                direction: widget.direction,
-              ),
+      if (currentStep < steps.length - 1) {
+        setState(() {
+          currentStep++;
+        });
+      } else {
+        timer.cancel();
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => AIDecisionScreen(
+              market: widget.market,
+              direction: widget.direction,
             ),
-          );
-
-        }
-
-      },
-    );
+          ),
+        );
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-
     return Scaffold(
-
-      appBar: AppBar(
-        title: const Text("AI Analysis"),
-      ),
-
-      body: ListView.builder(
-
-        padding: const EdgeInsets.all(20),
-
-        itemCount: steps.length,
-
-        itemBuilder: (_, index) {
-
-          final completed = index < currentStep;
-          final scanning = index == currentStep;
-
-          return Card(
-
-            child: ListTile(
-
-              leading: completed
-                  ? const Icon(Icons.check_circle,color:Colors.green)
-                  : scanning
-                  ? const SizedBox(
-                width:24,
-                height:24,
-                child:CircularProgressIndicator(strokeWidth:3),
-              )
-                  : const Icon(Icons.schedule),
-
-              title: Text(
-                steps[index],
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
+      appBar: AppBar(title: const Text("AI Analysis")),
+      body: _error != null
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  _error!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
-
-              subtitle: Text(
-                completed
-                    ? "Completed"
-                    : scanning
-                    ? "Scanning..."
-                    : "Waiting",
+            )
+          : !_dataReady
+          ? const Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text(
+                    "Loading market data...",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ],
               ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(20),
+              itemCount: steps.length,
+              itemBuilder: (_, index) {
+                final completed = index < currentStep;
 
+                final scanning = index == currentStep;
+
+                return Card(
+                  child: ListTile(
+                    leading: completed
+                        ? const Icon(Icons.check_circle, color: Colors.green)
+                        : scanning
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(strokeWidth: 3),
+                          )
+                        : const Icon(Icons.schedule),
+                    title: Text(
+                      steps[index],
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    subtitle: Text(
+                      completed
+                          ? "Completed"
+                          : scanning
+                          ? "Scanning..."
+                          : "Waiting",
+                    ),
+                  ),
+                );
+              },
             ),
-
-          );
-
-        },
-
-      ),
-
     );
-
   }
-
 }

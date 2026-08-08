@@ -23,10 +23,7 @@ class NewsCard extends StatelessWidget {
         children: [
           const Text(
             "📰 Market News",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
 
           const SizedBox(height: 18),
@@ -74,10 +71,7 @@ class NewsCard extends StatelessWidget {
               color: Colors.blue.shade50,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(
-              Icons.article_outlined,
-              color: Colors.blue,
-            ),
+            child: const Icon(Icons.article_outlined, color: Colors.blue),
           ),
 
           const SizedBox(width: 14),
@@ -96,10 +90,7 @@ class NewsCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   "$source • $time",
-                  style: const TextStyle(
-                    color: Colors.grey,
-                    fontSize: 13,
-                  ),
+                  style: const TextStyle(color: Colors.grey, fontSize: 13),
                 ),
               ],
             ),

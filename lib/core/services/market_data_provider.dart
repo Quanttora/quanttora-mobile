@@ -5,7 +5,5 @@ abstract class MarketDataProvider {
 
   Future<bool> isConnected();
 
-  Future<dynamic> getMarketSnapshot({
-    required String market,
-  });
+  Future<dynamic> getMarketSnapshot({required String market});
 }

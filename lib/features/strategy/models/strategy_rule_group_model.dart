@@ -1,7 +1,4 @@
-enum RuleGroupOperator {
-  and,
-  or,
-}
+enum RuleGroupOperator { and, or }
 
 class StrategyRuleGroupModel {
   final String id;
@@ -67,9 +64,7 @@ class StrategyRuleGroupModel {
     };
   }
 
-  factory StrategyRuleGroupModel.fromMap(
-    Map<String, dynamic> map,
-  ) {
+  factory StrategyRuleGroupModel.fromMap(Map<String, dynamic> map) {
     return StrategyRuleGroupModel(
       id: map['id'] ?? '',
       strategyId: map['strategyId'] ?? '',

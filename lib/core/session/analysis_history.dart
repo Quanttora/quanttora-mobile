@@ -1,7 +1,6 @@
 import 'analysis_session.dart';
 
 class AnalysisHistory {
-
   static final List<AnalysisSession> _history = [];
 
   static void add(AnalysisSession session) {

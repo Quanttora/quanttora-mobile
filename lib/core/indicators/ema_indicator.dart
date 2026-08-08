@@ -21,10 +21,7 @@ class EmaIndicator implements Indicator {
   int get maxScore => 15;
 
   @override
-  bool get passed =>
-      priceAboveEma22 &&
-      ema22AboveEma33 &&
-      emaSlopeUp;
+  bool get passed => priceAboveEma22 && ema22AboveEma33 && emaSlopeUp;
 
   @override
   int calculate() {

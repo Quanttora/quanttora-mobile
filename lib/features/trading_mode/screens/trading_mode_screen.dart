@@ -49,10 +49,7 @@ class _TradingModeScreenState extends State<TradingModeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Trading Mode"),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text("Trading Mode"), centerTitle: true),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -60,20 +57,14 @@ class _TradingModeScreenState extends State<TradingModeScreen> {
           children: [
             const Text(
               "How do you trade?",
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
             ),
 
             const SizedBox(height: 8),
 
             const Text(
               "Quanttora AI adapts its analysis based on your trading style.",
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey,
-              ),
+              style: TextStyle(fontSize: 16, color: Colors.grey),
             ),
 
             const SizedBox(height: 25),
@@ -98,14 +89,10 @@ class _TradingModeScreenState extends State<TradingModeScreen> {
                         duration: const Duration(milliseconds: 250),
                         padding: const EdgeInsets.all(18),
                         decoration: BoxDecoration(
-                          color: selected
-                              ? mode.color
-                              : Colors.white,
+                          color: selected ? mode.color : Colors.white,
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: selected
-                                ? mode.color
-                                : Colors.grey.shade300,
+                            color: selected ? mode.color : Colors.grey.shade300,
                           ),
                           boxShadow: [
                             BoxShadow(
@@ -122,18 +109,14 @@ class _TradingModeScreenState extends State<TradingModeScreen> {
                               backgroundColor: selected
                                   ? Colors.white
                                   : mode.color.withValues(alpha: 0.15),
-                              child: Icon(
-                                mode.icon,
-                                color: mode.color,
-                              ),
+                              child: Icon(mode.icon, color: mode.color),
                             ),
 
                             const SizedBox(width: 16),
 
                             Expanded(
                               child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     mode.title,
@@ -178,23 +161,18 @@ class _TradingModeScreenState extends State<TradingModeScreen> {
               height: 56,
               child: ElevatedButton(
                 onPressed: () {
-                  SessionManager.instance
-                      .updateTradingMode(selectedMode);
+                  SessionManager.instance.updateTradingMode(selectedMode);
 
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) =>
-                          const MyStrategiesScreen(),
+                      builder: (_) => const MyStrategiesScreen(),
                     ),
                   );
                 },
                 child: const Text(
                   "CONTINUE",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
             ),

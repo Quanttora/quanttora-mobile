@@ -17,10 +17,7 @@ class OptionSelector extends StatelessWidget {
       children: [
         const Text(
           'Option Type',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-          ),
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 12),
         Container(

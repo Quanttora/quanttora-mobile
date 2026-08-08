@@ -19,25 +19,17 @@ class TradesSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (loading) {
-      return const LoadingCard(
-        message: "Loading Trades...",
-      );
+      return const LoadingCard(message: "Loading Trades...");
     }
 
     if (error != null) {
-      return ErrorCard(
-        message: error!,
-      );
+      return ErrorCard(message: error!);
     }
 
     if (trades == null || trades!.isEmpty) {
-      return const ErrorCard(
-        message: "No trades available.",
-      );
+      return const ErrorCard(message: "No trades available.");
     }
 
-    return TradesCard(
-      trades: trades!,
-    );
+    return TradesCard(trades: trades!);
   }
 }

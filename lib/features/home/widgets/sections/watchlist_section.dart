@@ -19,15 +19,11 @@ class WatchlistSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (loading) {
-      return const LoadingCard(
-        message: "Loading Watchlist...",
-      );
+      return const LoadingCard(message: "Loading Watchlist...");
     }
 
     if (error != null) {
-      return ErrorCard(
-        message: error!,
-      );
+      return ErrorCard(message: error!);
     }
 
     return const WatchlistCard();

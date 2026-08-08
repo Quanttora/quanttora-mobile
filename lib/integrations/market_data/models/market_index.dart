@@ -26,9 +26,8 @@ class MarketIndex {
       change: double.tryParse(json['change']?.toString() ?? '0') ?? 0,
       percentChange:
           double.tryParse(json['percent_change']?.toString() ?? '0') ?? 0,
-      lastUpdated: DateTime.tryParse(
-            json['datetime']?.toString() ?? '',
-          ) ??
+      lastUpdated:
+          DateTime.tryParse(json['datetime']?.toString() ?? '') ??
           DateTime.now(),
     );
   }

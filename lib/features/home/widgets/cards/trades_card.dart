@@ -3,10 +3,7 @@ import 'package:flutter/material.dart';
 class TradesCard extends StatelessWidget {
   final List<dynamic> trades;
 
-  const TradesCard({
-    super.key,
-    required this.trades,
-  });
+  const TradesCard({super.key, required this.trades});
 
   @override
   Widget build(BuildContext context) {
@@ -45,10 +42,7 @@ class TradesCard extends StatelessWidget {
               const Expanded(
                 child: Text(
                   "Today's Trades",
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                 ),
               ),
               Container(
@@ -81,21 +75,15 @@ class TradesCard extends StatelessWidget {
             ),
             child: Row(
               children: [
-                const Icon(
-                  Icons.currency_rupee,
-                  color: Colors.teal,
-                ),
+                const Icon(Icons.currency_rupee, color: Colors.teal),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
                         "Total Traded Value",
-                        style: TextStyle(
-                          color: Colors.black54,
-                        ),
+                        style: TextStyle(color: Colors.black54),
                       ),
                       const SizedBox(height: 4),
                       Text(
@@ -133,10 +121,7 @@ class TradesCard extends StatelessWidget {
                   SizedBox(height: 16),
                   Text(
                     "No Trades Today",
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 20,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
                   ),
                   SizedBox(height: 8),
                   Text(
@@ -151,28 +136,18 @@ class TradesCard extends StatelessWidget {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: trades.length,
-              separatorBuilder: (_, __) =>
-                  const SizedBox(height: 14),
+              separatorBuilder: (_, __) => const SizedBox(height: 14),
               itemBuilder: (_, index) {
                 final trade = trades[index];
 
                 final symbol =
-                    trade["trading_symbol"] ??
-                    trade["tradingsymbol"] ??
-                    "";
+                    trade["trading_symbol"] ?? trade["tradingsymbol"] ?? "";
 
-                final side =
-                    trade["transaction_type"] ??
-                    trade["side"] ??
-                    "";
+                final side = trade["transaction_type"] ?? trade["side"] ?? "";
 
-                final qty =
-                    ((trade["quantity"] ?? 0) as num)
-                        .toDouble();
+                final qty = ((trade["quantity"] ?? 0) as num).toDouble();
 
-                final price =
-                    ((trade["price"] ?? 0) as num)
-                        .toDouble();
+                final price = ((trade["price"] ?? 0) as num).toDouble();
 
                 return _TradeTile(
                   symbol: symbol,
@@ -209,22 +184,19 @@ class _TradeTile extends StatelessWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: Colors.grey.shade300,
-        ),
+        border: Border.all(color: Colors.grey.shade300),
       ),
       child: Row(
         children: [
           CircleAvatar(
             radius: 22,
-            backgroundColor:
-                (buy ? Colors.green : Colors.red)
-                    .withValues(alpha: .10),
+            backgroundColor: (buy ? Colors.green : Colors.red).withValues(
+              alpha: .10,
+            ),
             child: Text(
               symbol.isEmpty ? "?" : symbol[0],
               style: TextStyle(
-                color:
-                    buy ? Colors.green : Colors.red,
+                color: buy ? Colors.green : Colors.red,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -234,8 +206,7 @@ class _TradeTile extends StatelessWidget {
 
           Expanded(
             child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   symbol,
@@ -245,19 +216,14 @@ class _TradeTile extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  "$side • Qty ${quantity.toStringAsFixed(0)}",
-                ),
+                Text("$side • Qty ${quantity.toStringAsFixed(0)}"),
               ],
             ),
           ),
 
           Text(
             "₹${price.toStringAsFixed(2)}",
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-            ),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
           ),
         ],
       ),

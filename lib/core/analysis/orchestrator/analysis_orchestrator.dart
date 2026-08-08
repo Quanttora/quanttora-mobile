@@ -1,76 +1,46 @@
 import '../../../features/trade_analysis/models/analysis_result.dart';
+import '../../services/market_data_service.dart';
 
 import '../analysis_engine.dart';
-
-import '../engines/global/global_market_engine.dart';
 
 import 'orchestrator_result.dart';
 
 class AnalysisOrchestrator {
-
   static Future<OrchestratorResult> analyze({
-
     required String market,
-
     required String direction,
-
   }) async {
+    final marketDataService = MarketDataService();
 
-    final global = GlobalMarketEngine.analyze(
-
-      sp500: 0.80,
-
-      nasdaq: 1.15,
-
-      dow: 0.55,
-
-      crude: 1.40,
-
-      dxy: 104.20,
-
-      indiaVix: 14.80,
-
-      fedEvent: false,
-
-      rbiEvent: false,
-
-      majorNews: false,
-
-    );
-
-    final AnalysisResult analysis = AnalysisEngine.analyze(
-
+    // FETCH REAL MARKET SNAPSHOT
+    final snapshot = await marketDataService.fetchSnapshot(
       market: market,
-
-      direction: direction,
-
+      timeframe: '3 min',
     );
 
-    if (global.riskDetected) {
+    // RUN ANALYSIS USING REAL MARKET DATA
+    final AnalysisResult analysis = AnalysisEngine.analyze(
+  market: market,
+  direction: direction,
+  candles: snapshot.candles,
+  optionChain: snapshot.optionChain,
+  oiData: snapshot.oiData,
+  heatMap: snapshot.heatMap,
+  sectorStrength: snapshot.sectorStrength,
 
-      return OrchestratorResult(
+  bidPrice: snapshot.bidPrice,
+  askPrice: snapshot.askPrice,
+  bidQuantity: snapshot.bidQuantity,
+  askQuantity: snapshot.askQuantity,
+);
 
-        analysis: analysis,
-
-        blocked: true,
-
-        blockReason:
-            "High global market risk detected. AI analysis temporarily paused.",
-
-      );
-
-    }
-
+    // Global-market blocking is intentionally
+    // disabled until genuine global/news data
+    // is connected.
     return OrchestratorResult(
-
       analysis: analysis,
-
       blocked: false,
-
-      blockReason: "",
-
+      blockReason: '',
     );
-
   }
-
 }
