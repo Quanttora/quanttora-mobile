@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/services/market_data_service.dart';
 import '../../core/widgets/responsive_container.dart';
+import '../broker/screens/upstox_login_screen.dart';
 
 import 'widgets/market_overview_card.dart';
 import 'widgets/quick_actions_card.dart';
@@ -12,10 +13,10 @@ class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  State createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State {
   final MarketDataService _marketService = MarketDataService();
 
   bool _loading = true;
@@ -62,18 +63,25 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  Future<void> _loadDashboard() async {
+  Future _loadDashboard() async {
     try {
       final dashboard = await _marketService.fetchMarketDashboard();
 
       final indices =
-          dashboard['indices'] as Map<String, dynamic>? ?? <String, dynamic>{};
+          dashboard['indices'] as Map<String, dynamic>? ??
+          <String, dynamic>{};
 
       final connected = dashboard['connected'] == true;
 
-      final nifty = _buildMarketIndex(name: 'NIFTY 50', data: indices['nifty']);
+      final nifty = _buildMarketIndex(
+        name: 'NIFTY 50',
+        data: indices['nifty'],
+      );
 
-      final sensex = _buildMarketIndex(name: 'SENSEX', data: indices['sensex']);
+      final sensex = _buildMarketIndex(
+        name: 'SENSEX',
+        data: indices['sensex'],
+      );
 
       final bankNifty = _buildMarketIndex(
         name: 'BANK NIFTY',
@@ -101,7 +109,10 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  MarketIndex _buildMarketIndex({required String name, required dynamic data}) {
+  MarketIndex _buildMarketIndex({
+    required String name,
+    required dynamic data,
+  }) {
     if (data is! Map) {
       return MarketIndex(
         name: name,
@@ -155,7 +166,11 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
     }
 
     return Scaffold(
@@ -185,7 +200,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             ? 'Market data connected'
                             : 'Market data unavailable',
                         style: TextStyle(
-                          color: _marketConnected ? Colors.green : Colors.grey,
+                          color: _marketConnected
+                              ? Colors.green
+                              : Colors.grey,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -204,7 +221,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
                 const SizedBox(height: 18),
 
-                const QuickActionsCard(),
+                QuickActionsCard(
+                  onBrokerTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const UpstoxLoginScreen(),
+                      ),
+                    );
+                  },
+                ),
 
                 const SizedBox(height: 30),
               ],
