@@ -14,6 +14,8 @@ import 'engines/rsi_engine.dart';
 import 'engines/liquidity_engine.dart';
 import 'engines/risk_engine.dart';
 import 'engines/market_health_engine.dart';
+import 'engines/liquidity_sweep_engine.dart';
+import 'engines/smart_money_engine.dart';
 
 import 'engines/ema/ema_engine.dart';
 import 'engines/heat_map/heat_map_engine.dart';
@@ -23,15 +25,20 @@ import 'engines/q_score/q_score_engine.dart';
 
 class AnalysisEngine {
   static AnalysisResult analyze({
-    required String market,
-    required String direction,
-    required List<Candle> candles,
-    required OptionChain optionChain,
-    required OIData oiData,
-    required HeatMap heatMap,
-    required SectorStrength sectorStrength,
-  }) {
-    // PRICE STRUCTURE
+  required String market,
+  required String direction,
+  required List<Candle> candles,
+  required OptionChain optionChain,
+  required OIData oiData,
+  required HeatMap heatMap,
+  required SectorStrength sectorStrength,
+
+  required double bidPrice,
+  required double askPrice,
+  required int bidQuantity,
+  required int askQuantity,
+}) {
+      // PRICE STRUCTURE
     final trend = TrendEngine.analyze(candles: candles, direction: direction);
 
     final ema = EMAEngine.analyze(candles: candles, direction: direction);
@@ -49,7 +56,20 @@ class AnalysisEngine {
     // LIQUIDITY
     // Excluded from Q-Score until genuine
     // bid/ask market depth is available.
-    final liquidity = LiquidityEngine.analyze();
+    final liquidity = LiquidityEngine.analyze(
+  bidPrice: bidPrice,
+  askPrice: askPrice,
+  bidQuantity: bidQuantity.toDouble(),
+  askQuantity: askQuantity.toDouble(),
+);
+
+final liquiditySweep = LiquiditySweepEngine.analyze(
+  candles: candles,
+);
+
+final smartMoney = SmartMoneyEngine.analyze(
+  candles: candles,
+);
 
     // MARKET VOLATILITY RISK
     final risk = RiskEngine.analyze(candles: candles);
@@ -159,11 +179,28 @@ class AnalysisEngine {
           available: oi.available,
         ),
         QScoreInput(
-          score: directionalBreadthScore,
-          weight: 8,
-          available: breadthAvailable,
-        ),
-        QScoreInput(score: risk.score, weight: 7, available: riskAvailable),
+  score: directionalBreadthScore,
+  weight: 8,
+  available: breadthAvailable,
+),
+
+QScoreInput(
+  score: liquiditySweep.score,
+  weight: 5,
+  available: liquiditySweep.detected,
+),
+
+QScoreInput(
+  score: smartMoney.score,
+  weight: 8,
+  available: smartMoney.score > 0,
+),
+
+QScoreInput(
+  score: risk.score,
+  weight: 7,
+  available: riskAvailable,
+),
       ],
     );
 
@@ -186,6 +223,8 @@ class AnalysisEngine {
       adx.reason,
       rsi.reason,
       liquidity.reason,
+      liquiditySweep.reason,
+      smartMoney.reason,
       risk.reason,
       marketHealth.reason,
     ];
@@ -211,23 +250,37 @@ class AnalysisEngine {
     }
 
     return AnalysisResult(
-      market: market,
-      direction: direction,
+  market: market,
+  direction: direction,
 
-      // confidence currently represents
-      // Quanttora's weighted Q-Score.
-      confidence: qScore.score,
+  // Quanttora Q-Score
+  confidence: qScore.score,
 
-      marketHealth: marketHealth.score,
-      trend: trend.trend,
-      momentum: rsi.status,
-      volume: volume.status,
-      liquidity: liquidity.status,
-      volatility: risk.level,
-      sectorStrength: sectorText,
-      heatMap: heatMapText,
-      risk: risk.level,
-      reasons: reasons,
+  marketHealth: marketHealth.score,
+
+  trend: trend.trend,
+
+  momentum: rsi.status,
+
+  volume: volume.status,
+
+  liquidity: liquidity.status,
+
+  liquiditySweep: liquiditySweep.status,
+  liquiditySweepScore: liquiditySweep.score,
+
+  smartMoney: smartMoney.structure,
+  smartMoneyScore: smartMoney.score,
+
+  volatility: risk.level,
+
+  sectorStrength: sectorText,
+
+  heatMap: heatMapText,
+
+  risk: risk.level,
+
+  reasons: reasons,
     );
   }
 }

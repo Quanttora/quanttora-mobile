@@ -31,6 +31,19 @@ class VWAPEngine {
       );
     }
 
+    // Index instruments (NIFTY, BANKNIFTY, SENSEX, etc.)
+    // are marked with volume = -1 in MarketDataService.
+    if (candles.last.volume < 0) {
+      return const VWAPResult(
+        aboveVWAP: false,
+        value: 0,
+        score: 0,
+        status: 'N/A (Index Instrument)',
+        reason:
+            'VWAP is not available because exchange volume is not provided for index instruments.',
+      );
+    }
+
     double cumulativePriceVolume = 0;
     double cumulativeVolume = 0;
 
@@ -39,10 +52,10 @@ class VWAPEngine {
         continue;
       }
 
-      final typicalPrice = (candle.high + candle.low + candle.close) / 3;
+      final typicalPrice =
+          (candle.high + candle.low + candle.close) / 3;
 
       cumulativePriceVolume += typicalPrice * candle.volume;
-
       cumulativeVolume += candle.volume;
     }
 
@@ -60,14 +73,13 @@ class VWAPEngine {
     final vwap = cumulativePriceVolume / cumulativeVolume;
 
     final currentPrice = candles.last.close;
-
     final aboveVWAP = currentPrice > vwap;
 
     final isCall = direction.toUpperCase() == 'CALL';
 
-    int score;
-    String status;
-    String reason;
+    late final int score;
+    late final String status;
+    late final String reason;
 
     if (isCall) {
       if (aboveVWAP) {

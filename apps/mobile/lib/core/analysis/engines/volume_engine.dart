@@ -34,7 +34,22 @@ class VolumeEngine {
       );
     }
 
-    final validCandles = candles.where((candle) => candle.volume > 0).toList();
+    // Index instruments (NIFTY, BANKNIFTY, SENSEX, etc.)
+    // are marked with volume = -1 in MarketDataService.
+    if (candles.isNotEmpty && candles.last.volume < 0) {
+      return const VolumeResult(
+        currentVolume: 0,
+        averageVolume: 0,
+        relativeVolume: 0,
+        status: 'N/A (Index Instrument)',
+        score: 0,
+        reason:
+            'Exchange does not provide traded volume for index instruments.',
+      );
+    }
+
+    final validCandles =
+        candles.where((candle) => candle.volume > 0).toList();
 
     if (validCandles.length < period + 1) {
       return const VolumeResult(

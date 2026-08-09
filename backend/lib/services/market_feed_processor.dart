@@ -15,7 +15,7 @@ class MarketFeedProcessor {
     'BSE_INDEX|SENSEX': 'SENSEX',
     'NSE_INDEX|India VIX': 'INDIA VIX',
 
-    // VERIFIED REAL NSE SECTOR INDICES
+    // SECTOR INDICES
     'NSE_INDEX|Nifty Auto': 'NIFTY AUTO',
     'NSE_INDEX|Nifty FMCG': 'NIFTY FMCG',
     'NSE_INDEX|Nifty IT': 'NIFTY IT',
@@ -30,58 +30,78 @@ class MarketFeedProcessor {
       return;
     }
 
-    response.feeds.forEach(
-      (instrumentKey, feed) {
-        if (!_symbols.containsKey(instrumentKey)) {
-          return;
-        }
+    response.feeds.forEach((instrumentKey, feed) {
+      if (!_symbols.containsKey(instrumentKey)) {
+        return;
+      }
 
-        double? ltp;
-        double change = 0;
+      double? ltp;
+      double change = 0;
 
-        if (feed.hasFullFeed()) {
-          final full = feed.fullFeed;
+      double bidPrice = 0;
+      double askPrice = 0;
 
-          if (full.hasIndexFF()) {
-            final index = full.indexFF;
+      int bidQuantity = 0;
+      int askQuantity = 0;
 
-            if (index.hasLtpc()) {
-              ltp = index.ltpc.ltp;
-              change = index.ltpc.cp;
-            }
-          } else if (full.hasMarketFF()) {
-            final market = full.marketFF;
+      if (feed.hasFullFeed()) {
+        final full = feed.fullFeed;
 
-            if (market.hasLtpc()) {
-              ltp = market.ltpc.ltp;
-              change = market.ltpc.cp;
-            }
+        if (full.hasIndexFF()) {
+          final index = full.indexFF;
+
+          if (index.hasLtpc()) {
+            ltp = index.ltpc.ltp;
+            change = index.ltpc.cp;
           }
-        } else if (feed.hasLtpc()) {
-          ltp = feed.ltpc.ltp;
-          change = feed.ltpc.cp;
+        } else if (full.hasMarketFF()) {
+          final market = full.marketFF;
+
+          if (market.hasLtpc()) {
+            ltp = market.ltpc.ltp;
+            change = market.ltpc.cp;
+          }
+
+          if (market.marketLevel.bidAskQuote.isNotEmpty) {
+  final level1 =
+      market.marketLevel.bidAskQuote.first;
+
+            bidPrice = level1.bidP.toDouble();
+            askPrice = level1.askP.toDouble();
+
+            bidQuantity = level1.bidQ.toInt();
+            askQuantity = level1.askQ.toInt();
+          }
         }
+      } else if (feed.hasLtpc()) {
+        ltp = feed.ltpc.ltp;
+        change = feed.ltpc.cp;
+      }
 
-        if (ltp == null) {
-          return;
-        }
+      if (ltp == null) {
+        return;
+      }
 
-        final tick = MarketTick(
-          instrumentKey: instrumentKey,
-          symbol: _symbols[instrumentKey]!,
-          ltp: ltp,
-          change: change,
-          timestamp: DateTime.now(),
-        );
+      final tick = MarketTick(
+        instrumentKey: instrumentKey,
+        symbol: _symbols[instrumentKey]!,
+        ltp: ltp,
+        change: change,
+        bidPrice: bidPrice,
+        askPrice: askPrice,
+        bidQuantity: bidQuantity,
+        askQuantity: askQuantity,
+        timestamp: DateTime.now(),
+      );
 
-        MarketStore.instance.update(tick);
+      MarketStore.instance.update(tick);
 
-        print(
-          '${tick.symbol.padRight(16)} '
-          'LTP: ${tick.ltp.toStringAsFixed(2)} '
-          'Close: ${tick.change.toStringAsFixed(2)}',
-        );
-      },
-    );
+      print(
+        '${tick.symbol.padRight(16)} '
+        'LTP:${tick.ltp.toStringAsFixed(2)} '
+        'Bid:${tick.bidPrice}(${tick.bidQuantity}) '
+        'Ask:${tick.askPrice}(${tick.askQuantity})',
+      );
+    });
   }
 }

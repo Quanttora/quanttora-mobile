@@ -3,6 +3,13 @@ class MarketTick {
   final String symbol;
   final double ltp;
   final double change;
+
+  final double bidPrice;
+  final double askPrice;
+
+  final int bidQuantity;
+  final int askQuantity;
+
   final DateTime timestamp;
 
   const MarketTick({
@@ -10,6 +17,10 @@ class MarketTick {
     required this.symbol,
     required this.ltp,
     required this.change,
+    required this.bidPrice,
+    required this.askPrice,
+    required this.bidQuantity,
+    required this.askQuantity,
     required this.timestamp,
   });
 
@@ -18,6 +29,10 @@ class MarketTick {
     String? symbol,
     double? ltp,
     double? change,
+    double? bidPrice,
+    double? askPrice,
+    int? bidQuantity,
+    int? askQuantity,
     DateTime? timestamp,
   }) {
     return MarketTick(
@@ -25,6 +40,10 @@ class MarketTick {
       symbol: symbol ?? this.symbol,
       ltp: ltp ?? this.ltp,
       change: change ?? this.change,
+      bidPrice: bidPrice ?? this.bidPrice,
+      askPrice: askPrice ?? this.askPrice,
+      bidQuantity: bidQuantity ?? this.bidQuantity,
+      askQuantity: askQuantity ?? this.askQuantity,
       timestamp: timestamp ?? this.timestamp,
     );
   }
@@ -35,12 +54,16 @@ class MarketTick {
       'symbol': symbol,
       'ltp': ltp,
       'change': change,
+      'bidPrice': bidPrice,
+      'askPrice': askPrice,
+      'bidQuantity': bidQuantity,
+      'askQuantity': askQuantity,
       'timestamp': timestamp.toIso8601String(),
     };
   }
 
   @override
   String toString() {
-    return '$symbol : $ltp';
+    return '$symbol : $ltp | Bid: $bidPrice ($bidQuantity) | Ask: $askPrice ($askQuantity)';
   }
 }

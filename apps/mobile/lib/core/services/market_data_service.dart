@@ -28,6 +28,8 @@ class MarketDataService {
     required String market,
     String timeframe = '3 min',
   }) async {
+    debugPrint('===== FETCH SNAPSHOT CALLED =====');
+
     final dashboard = await _api.get('/market/dashboard');
 
     final candles = await _fetchHistoricalCandles(
@@ -46,6 +48,15 @@ class MarketDataService {
 
     final livePrice = _toDouble(marketData?['ltp']);
 
+    final bidPrice = _toDouble(marketData?['bidPrice']);
+    final askPrice = _toDouble(marketData?['askPrice']);
+
+    final bidQuantity =
+    (marketData?['bidQuantity'] as num?)?.toInt() ?? 0;
+
+    final askQuantity =
+    (marketData?['askQuantity'] as num?)?.toInt() ?? 0;
+
     final finalCandles = List<Candle>.from(candles);
 
     if (livePrice > 0 && finalCandles.isEmpty) {
@@ -62,20 +73,25 @@ class MarketDataService {
     }
 
     return MarketSnapshot(
-      candles: finalCandles.isNotEmpty ? finalCandles : emptySnapshot().candles,
+  candles: finalCandles.isNotEmpty ? finalCandles : emptySnapshot().candles,
 
-      // REAL UPSTOX OPTION CHAIN
-      optionChain: optionData.optionChain,
+  // REAL UPSTOX OPTION CHAIN
+  optionChain: optionData.optionChain,
 
-      // REAL UPSTOX OI DATA
-      oiData: optionData.oiData,
+  // REAL UPSTOX OI DATA
+  oiData: optionData.oiData,
 
-      // REAL SECTOR BREADTH
-      heatMap: _buildRealHeatMap(dashboard),
+  // REAL SECTOR BREADTH
+  heatMap: _buildRealHeatMap(dashboard),
 
-      // REAL SECTOR STRENGTH
-      sectorStrength: _buildRealSectorStrength(dashboard),
-    );
+  // REAL SECTOR STRENGTH
+  sectorStrength: _buildRealSectorStrength(dashboard),
+
+  bidPrice: bidPrice,
+  askPrice: askPrice,
+  bidQuantity: bidQuantity,
+  askQuantity: askQuantity,
+);
   }
 
   Future<_OptionAnalytics> _fetchOptionChain({required String market}) async {
@@ -361,6 +377,8 @@ class MarketDataService {
     required String market,
     required String timeframe,
   }) async {
+    debugPrint('===== FETCH HISTORICAL CALLED =====');
+
     final instrumentKey = _instrumentKeys[market.toUpperCase()];
 
     if (instrumentKey == null) {

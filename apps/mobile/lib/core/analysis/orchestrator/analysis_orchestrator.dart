@@ -20,14 +20,19 @@ class AnalysisOrchestrator {
 
     // RUN ANALYSIS USING REAL MARKET DATA
     final AnalysisResult analysis = AnalysisEngine.analyze(
-      market: market,
-      direction: direction,
-      candles: snapshot.candles,
-      optionChain: snapshot.optionChain,
-      oiData: snapshot.oiData,
-      heatMap: snapshot.heatMap,
-      sectorStrength: snapshot.sectorStrength,
-    );
+  market: market,
+  direction: direction,
+  candles: snapshot.candles,
+  optionChain: snapshot.optionChain,
+  oiData: snapshot.oiData,
+  heatMap: snapshot.heatMap,
+  sectorStrength: snapshot.sectorStrength,
+
+  bidPrice: snapshot.bidPrice,
+  askPrice: snapshot.askPrice,
+  bidQuantity: snapshot.bidQuantity,
+  askQuantity: snapshot.askQuantity,
+);
 
     // Global-market blocking is intentionally
     // disabled until genuine global/news data

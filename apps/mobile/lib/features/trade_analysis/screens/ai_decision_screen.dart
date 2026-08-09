@@ -79,14 +79,19 @@ class _AIDecisionScreenState extends State<AIDecisionScreen> {
       );
 
       final result = AnalysisEngine.analyze(
-        market: widget.market,
-        direction: widget.direction,
-        candles: snapshot.candles,
-        optionChain: snapshot.optionChain,
-        oiData: snapshot.oiData,
-        heatMap: snapshot.heatMap,
-        sectorStrength: snapshot.sectorStrength,
-      );
+  market: widget.market,
+  direction: widget.direction,
+  candles: snapshot.candles,
+  optionChain: snapshot.optionChain,
+  oiData: snapshot.oiData,
+  heatMap: snapshot.heatMap,
+  sectorStrength: snapshot.sectorStrength,
+
+  bidPrice: snapshot.bidPrice,
+  askPrice: snapshot.askPrice,
+  bidQuantity: snapshot.bidQuantity,
+  askQuantity: snapshot.askQuantity,
+);
 
       final tradesToday = await _tradeHistoryService.getTodayTradeCount(
         strategyId: session.strategyId,
@@ -288,7 +293,20 @@ class _AIDecisionScreenState extends State<AIDecisionScreen> {
 
         _tile('Liquidity', result.liquidity),
 
-        _tile('Volatility', result.volatility),
+_tile(
+  'Liquidity Sweep',
+  result.liquiditySweep,
+),
+
+_tile(
+  'Smart Money',
+  result.smartMoney,
+),
+
+_tile(
+  'Volatility',
+  result.volatility,
+),
 
         _tile('Sector Strength', result.sectorStrength),
 
