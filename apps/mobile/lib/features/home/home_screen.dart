@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../core/services/market_data_service.dart';
 import '../../core/widgets/responsive_container.dart';
 import '../broker/screens/upstox_login_screen.dart';
+import '../watchlist/screens/watchlist_screen.dart';
 
 import 'widgets/market_overview_card.dart';
 import 'widgets/quick_actions_card.dart';
@@ -13,10 +14,10 @@ class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State createState() => _HomeScreenState();
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State {
+class _HomeScreenState extends State<HomeScreen> {
   final MarketDataService _marketService = MarketDataService();
 
   bool _loading = true;
@@ -63,7 +64,7 @@ class _HomeScreenState extends State {
     super.dispose();
   }
 
-  Future _loadDashboard() async {
+  Future<void> _loadDashboard() async {
     try {
       final dashboard = await _marketService.fetchMarketDashboard();
 
@@ -163,6 +164,15 @@ class _HomeScreenState extends State {
     return double.tryParse(value?.toString() ?? '') ?? 0;
   }
 
+  void _openWatchlist() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const WatchlistScreen(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_loading) {
@@ -230,6 +240,7 @@ class _HomeScreenState extends State {
                       ),
                     );
                   },
+                  onWatchlistTap: _openWatchlist,
                 ),
 
                 const SizedBox(height: 30),
@@ -241,3 +252,4 @@ class _HomeScreenState extends State {
     );
   }
 }
+

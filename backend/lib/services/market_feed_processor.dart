@@ -23,6 +23,16 @@ class MarketFeedProcessor {
     'NSE_INDEX|Nifty Pharma': 'NIFTY PHARMA',
     'NSE_INDEX|Nifty PSU Bank': 'NIFTY PSU BANK',
     'NSE_INDEX|Nifty Realty': 'NIFTY REALTY',
+
+    // WATCHLIST EQUITIES
+    'NSE_EQ|INE002A01018': 'RELIANCE',
+    'NSE_EQ|INE467B01029': 'TCS',
+    'NSE_EQ|INE040A01034': 'HDFCBANK',
+    'NSE_EQ|INE009A01021': 'INFY',
+    'NSE_EQ|INE090A01021': 'ICICIBANK',
+    'NSE_EQ|INE062A01020': 'SBIN',
+    'NSE_EQ|INE397D01024': 'BHARTIARTL',
+    'NSE_EQ|INE154A01025': 'ITC',
   };
 
   void process(FeedResponse response) {
@@ -63,8 +73,8 @@ class MarketFeedProcessor {
           }
 
           if (market.marketLevel.bidAskQuote.isNotEmpty) {
-  final level1 =
-      market.marketLevel.bidAskQuote.first;
+            final level1 =
+                market.marketLevel.bidAskQuote.first;
 
             bidPrice = level1.bidP.toDouble();
             askPrice = level1.askP.toDouble();
