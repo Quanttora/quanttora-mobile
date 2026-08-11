@@ -21,7 +21,34 @@ class AuthRoutes {
       BrokerService.instance;
 
   final UpstoxMarketFeed _marketFeed =
-    UpstoxMarketFeed.instance;
+      UpstoxMarketFeed.instance;
+
+  static const List<String> _marketInstruments = [
+    // MAIN INDICES
+    'NSE_INDEX|Nifty 50',
+    'NSE_INDEX|Nifty Bank',
+    'BSE_INDEX|SENSEX',
+    'NSE_INDEX|India VIX',
+
+    // SECTOR INDICES
+    'NSE_INDEX|Nifty Auto',
+    'NSE_INDEX|Nifty FMCG',
+    'NSE_INDEX|Nifty IT',
+    'NSE_INDEX|Nifty Metal',
+    'NSE_INDEX|Nifty Pharma',
+    'NSE_INDEX|Nifty PSU Bank',
+    'NSE_INDEX|Nifty Realty',
+
+    // WATCHLIST EQUITIES
+    'NSE_EQ|INE002A01018', // RELIANCE
+    'NSE_EQ|INE467B01029', // TCS
+    'NSE_EQ|INE040A01034', // HDFCBANK
+    'NSE_EQ|INE009A01021', // INFY
+    'NSE_EQ|INE090A01021', // ICICIBANK
+    'NSE_EQ|INE062A01020', // SBIN
+    'NSE_EQ|INE397D01024', // BHARTIARTL
+    'NSE_EQ|INE154A01025', // ITC
+  ];
 
   Router get router {
     final router = Router();
@@ -104,31 +131,25 @@ class AuthRoutes {
         );
 
         await _marketFeed.connect();
-        await _marketFeed.subscribeMany([
-  // MAIN INDICES
-  'NSE_INDEX|Nifty 50',
-  'NSE_INDEX|Nifty Bank',
-  'BSE_INDEX|SENSEX',
-  'NSE_INDEX|India VIX',
 
-  // REAL SECTOR INDICES
-  'NSE_INDEX|Nifty Auto',
-  'NSE_INDEX|Nifty FMCG',
-  'NSE_INDEX|Nifty IT',
-  'NSE_INDEX|Nifty Metal',
-  'NSE_INDEX|Nifty Pharma',
-  'NSE_INDEX|Nifty PSU Bank',
-  'NSE_INDEX|Nifty Realty',
-]);
+        await _marketFeed.subscribeMany(
+          _marketInstruments,
+        );
 
         print('');
         print(
-            '==============================');
+          '==============================',
+        );
         print('UPSTOX CONNECTED');
         print(connection.userName);
         print(connection.email);
         print(
-            '==============================');
+          'MARKET INSTRUMENTS SUBSCRIBED: '
+          '${_marketInstruments.length}',
+        );
+        print(
+          '==============================',
+        );
         print('');
 
         return Response.found(

@@ -2,13 +2,15 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:backend/services/market_cache_service.dart';
 import 'package:backend/generated/market_data_v3.pb.dart';
+import 'package:backend/interfaces/broker/broker_market_feed_interface.dart';
 import 'package:backend/models/broker_session.dart';
 import 'package:backend/services/broker_service.dart';
+import 'package:backend/services/market_cache_service.dart';
 import 'package:http/http.dart' as http;
 
-class UpstoxMarketFeed {
+class UpstoxMarketFeed
+    implements BrokerMarketFeedInterface {
   UpstoxMarketFeed._();
 
   static final UpstoxMarketFeed instance =
@@ -32,10 +34,13 @@ class UpstoxMarketFeed {
   final StreamController<FeedResponse> _controller =
       StreamController<FeedResponse>.broadcast();
 
-  Stream<FeedResponse> get stream => _controller.stream;
+  Stream<FeedResponse> get stream =>
+      _controller.stream;
 
+  @override
   bool get isConnected => _connected;
 
+  @override
   Future<void> connect() async {
     if (_connecting || _connected) {
       return;
@@ -44,14 +49,19 @@ class UpstoxMarketFeed {
     _connecting = true;
 
     try {
-      final session = BrokerService.instance.session;
+      final session =
+          BrokerService.instance.session;
 
       if (session == null) {
-        throw Exception('Broker not connected.');
+        throw Exception(
+          'Broker not connected.',
+        );
       }
 
       final wsUrl =
-          await _getAuthorizedWebSocketUrl(session);
+          await _getAuthorizedWebSocketUrl(
+        session,
+      );
 
       await _connectSocket(wsUrl);
 
@@ -66,12 +76,15 @@ class UpstoxMarketFeed {
       _connecting = false;
       _connected = false;
 
-      print('[Upstox Feed] Connection failed: $e');
+      print(
+        '[Upstox Feed] Connection failed: $e',
+      );
 
       _scheduleReconnect();
     }
   }
 
+  @override
   Future<void> disconnect() async {
     _connected = false;
 
@@ -83,6 +96,7 @@ class UpstoxMarketFeed {
     _socket = null;
   }
 
+  @override
   Future<void> subscribe(
     List<String> instruments,
   ) async {
@@ -96,15 +110,15 @@ class UpstoxMarketFeed {
     }
 
     final payload = {
-      "guid":
+      'guid':
           DateTime.now()
               .millisecondsSinceEpoch
               .toString(),
-      "method": "sub",
-      "data": {
-        "mode": "full",
-        "instrumentKeys": instruments,
-      }
+      'method': 'sub',
+      'data': {
+        'mode': 'full',
+        'instrumentKeys': instruments,
+      },
     };
 
     print('');
@@ -114,32 +128,41 @@ class UpstoxMarketFeed {
     print('==============================');
     print('');
 
-    _socket?.add(jsonEncode(payload));
+    _socket?.add(
+      jsonEncode(payload),
+    );
 
-    print('[Upstox Feed] Subscription sent');
+    print(
+      '[Upstox Feed] Subscription sent',
+    );
   }
 
+  @override
   Future<void> unsubscribe(
     List<String> instruments,
   ) async {
-    _subscriptions.removeAll(instruments);
+    _subscriptions.removeAll(
+      instruments,
+    );
 
     if (!_connected) {
       return;
     }
 
     final payload = {
-      "guid":
+      'guid':
           DateTime.now()
               .millisecondsSinceEpoch
               .toString(),
-      "method": "unsub",
-      "data": {
-        "instrumentKeys": instruments,
-      }
+      'method': 'unsub',
+      'data': {
+        'instrumentKeys': instruments,
+      },
     };
 
-    _socket?.add(jsonEncode(payload));
+    _socket?.add(
+      jsonEncode(payload),
+    );
   }
 
   Future<String> _getAuthorizedWebSocketUrl(
@@ -155,18 +178,23 @@ class UpstoxMarketFeed {
     );
 
     if (response.statusCode != 200) {
-      throw Exception(response.body);
+      throw Exception(
+        response.body,
+      );
     }
 
-    final json = jsonDecode(response.body);
+    final json =
+        jsonDecode(response.body);
 
-    return json['data']['authorizedRedirectUri'];
+    return json['data']
+        ['authorizedRedirectUri'];
   }
 
   Future<void> _connectSocket(
     String url,
   ) async {
-    _socket = await WebSocket.connect(url);
+    _socket =
+        await WebSocket.connect(url);
 
     _socket!.pingInterval =
         const Duration(seconds: 20);
@@ -185,49 +213,89 @@ class UpstoxMarketFeed {
     }
   }
 
-  void _onMessage(dynamic message) {
-  print('');
-  print('==============================');
-  print('[Upstox Feed] MESSAGE RECEIVED');
+  void _onMessage(
+    dynamic message,
+  ) {
+    print('');
+    print('==============================');
+    print(
+      '[Upstox Feed] MESSAGE RECEIVED',
+    );
 
-  try {
-    if (message is! List<int>) {
-      print('Text Message: $message');
-      return;
+    try {
+      if (message is! List<int>) {
+        print(
+          'Text Message: $message',
+        );
+        return;
+      }
+
+      final response =
+          FeedResponse.fromBuffer(
+        message,
+      );
+
+      print(
+        'Type        : ${response.type}',
+      );
+
+      print(
+        'Timestamp   : ${response.currentTs}',
+      );
+
+      print(
+        'Feeds Count : ${response.feeds.length}',
+      );
+
+      print(
+        'Market Info : ${response.hasMarketInfo()}',
+      );
+
+      if (response.hasMarketInfo()) {
+        print(
+          'Segment Status : '
+          '${response.marketInfo.segmentStatus}',
+        );
+      }
+
+      if (response.feeds.isNotEmpty) {
+        response.feeds.forEach(
+          (key, value) {
+            MarketCacheService.instance
+                .update(
+              key,
+              value,
+            );
+
+            print(
+              'Feed Received : $key',
+            );
+          },
+        );
+
+        _controller.add(
+          response,
+        );
+      } else {
+        print(
+          'No feeds in this frame.',
+        );
+      }
+    } catch (e, s) {
+      print('Decode Error');
+      print(e);
+      print(s);
     }
 
-    final response = FeedResponse.fromBuffer(message);
-
-    print('Type        : ${response.type}');
-    print('Timestamp   : ${response.currentTs}');
-    print('Feeds Count : ${response.feeds.length}');
-    print('Market Info : ${response.hasMarketInfo()}');
-
-    if (response.hasMarketInfo()) {
-      print('Segment Status : ${response.marketInfo.segmentStatus}');
-    }
-
-    if (response.feeds.isNotEmpty) {
-  response.feeds.forEach((key, value) {
-    MarketCacheService.instance.update(key, value);
-    print('Feed Received : $key');
-  });
-
-      _controller.add(response);
-    } else {
-      print('No feeds in this frame.');
-    }
-  } catch (e, s) {
-    print('Decode Error');
-    print(e);
-    print(s);
+    print(
+      '==============================',
+    );
   }
 
-  print('==============================');
-}
-
   void _onDisconnected() {
-    print('[Upstox Feed] Disconnected');
+    print(
+      '[Upstox Feed] Disconnected',
+    );
 
     _connected = false;
 
@@ -239,7 +307,9 @@ class UpstoxMarketFeed {
   void _onError(
     Object error,
   ) {
-    print('[Upstox Feed] Error: $error');
+    print(
+      '[Upstox Feed] Error: $error',
+    );
 
     _connected = false;
 
@@ -272,7 +342,8 @@ class UpstoxMarketFeed {
     );
 
     print(
-      '[Upstox Feed] Reconnecting in ${delay.inSeconds}s',
+      '[Upstox Feed] Reconnecting in '
+      '${delay.inSeconds}s',
     );
 
     _reconnectTimer?.cancel();
@@ -285,30 +356,42 @@ class UpstoxMarketFeed {
     );
   }
 
+  @override
   Future<void> subscribeFull(
     String instrumentKey,
   ) async {
-    await subscribe([instrumentKey]);
+    await subscribe([
+      instrumentKey,
+    ]);
   }
 
+  @override
   Future<void> unsubscribeFull(
     String instrumentKey,
   ) async {
-    await unsubscribe([instrumentKey]);
+    await unsubscribe([
+      instrumentKey,
+    ]);
   }
 
+  @override
   Future<void> subscribeMany(
     List<String> keys,
   ) async {
-    if (keys.isEmpty) return;
+    if (keys.isEmpty) {
+      return;
+    }
 
     await subscribe(keys);
   }
 
+  @override
   Future<void> unsubscribeMany(
     List<String> keys,
   ) async {
-    if (keys.isEmpty) return;
+    if (keys.isEmpty) {
+      return;
+    }
 
     await unsubscribe(keys);
   }
@@ -317,6 +400,7 @@ class UpstoxMarketFeed {
     _subscriptions.clear();
   }
 
+  @override
   List<String> get subscriptions =>
       _subscriptions.toList();
 
@@ -339,6 +423,7 @@ class UpstoxMarketFeed {
     );
   }
 
+  @override
   StreamSubscription<FeedResponse> listen(
     void Function(FeedResponse data)
         onData,

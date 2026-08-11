@@ -1,9 +1,11 @@
 import 'dart:convert';
 
+import 'package:backend/interfaces/broker/broker_option_chain_interface.dart';
 import 'package:backend/services/broker_service.dart';
 import 'package:http/http.dart' as http;
 
-class UpstoxOptionChainService {
+class UpstoxOptionChainService
+    implements BrokerOptionChainInterface {
   UpstoxOptionChainService._();
 
   static final UpstoxOptionChainService instance =
@@ -12,6 +14,7 @@ class UpstoxOptionChainService {
   static const String _baseUrl =
       'https://api.upstox.com/v2/option/chain';
 
+  @override
   Future<Map<String, dynamic>> getOptionChain({
     required String instrumentKey,
     String expiryDate = 'current_week',

@@ -1,21 +1,27 @@
 import 'dart:convert';
 
-import 'package:backend/integrations/upstox/upstox_broker_service.dart';
 import 'package:backend/services/broker_dashboard_service.dart';
+import 'package:backend/services/broker_market_service.dart';
+import 'package:backend/services/broker/broker_market_feed_service.dart';
+import 'package:backend/services/broker/broker_option_chain_service.dart';
 import 'package:backend/services/broker_service.dart';
-import 'package:backend/services/upstox_market_feed.dart';
-import 'package:backend/services/upstox_option_chain_service.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 
 class BrokerRoutes {
   final Router router = Router();
 
-  final UpstoxBrokerService _broker =
-      UpstoxBrokerService();
-
   final BrokerService _brokerService =
       BrokerService.instance;
+
+  final BrokerMarketService _marketService =
+      BrokerMarketService.instance;
+
+  final BrokerMarketFeedService _marketFeedService =
+      BrokerMarketFeedService.instance;
+
+  final BrokerOptionChainService _optionChainService =
+      BrokerOptionChainService.instance;
 
   BrokerRoutes() {
     router.get('/status', _status);
@@ -26,7 +32,6 @@ class BrokerRoutes {
     router.get('/quotes', _quotes);
     router.get('/history', _history);
 
-    // REAL OPTION CHAIN
     router.get(
       '/option-chain',
       _optionChain,
@@ -68,18 +73,17 @@ class BrokerRoutes {
     );
   }
 
-  Response _json(dynamic data) =>
-      Response.ok(
-        jsonEncode(data),
-        headers: {
-          'Content-Type':
-              'application/json',
-        },
-      );
+  Response _json(dynamic data) {
+    return Response.ok(
+      jsonEncode(data),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    );
+  }
 
   String _accessToken() {
-    final session =
-        _brokerService.session;
+    final session = _brokerService.session;
 
     if (session == null) {
       throw Exception(
@@ -93,8 +97,7 @@ class BrokerRoutes {
   Future<Response> _execute(
     Future<dynamic> Function(
       String token,
-    )
-        action,
+    ) action,
   ) async {
     try {
       final result = await action(
@@ -147,13 +150,22 @@ class BrokerRoutes {
       'connected':
           _brokerService.isConnected,
       'marketFeed':
-          UpstoxMarketFeed
-              .instance
-              .isConnected,
+          _brokerService.isConnected &&
+              _marketFeedService.current
+                  .isConnected,
       'broker':
           _brokerService.session?.broker,
       'user':
           _brokerService.session?.userName,
+      'marketServiceSupported':
+          _brokerService.isConnected &&
+              _marketService.isSupported,
+      'marketFeedSupported':
+          _brokerService.isConnected &&
+              _marketFeedService.isSupported,
+      'optionChainSupported':
+          _brokerService.isConnected &&
+              _optionChainService.isSupported,
     });
   }
 
@@ -186,8 +198,7 @@ class BrokerRoutes {
           q['expiry'] ?? 'current_week';
 
       final result =
-          await UpstoxOptionChainService
-              .instance
+          await _optionChainService.current
               .getOptionChain(
         instrumentKey: instrumentKey,
         expiryDate: expiry,
@@ -212,15 +223,13 @@ class BrokerRoutes {
     Request request,
   ) async {
     try {
-      await UpstoxMarketFeed
-          .instance
+      await _marketFeedService.current
           .connect();
 
       return _json({
         'success': true,
         'connected':
-            UpstoxMarketFeed
-                .instance
+            _marketFeedService.current
                 .isConnected,
       });
     } catch (e) {
@@ -252,8 +261,7 @@ class BrokerRoutes {
       );
     }
 
-    await UpstoxMarketFeed
-        .instance
+    await _marketFeedService.current
         .subscribeFull(
       instrumentKey,
     );
@@ -262,8 +270,7 @@ class BrokerRoutes {
       'success': true,
       'instrument': instrumentKey,
       'subscriptions':
-          UpstoxMarketFeed
-              .instance
+          _marketFeedService.current
               .subscriptions,
     });
   }
@@ -284,8 +291,7 @@ class BrokerRoutes {
       );
     }
 
-    await UpstoxMarketFeed
-        .instance
+    await _marketFeedService.current
         .unsubscribeFull(
       instrumentKey,
     );
@@ -293,8 +299,7 @@ class BrokerRoutes {
     return _json({
       'success': true,
       'subscriptions':
-          UpstoxMarketFeed
-              .instance
+          _marketFeedService.current
               .subscriptions,
     });
   }
@@ -302,14 +307,19 @@ class BrokerRoutes {
   Future<Response> _subscriptions(
     Request request,
   ) async {
+    if (!_brokerService.isConnected) {
+      return _json({
+        'connected': false,
+        'subscriptions': <String>[],
+      });
+    }
+
     return _json({
       'connected':
-          UpstoxMarketFeed
-              .instance
+          _marketFeedService.current
               .isConnected,
       'subscriptions':
-          UpstoxMarketFeed
-              .instance
+          _marketFeedService.current
               .subscriptions,
     });
   }
@@ -317,9 +327,11 @@ class BrokerRoutes {
   Future<Response> _disconnect(
     Request request,
   ) async {
-    await UpstoxMarketFeed
-        .instance
-        .disconnect();
+    if (_brokerService.isConnected &&
+        _marketFeedService.isSupported) {
+      await _marketFeedService.current
+          .disconnect();
+    }
 
     _brokerService.disconnect();
 
@@ -339,7 +351,9 @@ class BrokerRoutes {
         'NSE_INDEX|India VIX';
 
     return _execute(
-      (token) => _broker.getQuotes(
+      (token) =>
+          _marketService.current
+              .getQuotes(
         token,
         instruments,
       ),
@@ -351,7 +365,8 @@ class BrokerRoutes {
   ) async {
     return _execute(
       (token) =>
-          _broker.getFunds(token),
+          _marketService.current
+              .getFunds(token),
     );
   }
 
@@ -360,7 +375,8 @@ class BrokerRoutes {
   ) async {
     return _execute(
       (token) =>
-          _broker.getHoldings(token),
+          _marketService.current
+              .getHoldings(token),
     );
   }
 
@@ -369,7 +385,8 @@ class BrokerRoutes {
   ) async {
     return _execute(
       (token) =>
-          _broker.getPositions(token),
+          _marketService.current
+              .getPositions(token),
     );
   }
 
@@ -378,7 +395,8 @@ class BrokerRoutes {
   ) async {
     return _execute(
       (token) =>
-          _broker.getOrderBook(token),
+          _marketService.current
+              .getOrderBook(token),
     );
   }
 
@@ -387,7 +405,8 @@ class BrokerRoutes {
   ) async {
     return _execute(
       (token) =>
-          _broker.getTradeBook(token),
+          _marketService.current
+              .getTradeBook(token),
     );
   }
 
@@ -407,7 +426,9 @@ class BrokerRoutes {
     }
 
     return _execute(
-      (token) => _broker.getQuotes(
+      (token) =>
+          _marketService.current
+              .getQuotes(
         token,
         instrumentKey,
       ),
@@ -440,7 +461,8 @@ class BrokerRoutes {
 
     return _execute(
       (token) =>
-          _broker.getHistoricalCandles(
+          _marketService.current
+              .getHistoricalCandles(
         token,
         instrumentKey,
         q['interval'] ?? 'day',

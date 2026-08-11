@@ -1,4 +1,4 @@
-import '../integrations/upstox/upstox_broker_service.dart';
+import 'broker_market_service.dart';
 import 'broker_service.dart';
 
 class BrokerDashboardService {
@@ -7,8 +7,8 @@ class BrokerDashboardService {
   static final BrokerDashboardService instance =
       BrokerDashboardService._();
 
-  final BrokerService _brokerService = BrokerService.instance;
-  final UpstoxBrokerService _broker = UpstoxBrokerService();
+  final BrokerService _brokerService =
+      BrokerService.instance;
 
   Future<Map<String, dynamic>> getDashboard() async {
     final session = _brokerService.session;
@@ -18,13 +18,14 @@ class BrokerDashboardService {
     }
 
     final token = session.accessToken;
+    final broker = BrokerMarketService.instance.current;
 
     final results = await Future.wait([
-      _broker.getFunds(token),
-      _broker.getHoldings(token),
-      _broker.getPositions(token),
-      _broker.getOrderBook(token),
-      _broker.getTradeBook(token),
+      broker.getFunds(token),
+      broker.getHoldings(token),
+      broker.getPositions(token),
+      broker.getOrderBook(token),
+      broker.getTradeBook(token),
     ]);
 
     final funds = results[0];
