@@ -299,18 +299,8 @@ _tile(
 ),
 
 _tile(
-  'Liquidity Sweep Score',
-  '${result.liquiditySweepScore}/100',
-),
-
-_tile(
   'Smart Money',
   result.smartMoney,
-),
-
-_tile(
-  'Smart Money Score',
-  '${result.smartMoneyScore}/100',
 ),
 
 _tile(
