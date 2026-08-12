@@ -5,6 +5,7 @@ import 'package:backend/services/broker_market_service.dart';
 import 'package:backend/services/broker/broker_market_feed_service.dart';
 import 'package:backend/services/broker/broker_option_chain_service.dart';
 import 'package:backend/services/broker_service.dart';
+import 'package:backend/services/option_chain/option_chain_analyzer.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 
@@ -23,6 +24,9 @@ class BrokerRoutes {
   final BrokerOptionChainService _optionChainService =
       BrokerOptionChainService.instance;
 
+  final OptionChainAnalyzer _optionChainAnalyzer =
+      OptionChainAnalyzer.instance;
+
   BrokerRoutes() {
     router.get('/status', _status);
 
@@ -35,6 +39,16 @@ class BrokerRoutes {
     router.get(
       '/option-chain',
       _optionChain,
+    );
+
+    router.get(
+      '/option-contracts',
+      _optionContracts,
+    );
+
+    router.get(
+      '/option-analysis',
+      _optionAnalysis,
     );
 
     router.get('/holdings', _holdings);
@@ -112,8 +126,7 @@ class BrokerRoutes {
           'error': e.toString(),
         }),
         headers: {
-          'Content-Type':
-              'application/json',
+          'Content-Type': 'application/json',
         },
       );
     }
@@ -136,8 +149,7 @@ class BrokerRoutes {
           'error': e.toString(),
         }),
         headers: {
-          'Content-Type':
-              'application/json',
+          'Content-Type': 'application/json',
         },
       );
     }
@@ -205,6 +217,116 @@ class BrokerRoutes {
       );
 
       return _json(result);
+    } catch (e) {
+      return Response.internalServerError(
+        body: jsonEncode({
+          'success': false,
+          'error': e.toString(),
+        }),
+        headers: {
+          'Content-Type':
+              'application/json',
+        },
+      );
+    }
+  }
+
+  Future<Response> _optionContracts(
+    Request request,
+  ) async {
+    try {
+      final q =
+          request.url.queryParameters;
+
+      final instrumentKey =
+          q['instrumentKey'];
+
+      if (instrumentKey == null ||
+          instrumentKey.isEmpty) {
+        return Response.badRequest(
+          body: jsonEncode({
+            'success': false,
+            'error':
+                'instrumentKey is required',
+          }),
+          headers: {
+            'Content-Type':
+                'application/json',
+          },
+        );
+      }
+
+      final expiry =
+          q['expiry'];
+
+      final result =
+          await _optionChainService
+              .getOptionContracts(
+        instrumentKey: instrumentKey,
+        expiryDate: expiry,
+      );
+
+      return _json(result);
+    } catch (e) {
+      return Response.internalServerError(
+        body: jsonEncode({
+          'success': false,
+          'error': e.toString(),
+        }),
+        headers: {
+          'Content-Type':
+              'application/json',
+        },
+      );
+    }
+  }
+
+  Future<Response> _optionAnalysis(
+    Request request,
+  ) async {
+    try {
+      final q =
+          request.url.queryParameters;
+
+      final instrumentKey =
+          q['instrumentKey'];
+
+      if (instrumentKey == null ||
+          instrumentKey.isEmpty) {
+        return Response.badRequest(
+          body: jsonEncode({
+            'success': false,
+            'error':
+                'instrumentKey is required',
+          }),
+          headers: {
+            'Content-Type':
+                'application/json',
+          },
+        );
+      }
+
+      final expiry =
+          q['expiry'] ?? 'current_week';
+
+      final optionChain =
+          await _optionChainService.current
+              .getOptionChain(
+        instrumentKey: instrumentKey,
+        expiryDate: expiry,
+      );
+
+      final analysis =
+          _optionChainAnalyzer.analyze(
+        optionChain: optionChain,
+      );
+
+      return _json({
+        'status': 'success',
+        'instrumentKey': instrumentKey,
+        'expiry': expiry,
+        'analysis': analysis,
+      });
     } catch (e) {
       return Response.internalServerError(
         body: jsonEncode({

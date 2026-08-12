@@ -35,4 +35,26 @@ class BrokerOptionChainService {
         return false;
     }
   }
+
+  Future<Map<String, dynamic>> getOptionContracts({
+    required String instrumentKey,
+    String? expiryDate,
+  }) {
+    final broker =
+        BrokerService.instance.session?.broker;
+
+    switch (broker?.toLowerCase()) {
+      case 'upstox':
+        return UpstoxOptionChainService.instance
+            .getOptionContracts(
+          instrumentKey: instrumentKey,
+          expiryDate: expiryDate,
+        );
+
+      default:
+        throw UnsupportedError(
+          'Option contracts are not supported for broker: $broker',
+        );
+    }
+  }
 }

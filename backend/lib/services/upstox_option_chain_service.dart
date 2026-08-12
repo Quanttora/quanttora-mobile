@@ -11,8 +11,11 @@ class UpstoxOptionChainService
   static final UpstoxOptionChainService instance =
       UpstoxOptionChainService._();
 
-  static const String _baseUrl =
+  static const String _optionChainBaseUrl =
       'https://api.upstox.com/v2/option/chain';
+
+  static const String _optionContractBaseUrl =
+      'https://api.upstox.com/v2/option/contract';
 
   @override
   Future<Map<String, dynamic>> getOptionChain({
@@ -25,7 +28,7 @@ class UpstoxOptionChainService
       throw StateError('Broker is not connected.');
     }
 
-    final uri = Uri.parse(_baseUrl).replace(
+    final uri = Uri.parse(_optionChainBaseUrl).replace(
       queryParameters: {
         'instrument_key': instrumentKey,
         'expiry_date': expiryDate,
@@ -37,8 +40,7 @@ class UpstoxOptionChainService
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
-        'Authorization':
-            'Bearer ${broker.accessToken}',
+        'Authorization': 'Bearer ${broker.accessToken}',
       },
     );
 
@@ -69,6 +71,80 @@ class UpstoxOptionChainService
     if (data is! List) {
       throw Exception(
         'Option Chain data is unavailable.',
+      );
+    }
+
+    return {
+      'status': 'success',
+      'instrumentKey': instrumentKey,
+      'expiry': expiryDate,
+      'count': data.length,
+      'data': data,
+    };
+  }
+
+  Future<Map<String, dynamic>> getOptionContracts({
+    required String instrumentKey,
+    String? expiryDate,
+  }) async {
+    final broker = BrokerService.instance;
+
+    if (!broker.hasValidSession()) {
+      throw StateError('Broker is not connected.');
+    }
+
+    final queryParameters = <String, String>{
+      'instrument_key': instrumentKey,
+    };
+
+    if (expiryDate != null &&
+        expiryDate.trim().isNotEmpty) {
+      queryParameters['expiry_date'] =
+          expiryDate.trim();
+    }
+
+    final uri =
+        Uri.parse(_optionContractBaseUrl).replace(
+      queryParameters: queryParameters,
+    );
+
+    final response = await http.get(
+      uri,
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization':
+            'Bearer ${broker.accessToken}',
+      },
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Upstox Option Contracts failed '
+        '(${response.statusCode}): ${response.body}',
+      );
+    }
+
+    final decoded = jsonDecode(response.body);
+
+    if (decoded is! Map<String, dynamic>) {
+      throw Exception(
+        'Invalid Option Contracts response.',
+      );
+    }
+
+    if (decoded['status'] != 'success') {
+      throw Exception(
+        'Upstox Option Contracts returned '
+        'status: ${decoded['status']}',
+      );
+    }
+
+    final data = decoded['data'];
+
+    if (data is! List) {
+      throw Exception(
+        'Option Contracts data is unavailable.',
       );
     }
 
