@@ -25,56 +25,89 @@ import 'engines/q_score/q_score_engine.dart';
 
 class AnalysisEngine {
   static AnalysisResult analyze({
-  required String market,
-  required String direction,
-  required List<Candle> candles,
-  required OptionChain optionChain,
-  required OIData oiData,
-  required HeatMap heatMap,
-  required SectorStrength sectorStrength,
+    required String market,
+    required String direction,
+    required List<Candle> candles,
+    required OptionChain optionChain,
+    required OIData oiData,
+    required HeatMap heatMap,
+    required SectorStrength sectorStrength,
+    required double bidPrice,
+    required double askPrice,
+    required int bidQuantity,
+    required int askQuantity,
+  }) {
+    // ============================================================
+    // PRICE STRUCTURE
+    // ============================================================
 
-  required double bidPrice,
-  required double askPrice,
-  required int bidQuantity,
-  required int askQuantity,
-}) {
-      // PRICE STRUCTURE
-    final trend = TrendEngine.analyze(candles: candles, direction: direction);
+    final trend = TrendEngine.analyze(
+      candles: candles,
+      direction: direction,
+    );
 
-    final ema = EMAEngine.analyze(candles: candles, direction: direction);
+    final ema = EMAEngine.analyze(
+      candles: candles,
+      direction: direction,
+    );
 
-    final vwap = VWAPEngine.analyze(candles: candles, direction: direction);
+    final vwap = VWAPEngine.analyze(
+      candles: candles,
+      direction: direction,
+    );
 
+    // ============================================================
     // MOMENTUM / STRENGTH
-    final adx = ADXEngine.analyze(candles: candles);
+    // ============================================================
 
-    final rsi = RSIEngine.analyze(candles: candles, direction: direction);
+    final adx = ADXEngine.analyze(
+      candles: candles,
+    );
 
+    final rsi = RSIEngine.analyze(
+      candles: candles,
+      direction: direction,
+    );
+
+    // ============================================================
     // PARTICIPATION
-    final volume = VolumeEngine.analyze(candles: candles);
+    // ============================================================
 
+    final volume = VolumeEngine.analyze(
+      candles: candles,
+    );
+
+    // ============================================================
     // LIQUIDITY
-    // Excluded from Q-Score until genuine
-    // bid/ask market depth is available.
+    // ============================================================
+
     final liquidity = LiquidityEngine.analyze(
-  bidPrice: bidPrice,
-  askPrice: askPrice,
-  bidQuantity: bidQuantity.toDouble(),
-  askQuantity: askQuantity.toDouble(),
-);
+      bidPrice: bidPrice,
+      askPrice: askPrice,
+      bidQuantity: bidQuantity.toDouble(),
+      askQuantity: askQuantity.toDouble(),
+    );
 
-final liquiditySweep = LiquiditySweepEngine.analyze(
-  candles: candles,
-);
+    final liquiditySweep = LiquiditySweepEngine.analyze(
+      candles: candles,
+    );
 
-final smartMoney = SmartMoneyEngine.analyze(
-  candles: candles,
-);
+    final smartMoney = SmartMoneyEngine.analyze(
+      candles: candles,
+    );
 
+    // ============================================================
     // MARKET VOLATILITY RISK
-    final risk = RiskEngine.analyze(candles: candles);
+    // ============================================================
 
+    final risk = RiskEngine.analyze(
+      candles: candles,
+    );
+
+    // ============================================================
     // DERIVATIVES
+    // ============================================================
+
     final option = OptionChainEngine.analyze(
       pcr: optionChain.pcr,
       maxCallOI: optionChain.maxCallOI,
@@ -95,13 +128,19 @@ final smartMoney = SmartMoneyEngine.analyze(
       putWriting: oiData.putWriting,
     );
 
+    // ============================================================
     // MARKET BREADTH
+    // ============================================================
+
     final breadth = HeatMapEngine.analyze(
       advancing: heatMap.advancing,
       declining: heatMap.declining,
     );
 
+    // ============================================================
     // COMPOSITE MARKET HEALTH
+    // ============================================================
+
     final marketHealth = MarketHealthEngine.analyze(
       trendScore: trend.score,
       emaScore: ema.score,
@@ -110,110 +149,193 @@ final smartMoney = SmartMoneyEngine.analyze(
       riskScore: risk.score,
     );
 
-    // Direction-align raw OI strength.
-    final directionalOIScore = QScoreEngine.directionalOIScore(
+    // ============================================================
+    // DIRECTIONAL DERIVATIVE SCORING
+    // ============================================================
+
+    final directionalOIScore =
+        QScoreEngine.directionalOIScore(
       bias: oi.bias,
       rawScore: oi.score,
       direction: direction,
     );
 
-    // Direction-align market breadth.
-    final directionalBreadthScore = QScoreEngine.directionalBreadthScore(
+    final directionalBreadthScore =
+        QScoreEngine.directionalBreadthScore(
       advancing: heatMap.advancing,
       declining: heatMap.declining,
       direction: direction,
     );
+
+    // ============================================================
+    // DATA AVAILABILITY
+    // ============================================================
 
     final volumeAvailable =
         volume.status != 'Volume Unavailable' &&
         volume.status != 'Insufficient Data';
 
     final vwapAvailable =
-        vwap.status != 'Unavailable' && vwap.status != 'Insufficient Data';
+        vwap.status != 'Unavailable' &&
+        vwap.status != 'Insufficient Data';
 
-    final optionAvailable = optionChain.pcr > 0;
+    final optionAvailable =
+        optionChain.pcr > 0;
 
-    final breadthAvailable = breadth.sentiment != 'Unavailable';
+    final breadthAvailable =
+        breadth.sentiment != 'Unavailable';
 
-    final riskAvailable = risk.level != 'Unknown';
+    final riskAvailable =
+        risk.level != 'Unknown';
 
-    // PERMANENT WEIGHTED Q-SCORE
+    final trendAvailable =
+        trend.trend != 'Unknown' &&
+        trend.score >= 0;
+
+    final emaAvailable =
+        ema.score >= 0;
+
+    final adxAvailable =
+        adx.score >= 0;
+
+    final rsiAvailable =
+        rsi.score >= 0;
+
+    final liquiditySweepAvailable =
+        liquiditySweep.detected;
+
+    final smartMoneyAvailable =
+        smartMoney.score > 0;
+
+    // ============================================================
+    // QUANTTORA Q-SCORE
     //
-    // PRICE STRUCTURE = 35%
-    // Trend 15 + EMA 12 + VWAP 8
+    // TOTAL WEIGHT = 100
     //
-    // MOMENTUM = 20%
-    // ADX 10 + RSI 10
+    // PRICE STRUCTURE = 30
+    // Trend 13
+    // EMA   10
+    // VWAP   7
     //
-    // PARTICIPATION = 10%
-    // Volume 10
+    // MOMENTUM = 16
+    // ADX 8
+    // RSI 8
     //
-    // DERIVATIVES = 20%
-    // Option Chain 12 + OI 8
+    // PARTICIPATION = 9
+    // Volume 9
     //
-    // MARKET CONTEXT = 15%
-    // Breadth 8 + Volatility Risk 7
+    // DERIVATIVES = 17
+    // Option Chain 10
+    // OI 7
+    //
+    // MARKET CONTEXT = 10
+    // Breadth 5
+    // Risk 5
+    //
+    // LIQUIDITY / SMART MONEY = 18
+    // Liquidity Sweep 8
+    // Smart Money 10
     //
     // Unavailable inputs are excluded and
     // remaining weights are normalized.
+    // ============================================================
+
     final qScore = QScoreEngine.calculate(
       inputs: [
-        QScoreInput(score: trend.score, weight: 15, available: trend.score > 0),
-        QScoreInput(score: ema.score, weight: 12, available: ema.score > 0),
-        QScoreInput(score: vwap.score, weight: 8, available: vwapAvailable),
-        QScoreInput(score: adx.score, weight: 10, available: adx.score > 0),
-        QScoreInput(score: rsi.score, weight: 10, available: rsi.score > 0),
+        QScoreInput(
+          score: trend.score,
+          weight: 13,
+          available: trendAvailable,
+        ),
+
+        QScoreInput(
+          score: ema.score,
+          weight: 10,
+          available: emaAvailable,
+        ),
+
+        QScoreInput(
+          score: vwap.score,
+          weight: 7,
+          available: vwapAvailable,
+        ),
+
+        QScoreInput(
+          score: adx.score,
+          weight: 8,
+          available: adxAvailable,
+        ),
+
+        QScoreInput(
+          score: rsi.score,
+          weight: 8,
+          available: rsiAvailable,
+        ),
+
         QScoreInput(
           score: volume.score,
-          weight: 10,
+          weight: 9,
           available: volumeAvailable,
         ),
+
         QScoreInput(
           score: option.score,
-          weight: 12,
+          weight: 10,
           available: optionAvailable,
         ),
+
         QScoreInput(
           score: directionalOIScore,
-          weight: 8,
+          weight: 7,
           available: oi.available,
         ),
+
         QScoreInput(
-  score: directionalBreadthScore,
-  weight: 8,
-  available: breadthAvailable,
-),
+          score: directionalBreadthScore,
+          weight: 5,
+          available: breadthAvailable,
+        ),
 
-QScoreInput(
-  score: liquiditySweep.score,
-  weight: 5,
-  available: liquiditySweep.detected,
-),
+        QScoreInput(
+          score: risk.score,
+          weight: 5,
+          available: riskAvailable,
+        ),
 
-QScoreInput(
-  score: smartMoney.score,
-  weight: 8,
-  available: smartMoney.score > 0,
-),
+        QScoreInput(
+          score: liquiditySweep.score,
+          weight: 8,
+          available: liquiditySweepAvailable,
+        ),
 
-QScoreInput(
-  score: risk.score,
-  weight: 7,
-  available: riskAvailable,
-),
+        QScoreInput(
+          score: smartMoney.score,
+          weight: 10,
+          available: smartMoneyAvailable,
+        ),
       ],
     );
 
-    final sectorText = sectorStrength.name == '-'
-        ? 'Unavailable'
-        : '${sectorStrength.name} '
-              '${sectorStrength.strength.toStringAsFixed(2)}%';
+    // ============================================================
+    // DISPLAY TEXT
+    // ============================================================
 
-    final heatMapText = breadth.sentiment == 'Unavailable'
-        ? 'Unavailable'
-        : '${breadth.sentiment} '
-              '(${heatMap.advancing} up / '
-              '${heatMap.declining} down)';
+    final sectorText =
+        sectorStrength.name == '-'
+            ? 'Unavailable'
+            : '${sectorStrength.name} '
+                '${sectorStrength.strength.toStringAsFixed(2)}%';
+
+    final heatMapText =
+        breadth.sentiment == 'Unavailable'
+            ? 'Unavailable'
+            : '${breadth.sentiment} '
+                '(${heatMap.advancing} up / '
+                '${heatMap.declining} down)';
+
+    // ============================================================
+    // ANALYSIS REASONS
+    // ============================================================
 
     final reasons = <String>[
       trend.reason,
@@ -249,38 +371,48 @@ QScoreInput(
       );
     }
 
+    // Q-Score data coverage
+    reasons.add(
+      'Q-Score data coverage: '
+      '${qScore.coveragePercent}%.',
+    );
+
+    // ============================================================
+    // FINAL ANALYSIS RESULT
+    // ============================================================
+
     return AnalysisResult(
-  market: market,
-  direction: direction,
+      market: market,
+      direction: direction,
 
-  // Quanttora Q-Score
-  confidence: qScore.score,
+      // Quanttora Q-Score
+      confidence: qScore.score,
 
-  marketHealth: marketHealth.score,
+      marketHealth: marketHealth.score,
 
-  trend: trend.trend,
+      trend: trend.trend,
 
-  momentum: rsi.status,
+      momentum: rsi.status,
 
-  volume: volume.status,
+      volume: volume.status,
 
-  liquidity: liquidity.status,
+      liquidity: liquidity.status,
 
-  liquiditySweep: liquiditySweep.status,
-  liquiditySweepScore: liquiditySweep.score,
+      liquiditySweep: liquiditySweep.status,
+      liquiditySweepScore: liquiditySweep.score,
 
-  smartMoney: smartMoney.structure,
-  smartMoneyScore: smartMoney.score,
+      smartMoney: smartMoney.structure,
+      smartMoneyScore: smartMoney.score,
 
-  volatility: risk.level,
+      volatility: risk.level,
 
-  sectorStrength: sectorText,
+      sectorStrength: sectorText,
 
-  heatMap: heatMapText,
+      heatMap: heatMapText,
 
-  risk: risk.level,
+      risk: risk.level,
 
-  reasons: reasons,
+      reasons: reasons,
     );
   }
 }

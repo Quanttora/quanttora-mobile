@@ -13,36 +13,75 @@ class QScoreInput {
 class QScoreResult {
   final int score;
   final double availableWeight;
+  final double totalWeight;
 
-  const QScoreResult({required this.score, required this.availableWeight});
+  const QScoreResult({
+    required this.score,
+    required this.availableWeight,
+    required this.totalWeight,
+  });
+
+  double get coverage {
+    if (totalWeight <= 0) {
+      return 0;
+    }
+
+    return (availableWeight / totalWeight).clamp(0.0, 1.0);
+  }
+
+  int get coveragePercent => (coverage * 100).round();
 }
 
 class QScoreEngine {
-  static QScoreResult calculate({required List<QScoreInput> inputs}) {
-    final availableInputs = inputs.where((input) => input.available).toList();
-
-    if (availableInputs.isEmpty) {
-      return const QScoreResult(score: 0, availableWeight: 0);
+  static QScoreResult calculate({
+    required List<QScoreInput> inputs,
+  }) {
+    if (inputs.isEmpty) {
+      return const QScoreResult(
+        score: 0,
+        availableWeight: 0,
+        totalWeight: 0,
+      );
     }
 
     double weightedTotal = 0;
     double availableWeight = 0;
+    double totalWeight = 0;
 
-    for (final input in availableInputs) {
+    for (final input in inputs) {
+      if (input.weight <= 0) {
+        continue;
+      }
+
+      totalWeight += input.weight;
+
+      if (!input.available) {
+        continue;
+      }
+
       final normalizedScore = input.score.clamp(0, 100);
 
       weightedTotal += normalizedScore * input.weight;
-
       availableWeight += input.weight;
     }
 
     if (availableWeight <= 0) {
-      return const QScoreResult(score: 0, availableWeight: 0);
+      return QScoreResult(
+        score: 0,
+        availableWeight: 0,
+        totalWeight: totalWeight,
+      );
     }
 
-    final score = (weightedTotal / availableWeight).round().clamp(0, 100);
+    final score = (weightedTotal / availableWeight)
+        .round()
+        .clamp(0, 100);
 
-    return QScoreResult(score: score, availableWeight: availableWeight);
+    return QScoreResult(
+      score: score,
+      availableWeight: availableWeight,
+      totalWeight: totalWeight,
+    );
   }
 
   /// Converts market breadth into a score aligned
@@ -61,11 +100,15 @@ class QScoreEngine {
     final normalizedDirection = direction.trim().toUpperCase();
 
     if (normalizedDirection == 'CALL') {
-      return ((advancing / total) * 100).round().clamp(0, 100);
+      return ((advancing / total) * 100)
+          .round()
+          .clamp(0, 100);
     }
 
     if (normalizedDirection == 'PUT') {
-      return ((declining / total) * 100).round().clamp(0, 100);
+      return ((declining / total) * 100)
+          .round()
+          .clamp(0, 100);
     }
 
     return 0;
@@ -79,7 +122,6 @@ class QScoreEngine {
     required String direction,
   }) {
     final normalizedBias = bias.trim().toUpperCase();
-
     final normalizedDirection = direction.trim().toUpperCase();
 
     if (normalizedBias == 'NEUTRAL') {
@@ -87,16 +129,20 @@ class QScoreEngine {
     }
 
     final supportsDirection =
-        (normalizedDirection == 'CALL' && normalizedBias == 'BULLISH') ||
-        (normalizedDirection == 'PUT' && normalizedBias == 'BEARISH');
+        (normalizedDirection == 'CALL' &&
+            normalizedBias == 'BULLISH') ||
+        (normalizedDirection == 'PUT' &&
+            normalizedBias == 'BEARISH');
 
     if (supportsDirection) {
       return rawScore.clamp(0, 100);
     }
 
     final opposesDirection =
-        (normalizedDirection == 'CALL' && normalizedBias == 'BEARISH') ||
-        (normalizedDirection == 'PUT' && normalizedBias == 'BULLISH');
+        (normalizedDirection == 'CALL' &&
+            normalizedBias == 'BEARISH') ||
+        (normalizedDirection == 'PUT' &&
+            normalizedBias == 'BULLISH');
 
     if (opposesDirection) {
       return (100 - rawScore).clamp(0, 100);
