@@ -65,7 +65,7 @@ class MarketRoutes {
           return;
         }
 
-        final previousClose = tick.change;
+        final previousClose = tick.previousClose;
 
         double percentageChange = 0;
 

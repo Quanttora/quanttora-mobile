@@ -46,7 +46,7 @@ class MarketFeedProcessor {
       }
 
       double? ltp;
-      double change = 0;
+      double previousClose = 0;
 
       double bidPrice = 0;
       double askPrice = 0;
@@ -62,14 +62,14 @@ class MarketFeedProcessor {
 
           if (index.hasLtpc()) {
             ltp = index.ltpc.ltp;
-            change = index.ltpc.cp;
+            previousClose = index.ltpc.cp;
           }
         } else if (full.hasMarketFF()) {
           final market = full.marketFF;
 
           if (market.hasLtpc()) {
             ltp = market.ltpc.ltp;
-            change = market.ltpc.cp;
+            previousClose = market.ltpc.cp;
           }
 
           if (market.marketLevel.bidAskQuote.isNotEmpty) {
@@ -85,18 +85,28 @@ class MarketFeedProcessor {
         }
       } else if (feed.hasLtpc()) {
         ltp = feed.ltpc.ltp;
-        change = feed.ltpc.cp;
+        previousClose = feed.ltpc.cp;
       }
 
       if (ltp == null) {
         return;
       }
 
+      final change =
+          ltp - previousClose;
+
+      final changePercent =
+          previousClose > 0
+              ? (change / previousClose) * 100
+              : 0.0;
+
       final tick = MarketTick(
         instrumentKey: instrumentKey,
         symbol: _symbols[instrumentKey]!,
         ltp: ltp,
+        previousClose: previousClose,
         change: change,
+        changePercent: changePercent,
         bidPrice: bidPrice,
         askPrice: askPrice,
         bidQuantity: bidQuantity,
@@ -109,6 +119,10 @@ class MarketFeedProcessor {
       print(
         '${tick.symbol.padRight(16)} '
         'LTP:${tick.ltp.toStringAsFixed(2)} '
+        'Change:${tick.change >= 0 ? '+' : ''}'
+        '${tick.change.toStringAsFixed(2)} '
+        '(${tick.changePercent >= 0 ? '+' : ''}'
+        '${tick.changePercent.toStringAsFixed(2)}%) '
         'Bid:${tick.bidPrice}(${tick.bidQuantity}) '
         'Ask:${tick.askPrice}(${tick.askQuantity})',
       );

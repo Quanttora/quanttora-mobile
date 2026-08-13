@@ -109,6 +109,10 @@ class UpstoxMarketFeed
       return;
     }
 
+    if (instruments.isEmpty) {
+      return;
+    }
+
     final payload = {
       'guid':
           DateTime.now()
@@ -121,19 +125,27 @@ class UpstoxMarketFeed
       },
     };
 
+    final message =
+        jsonEncode(payload);
+
+    final binaryMessage =
+        utf8.encode(message);
+
     print('');
     print('==============================');
     print('[Upstox Feed] SUBSCRIBE');
-    print(jsonEncode(payload));
+    print(message);
+    print(
+      '[Upstox Feed] Sending binary subscription '
+      '(${binaryMessage.length} bytes)',
+    );
     print('==============================');
     print('');
 
-    _socket?.add(
-      jsonEncode(payload),
-    );
+    _socket?.add(binaryMessage);
 
     print(
-      '[Upstox Feed] Subscription sent',
+      '[Upstox Feed] Binary subscription sent',
     );
   }
 
@@ -145,7 +157,8 @@ class UpstoxMarketFeed
       instruments,
     );
 
-    if (!_connected) {
+    if (!_connected ||
+        instruments.isEmpty) {
       return;
     }
 
@@ -160,8 +173,16 @@ class UpstoxMarketFeed
       },
     };
 
-    _socket?.add(
-      jsonEncode(payload),
+    final message =
+        jsonEncode(payload);
+
+    final binaryMessage =
+        utf8.encode(message);
+
+    _socket?.add(binaryMessage);
+
+    print(
+      '[Upstox Feed] Binary unsubscribe sent',
     );
   }
 
@@ -173,21 +194,40 @@ class UpstoxMarketFeed
       headers: {
         'Authorization':
             'Bearer ${session.accessToken}',
-        'Accept': 'application/json',
+        'Accept': '*/*',
       },
     );
 
     if (response.statusCode != 200) {
       throw Exception(
-        response.body,
+        'Market feed authorization failed '
+        '(${response.statusCode}): '
+        '${response.body}',
       );
     }
 
-    final json =
+    final decoded =
         jsonDecode(response.body);
 
-    return json['data']
-        ['authorizedRedirectUri'];
+    final data = decoded['data'];
+
+    if (data is! Map) {
+      throw Exception(
+        'Invalid market feed authorization response.',
+      );
+    }
+
+    final url =
+        data['authorizedRedirectUri']
+            ?.toString();
+
+    if (url == null || url.isEmpty) {
+      throw Exception(
+        'Market feed WebSocket URL is missing.',
+      );
+    }
+
+    return url;
   }
 
   Future<void> _connectSocket(
@@ -225,7 +265,13 @@ class UpstoxMarketFeed
     try {
       if (message is! List<int>) {
         print(
-          'Text Message: $message',
+          'Unexpected text message: $message',
+        );
+        print(
+          'Expected binary protobuf feed message.',
+        );
+        print(
+          '==============================',
         );
         return;
       }
