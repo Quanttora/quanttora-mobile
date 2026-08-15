@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../core/analysis/analysis_engine.dart';
 import '../../../core/analysis/policy/decision_policy.dart';
 import '../../../core/analysis/policy/policy_result.dart';
+import '../../../core/constitution/constitution_engine.dart';
+import '../../../core/constitution/constitution_result.dart';
 import '../../../core/services/market_data_service.dart';
 import '../../../core/services/news_safety_service.dart';
 import '../../session/services/session_manager.dart';
@@ -32,6 +34,7 @@ class _AIDecisionScreenState extends State<AIDecisionScreen> {
 
   AnalysisResult? _result;
   PolicyResult? _policyResult;
+  ConstitutionResult? _constitutionResult;
 
   int _tradesToday = 0;
 
@@ -79,30 +82,24 @@ class _AIDecisionScreenState extends State<AIDecisionScreen> {
       );
 
       final result = AnalysisEngine.analyze(
-  market: widget.market,
-  direction: widget.direction,
-  candles: snapshot.candles,
-  optionChain: snapshot.optionChain,
-  oiData: snapshot.oiData,
-  heatMap: snapshot.heatMap,
-  sectorStrength: snapshot.sectorStrength,
-
-  bidPrice: snapshot.bidPrice,
-  askPrice: snapshot.askPrice,
-  bidQuantity: snapshot.bidQuantity,
-  askQuantity: snapshot.askQuantity,
-);
+        market: widget.market,
+        direction: widget.direction,
+        candles: snapshot.candles,
+        optionChain: snapshot.optionChain,
+        oiData: snapshot.oiData,
+        heatMap: snapshot.heatMap,
+        sectorStrength: snapshot.sectorStrength,
+        bidPrice: snapshot.bidPrice,
+        askPrice: snapshot.askPrice,
+        bidQuantity: snapshot.bidQuantity,
+        askQuantity: snapshot.askQuantity,
+      );
 
       final tradesToday = await _tradeHistoryService.getTodayTradeCount(
         strategyId: session.strategyId,
       );
 
       // REAL NEWS SAFETY CONNECTION
-      //
-      // If the selected strategy has Avoid News enabled,
-      // Quanttora asks the backend /news/safety endpoint.
-      //
-      // If Avoid News is disabled, the news gate is bypassed.
       final NewsSafetyResult newsSafety;
 
       if (session.strategyAvoidNews) {
@@ -116,21 +113,53 @@ class _AIDecisionScreenState extends State<AIDecisionScreen> {
         );
       }
 
-      final policyResult = DecisionPolicy.evaluate(
+      // STRATEGY POLICY
+      final basePolicyResult = DecisionPolicy.evaluate(
         aiConfidence: result.confidence,
         minimumAiScore: session.strategyMinimumAiScore,
         avoidSidewaysMarket: session.strategyAvoidSideways,
         avoidLowVolume: session.strategyAvoidLowVolume,
         avoidNews: session.strategyAvoidNews,
-
-        // REAL NEWS SAFETY VALUES
         newsDataAvailable: newsSafety.dataAvailable,
         highImpactNews: newsSafety.highImpactNews,
-
         trend: result.trend,
         volume: result.volume,
         tradesToday: tradesToday,
         maxTradesPerDay: session.strategyMaxTradesPerDay,
+      );
+
+      // CONSTITUTION
+      //
+      // Daily-loss is intentionally disabled for now because
+      // Quanttora does not yet have reliable realized daily P&L.
+      //
+      // Risk/reward uses the selected strategy configuration.
+      final constitutionResult = const ConstitutionEngine().evaluate(
+        tradesToday: tradesToday,
+        maxTradesPerDay: session.strategyMaxTradesPerDay,
+        dailyLoss: 0,
+        maxDailyLoss: 0,
+        riskReward: session.strategyRiskRewardRatio,
+        minimumRiskReward: session.strategyRiskRewardRatio,
+      );
+
+      final blockingReasons = <String>[...basePolicyResult.blockingReasons];
+
+      final passedRules = <String>[...basePolicyResult.passedRules];
+
+      // Add Constitution results.
+      for (final rule in constitutionResult.rules) {
+        if (rule.status.name == 'pass') {
+          passedRules.add('Constitution: ${rule.title} passed.');
+        } else {
+          blockingReasons.add('Constitution: ${rule.title} failed.');
+        }
+      }
+
+      final policyResult = PolicyResult(
+        allowed: basePolicyResult.allowed && constitutionResult.canAnalyze,
+        blockingReasons: blockingReasons,
+        passedRules: passedRules,
       );
 
       if (!mounted) {
@@ -140,6 +169,7 @@ class _AIDecisionScreenState extends State<AIDecisionScreen> {
       setState(() {
         _result = result;
         _policyResult = policyResult;
+        _constitutionResult = constitutionResult;
         _tradesToday = tradesToday;
         _loading = false;
         _error = null;
@@ -271,8 +301,7 @@ class _AIDecisionScreenState extends State<AIDecisionScreen> {
         _tile(
           'Daily Trades',
           session.strategyMaxTradesPerDay > 0
-              ? '$_tradesToday/'
-                    '${session.strategyMaxTradesPerDay}'
+              ? '$_tradesToday/${session.strategyMaxTradesPerDay}'
               : 'Not configured',
         ),
 
@@ -293,20 +322,11 @@ class _AIDecisionScreenState extends State<AIDecisionScreen> {
 
         _tile('Liquidity', result.liquidity),
 
-_tile(
-  'Liquidity Sweep',
-  result.liquiditySweep,
-),
+        _tile('Liquidity Sweep', result.liquiditySweep),
 
-_tile(
-  'Smart Money',
-  result.smartMoney,
-),
+        _tile('Smart Money', result.smartMoney),
 
-_tile(
-  'Volatility',
-  result.volatility,
-),
+        _tile('Volatility', result.volatility),
 
         _tile('Sector Strength', result.sectorStrength),
 
@@ -315,6 +335,39 @@ _tile(
         _tile('Risk', result.risk),
 
         const SizedBox(height: 25),
+
+        if (_constitutionResult != null) ...[
+          const Text(
+            'Trading Constitution',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+
+          const SizedBox(height: 12),
+
+          ..._constitutionResult!.rules.map((rule) {
+            final passed = rule.status.name == 'pass';
+
+            return Card(
+              child: ListTile(
+                leading: Icon(
+                  passed ? Icons.verified_rounded : Icons.block_rounded,
+                  color: passed ? Colors.green : Colors.red,
+                ),
+                title: Text(rule.title),
+                subtitle: Text(rule.description),
+                trailing: Text(
+                  passed ? 'PASS' : 'FAIL',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: passed ? Colors.green : Colors.red,
+                  ),
+                ),
+              ),
+            );
+          }),
+
+          const SizedBox(height: 25),
+        ],
 
         if (policy.passedRules.isNotEmpty) ...[
           const Text(
@@ -380,7 +433,7 @@ _tile(
             onPressed: policy.allowed
                 ? () {
                     // Broker execution remains intentionally
-                    // disconnected until remaining Gate 3
+                    // disabled until all final execution
                     // protections are completed.
                   }
                 : null,
@@ -394,9 +447,10 @@ _tile(
         if (policy.allowed) ...[
           const SizedBox(height: 12),
           const Text(
-            'Current implemented strategy gates have passed. '
-            'Broker execution remains disabled until the '
-            'remaining Quanttora safety gates are completed.',
+            'Current strategy and Constitution gates '
+            'have passed. Broker execution remains '
+            'disabled until the remaining Quanttora '
+            'safety gates are completed.',
             textAlign: TextAlign.center,
             style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600),
           ),
@@ -434,7 +488,7 @@ _tile(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  allowed ? 'STRATEGY GATES PASSED' : 'NO TRADE',
+                  allowed ? 'STRATEGY + CONSTITUTION PASSED' : 'NO TRADE',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -445,9 +499,9 @@ _tile(
                 Text(
                   allowed
                       ? 'All currently implemented strategy '
-                            'rules have passed.'
+                            'and Constitution rules have passed.'
                       : '${policy.blockingReasons.length} '
-                            'strategy rule(s) blocked this trade.',
+                            'rule(s) blocked this trade.',
                 ),
               ],
             ),
