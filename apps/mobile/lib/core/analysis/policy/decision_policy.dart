@@ -19,7 +19,10 @@ class DecisionPolicy {
     final blockingReasons = <String>[];
     final passedRules = <String>[];
 
+    // ============================================================
     // AI SCORE GATE
+    // ============================================================
+
     if (minimumAiScore > 0) {
       if (aiConfidence < minimumAiScore) {
         blockingReasons.add(
@@ -31,7 +34,10 @@ class DecisionPolicy {
       }
     }
 
+    // ============================================================
     // SIDEWAYS MARKET GATE
+    // ============================================================
+
     if (avoidSidewaysMarket) {
       if (trend == 'Sideways') {
         blockingReasons.add(
@@ -44,11 +50,25 @@ class DecisionPolicy {
       }
     }
 
+    // ============================================================
     // LOW VOLUME GATE
+    // ============================================================
+
     if (avoidLowVolume) {
       if (volume == 'Low') {
         blockingReasons.add(
           'Strategy does not allow trading in low-volume conditions.',
+        );
+      } else if (volume == 'N/A (Index Instrument)') {
+        // Index instruments such as NIFTY 50, BANK NIFTY and
+        // SENSEX do not provide exchange traded volume.
+        //
+        // This is NOT the same as low volume.
+        // Do not block an index trade merely because volume
+        // does not exist for the underlying index.
+        passedRules.add(
+          'Volume filter passed: index instrument does not '
+          'provide exchange traded volume.',
         );
       } else if (volume == 'Volume Unavailable' ||
           volume == 'Insufficient Data') {
@@ -61,7 +81,10 @@ class DecisionPolicy {
       }
     }
 
+    // ============================================================
     // NEWS SAFETY GATE
+    // ============================================================
+
     if (avoidNews) {
       if (!newsDataAvailable) {
         blockingReasons.add(
@@ -75,7 +98,10 @@ class DecisionPolicy {
       }
     }
 
+    // ============================================================
     // MAX TRADES PER DAY GATE
+    // ============================================================
+
     if (maxTradesPerDay > 0) {
       if (tradesToday >= maxTradesPerDay) {
         blockingReasons.add(

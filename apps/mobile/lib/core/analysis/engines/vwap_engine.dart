@@ -31,33 +31,58 @@ class VWAPEngine {
       );
     }
 
-    // Index instruments (NIFTY, BANKNIFTY, SENSEX, etc.)
-    // are marked with volume = -1 in MarketDataService.
-    if (candles.last.volume < 0) {
+    // ============================================================
+    // INDEX INSTRUMENT
+    // ============================================================
+    //
+    // MarketDataService marks index candles with volume = -1.
+    //
+    // NIFTY 50, BANK NIFTY, SENSEX and similar index instruments
+    // do not provide exchange-traded volume for the underlying
+    // index itself.
+    //
+    // Therefore we must NOT manufacture volume or calculate a
+    // misleading VWAP.
+    //
+    // ============================================================
+
+    final isIndexInstrument = candles.any((candle) => candle.volume < 0);
+
+    if (isIndexInstrument) {
       return const VWAPResult(
         aboveVWAP: false,
         value: 0,
         score: 0,
         status: 'N/A (Index Instrument)',
         reason:
-            'VWAP is not available because exchange volume is not provided for index instruments.',
+            'VWAP is not available because exchange-traded volume '
+            'is not provided for index instruments.',
       );
     }
+
+    // ============================================================
+    // VALID VOLUME DATA
+    // ============================================================
 
     double cumulativePriceVolume = 0;
     double cumulativeVolume = 0;
 
     for (final candle in candles) {
+      // Ignore candles without usable volume.
       if (candle.volume <= 0) {
         continue;
       }
 
-      final typicalPrice =
-          (candle.high + candle.low + candle.close) / 3;
+      final typicalPrice = (candle.high + candle.low + candle.close) / 3;
 
       cumulativePriceVolume += typicalPrice * candle.volume;
+
       cumulativeVolume += candle.volume;
     }
+
+    // ============================================================
+    // NO USABLE VOLUME
+    // ============================================================
 
     if (cumulativeVolume <= 0) {
       return const VWAPResult(
@@ -66,16 +91,26 @@ class VWAPEngine {
         score: 0,
         status: 'Volume Unavailable',
         reason:
-            'VWAP cannot be calculated because candle volume is unavailable.',
+            'VWAP cannot be calculated because reliable '
+            'candle volume is unavailable.',
       );
     }
+
+    // ============================================================
+    // VWAP
+    // ============================================================
 
     final vwap = cumulativePriceVolume / cumulativeVolume;
 
     final currentPrice = candles.last.close;
+
     final aboveVWAP = currentPrice > vwap;
 
     final isCall = direction.toUpperCase() == 'CALL';
+
+    // ============================================================
+    // DIRECTIONAL SCORING
+    // ============================================================
 
     late final int score;
     late final String status;
@@ -85,25 +120,41 @@ class VWAPEngine {
       if (aboveVWAP) {
         score = 90;
         status = 'Above VWAP';
+
         reason =
-            'Price ${currentPrice.toStringAsFixed(2)} is above VWAP ${vwap.toStringAsFixed(2)}, supporting the CALL direction.';
+            'Price ${currentPrice.toStringAsFixed(2)} '
+            'is above VWAP '
+            '${vwap.toStringAsFixed(2)}, '
+            'supporting the CALL direction.';
       } else {
         score = 40;
         status = 'Below VWAP';
+
         reason =
-            'Price ${currentPrice.toStringAsFixed(2)} is below VWAP ${vwap.toStringAsFixed(2)}, which does not support the CALL direction.';
+            'Price ${currentPrice.toStringAsFixed(2)} '
+            'is below VWAP '
+            '${vwap.toStringAsFixed(2)}, '
+            'which does not support the CALL direction.';
       }
     } else {
       if (!aboveVWAP) {
         score = 90;
         status = 'Below VWAP';
+
         reason =
-            'Price ${currentPrice.toStringAsFixed(2)} is below VWAP ${vwap.toStringAsFixed(2)}, supporting the PUT direction.';
+            'Price ${currentPrice.toStringAsFixed(2)} '
+            'is below VWAP '
+            '${vwap.toStringAsFixed(2)}, '
+            'supporting the PUT direction.';
       } else {
         score = 40;
         status = 'Above VWAP';
+
         reason =
-            'Price ${currentPrice.toStringAsFixed(2)} is above VWAP ${vwap.toStringAsFixed(2)}, which does not support the PUT direction.';
+            'Price ${currentPrice.toStringAsFixed(2)} '
+            'is above VWAP '
+            '${vwap.toStringAsFixed(2)}, '
+            'which does not support the PUT direction.';
       }
     }
 

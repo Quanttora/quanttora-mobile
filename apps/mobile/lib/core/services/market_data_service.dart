@@ -37,77 +37,54 @@ class MarketDataService {
       timeframe: timeframe,
     );
 
-    final optionData = await _fetchOptionChain(
-      market: market,
-    );
+    final optionData = await _fetchOptionChain(market: market);
 
     final indices =
-        dashboard['indices'] as Map<String, dynamic>? ??
-            <String, dynamic>{};
+        dashboard['indices'] as Map<String, dynamic>? ?? <String, dynamic>{};
 
     final marketKey = _dashboardKey(market);
 
-    final marketData =
-        indices[marketKey] as Map<String, dynamic>?;
+    final marketData = indices[marketKey] as Map<String, dynamic>?;
 
-    final livePrice =
-        _toDouble(marketData?['ltp']);
+    final livePrice = _toDouble(marketData?['ltp']);
 
-    final bidPrice =
-        _toDouble(marketData?['bidPrice']);
+    final bidPrice = _toDouble(marketData?['bidPrice']);
 
-    final askPrice =
-        _toDouble(marketData?['askPrice']);
+    final askPrice = _toDouble(marketData?['askPrice']);
 
-    final bidQuantity =
-        (marketData?['bidQuantity'] as num?)
-                ?.toInt() ??
-            0;
+    final bidQuantity = (marketData?['bidQuantity'] as num?)?.toInt() ?? 0;
 
-    final askQuantity =
-        (marketData?['askQuantity'] as num?)
-                ?.toInt() ??
-            0;
+    final askQuantity = (marketData?['askQuantity'] as num?)?.toInt() ?? 0;
 
-    final finalCandles =
-        List<Candle>.from(candles);
+    final finalCandles = List<Candle>.from(candles);
 
-    if (livePrice > 0 &&
-        finalCandles.isEmpty) {
+    if (livePrice > 0 && finalCandles.isEmpty) {
       finalCandles.add(
         Candle(
           open: livePrice,
           high: livePrice,
           low: livePrice,
           close: livePrice,
-          volume: 0,
+          volume: _isIndexMarket(market) ? -1 : 0,
           time: DateTime.now(),
         ),
       );
     }
 
     return MarketSnapshot(
-      candles: finalCandles.isNotEmpty
-          ? finalCandles
-          : emptySnapshot().candles,
+      candles: finalCandles.isNotEmpty ? finalCandles : emptySnapshot().candles,
 
       // REAL UPSTOX OPTION CHAIN
-      optionChain:
-          optionData.optionChain,
+      optionChain: optionData.optionChain,
 
       // REAL UPSTOX OI DATA
-      oiData:
-          optionData.oiData,
+      oiData: optionData.oiData,
 
       // REAL SECTOR BREADTH
-      heatMap:
-          _buildRealHeatMap(dashboard),
+      heatMap: _buildRealHeatMap(dashboard),
 
       // REAL SECTOR STRENGTH
-      sectorStrength:
-          _buildRealSectorStrength(
-        dashboard,
-      ),
+      sectorStrength: _buildRealSectorStrength(dashboard),
 
       bidPrice: bidPrice,
       askPrice: askPrice,
@@ -116,49 +93,34 @@ class MarketDataService {
     );
   }
 
-  Future<_OptionAnalytics> _fetchOptionChain({
-    required String market,
-  }) async {
-    final instrumentKey =
-        _instrumentKeys[market.toUpperCase()];
+  Future<_OptionAnalytics> _fetchOptionChain({required String market}) async {
+    final instrumentKey = _instrumentKeys[market.toUpperCase()];
 
     if (instrumentKey == null) {
       return _OptionAnalytics.empty();
     }
 
-    if (market.toUpperCase() ==
-        'INDIA VIX') {
+    if (market.toUpperCase() == 'INDIA VIX') {
       return _OptionAnalytics.empty();
     }
 
     try {
-      final encodedInstrument =
-          Uri.encodeQueryComponent(
-        instrumentKey,
-      );
+      final encodedInstrument = Uri.encodeQueryComponent(instrumentKey);
 
       // ---------------------------------------------------------
       // STEP 1:
       // Get available option contracts.
-      // This allows Quanttora to select the nearest
-      // actual expiry instead of using "current_week".
       // ---------------------------------------------------------
 
-      final contractsResponse =
-          await _api.get(
+      final contractsResponse = await _api.get(
         '/broker/option-contracts'
         '?instrumentKey=$encodedInstrument',
       );
 
-      final contracts =
-          contractsResponse['data']
-              as List<dynamic>?;
+      final contracts = contractsResponse['data'] as List<dynamic>?;
 
-      if (contracts == null ||
-          contracts.isEmpty) {
-        debugPrint(
-          '[Quanttora] No option contracts found.',
-        );
+      if (contracts == null || contracts.isEmpty) {
+        debugPrint('[Quanttora] No option contracts found.');
 
         return _OptionAnalytics.empty();
       }
@@ -170,11 +132,7 @@ class MarketDataService {
           continue;
         }
 
-        final expiry =
-            DateTime.tryParse(
-          item['expiry']?.toString() ??
-              '',
-        );
+        final expiry = DateTime.tryParse(item['expiry']?.toString() ?? '');
 
         if (expiry != null) {
           expiries.add(expiry);
@@ -182,17 +140,14 @@ class MarketDataService {
       }
 
       if (expiries.isEmpty) {
-        debugPrint(
-          '[Quanttora] No valid expiries found.',
-        );
+        debugPrint('[Quanttora] No valid expiries found.');
 
         return _OptionAnalytics.empty();
       }
 
       expiries.sort();
 
-      final expiryDate =
-          _formatDate(expiries.first);
+      final expiryDate = _formatDate(expiries.first);
 
       debugPrint(
         '[Quanttora] Selected expiry: '
@@ -204,21 +159,16 @@ class MarketDataService {
       // Get Quanttora's real backend analysis.
       // ---------------------------------------------------------
 
-      final analysisResponse =
-          await _api.get(
+      final analysisResponse = await _api.get(
         '/broker/option-analysis'
         '?instrumentKey=$encodedInstrument'
         '&expiry=$expiryDate',
       );
 
-      final analysis =
-          analysisResponse['analysis']
-              as Map<String, dynamic>?;
+      final analysis = analysisResponse['analysis'] as Map<String, dynamic>?;
 
       if (analysis == null) {
-        debugPrint(
-          '[Quanttora] Analysis data unavailable.',
-        );
+        debugPrint('[Quanttora] Analysis data unavailable.');
 
         return _OptionAnalytics.empty();
       }
@@ -229,93 +179,55 @@ class MarketDataService {
       // ---------------------------------------------------------
 
       final support =
-          analysis['support']
-              as Map<String, dynamic>? ??
-          <String, dynamic>{};
+          analysis['support'] as Map<String, dynamic>? ?? <String, dynamic>{};
 
       final resistance =
-          analysis['resistance']
-              as Map<String, dynamic>? ??
+          analysis['resistance'] as Map<String, dynamic>? ??
           <String, dynamic>{};
 
       final totals =
-          analysis['totals']
-              as Map<String, dynamic>? ??
-          <String, dynamic>{};
+          analysis['totals'] as Map<String, dynamic>? ?? <String, dynamic>{};
 
       // ---------------------------------------------------------
       // STEP 4:
       // Totals
       // ---------------------------------------------------------
 
-      final pcr =
-          _toDouble(totals['pcr']);
+      final pcr = _toDouble(totals['pcr']);
 
-      final callOI =
-          _toDouble(totals['callOi']);
+      final callOI = _toDouble(totals['callOi']);
 
-      final putOI =
-          _toDouble(totals['putOi']);
+      final putOI = _toDouble(totals['putOi']);
 
-      final callOIChange =
-          _toDouble(
-        totals['callOiChange'],
-      );
+      final callOIChange = _toDouble(totals['callOiChange']);
 
-      final putOIChange =
-          _toDouble(
-        totals['putOiChange'],
-      );
+      final putOIChange = _toDouble(totals['putOiChange']);
 
-      final callVolume =
-          _toDouble(
-        totals['callVolume'],
-      );
+      final callVolume = _toDouble(totals['callVolume']);
 
-      final putVolume =
-          _toDouble(
-        totals['putVolume'],
-      );
+      final putVolume = _toDouble(totals['putVolume']);
 
       // ---------------------------------------------------------
       // STEP 5:
       // Support / Resistance
       // ---------------------------------------------------------
 
-      final supportStrike =
-          _toDouble(
-        support['strike'],
-      );
+      final supportStrike = _toDouble(support['strike']);
 
-      final supportOI =
-          _toDouble(
-        support['oi'],
-      );
+      final supportOI = _toDouble(support['oi']);
 
-      final resistanceStrike =
-          _toDouble(
-        resistance['strike'],
-      );
+      final resistanceStrike = _toDouble(resistance['strike']);
 
-      final resistanceOI =
-          _toDouble(
-        resistance['oi'],
-      );
+      final resistanceOI = _toDouble(resistance['oi']);
 
       // ---------------------------------------------------------
       // STEP 6:
       // Spot / ATM
       // ---------------------------------------------------------
 
-      final spotPrice =
-          _toDouble(
-        analysis['spotPrice'],
-      );
+      final spotPrice = _toDouble(analysis['spotPrice']);
 
-      final atmStrike =
-          _toDouble(
-        analysis['atmStrike'],
-      );
+      final atmStrike = _toDouble(analysis['atmStrike']);
 
       // ---------------------------------------------------------
       // STEP 7:
@@ -323,50 +235,27 @@ class MarketDataService {
       // ---------------------------------------------------------
 
       final direction =
-          analysis['direction']
-              ?.toString()
-              .toUpperCase() ??
-          'NEUTRAL';
+          analysis['direction']?.toString().toUpperCase() ?? 'NEUTRAL';
 
-      final directionScore =
-          _toDouble(
-        analysis['directionScore'],
-      );
+      final directionScore = _toDouble(analysis['directionScore']);
 
-      final qScore =
-          _toDouble(
-        analysis['qScore'],
-      );
+      final qScore = _toDouble(analysis['qScore']);
 
-      final rowsAnalyzed =
-          (analysis['rowsAnalyzed']
-                      as num?)
-                  ?.toInt() ??
-              0;
+      final rowsAnalyzed = (analysis['rowsAnalyzed'] as num?)?.toInt() ?? 0;
 
       // ---------------------------------------------------------
       // DEBUG
       // ---------------------------------------------------------
 
-      debugPrint(
-        '[Quanttora] REAL OPTION ANALYSIS',
-      );
+      debugPrint('[Quanttora] REAL OPTION ANALYSIS');
 
-      debugPrint(
-        '[Quanttora] Market: $market',
-      );
+      debugPrint('[Quanttora] Market: $market');
 
-      debugPrint(
-        '[Quanttora] Expiry: $expiryDate',
-      );
+      debugPrint('[Quanttora] Expiry: $expiryDate');
 
-      debugPrint(
-        '[Quanttora] Spot: $spotPrice',
-      );
+      debugPrint('[Quanttora] Spot: $spotPrice');
 
-      debugPrint(
-        '[Quanttora] ATM: $atmStrike',
-      );
+      debugPrint('[Quanttora] ATM: $atmStrike');
 
       debugPrint(
         '[Quanttora] Support: '
@@ -412,102 +301,65 @@ class MarketDataService {
         optionChain: OptionChain(
           pcr: pcr,
 
-          // Existing fields preserved.
-          maxCallOI:
-              resistanceStrike,
+          maxCallOI: resistanceStrike,
 
-          maxPutOI:
-              supportStrike,
+          maxPutOI: supportStrike,
 
-          callVolume:
-              callVolume,
+          callVolume: callVolume,
 
-          putVolume:
-              putVolume,
+          putVolume: putVolume,
 
-          // New Quanttora fields.
-          spotPrice:
-              spotPrice,
+          spotPrice: spotPrice,
 
-          atmStrike:
-              atmStrike,
+          atmStrike: atmStrike,
 
-          supportStrike:
-              supportStrike,
+          supportStrike: supportStrike,
 
-          supportOI:
-              supportOI,
+          supportOI: supportOI,
 
-          resistanceStrike:
-              resistanceStrike,
+          resistanceStrike: resistanceStrike,
 
-          resistanceOI:
-              resistanceOI,
+          resistanceOI: resistanceOI,
 
-          callOI:
-              callOI,
+          callOI: callOI,
 
-          putOI:
-              putOI,
+          putOI: putOI,
 
-          callOIChange:
-              callOIChange,
+          callOIChange: callOIChange,
 
-          putOIChange:
-              putOIChange,
+          putOIChange: putOIChange,
 
-          direction:
-              direction,
+          direction: direction,
 
-          directionScore:
-              directionScore,
+          directionScore: directionScore,
 
-          qScore:
-              qScore,
+          qScore: qScore,
 
-          expiry:
-              expiryDate,
+          expiry: expiryDate,
 
-          rowsAnalyzed:
-              rowsAnalyzed,
+          rowsAnalyzed: rowsAnalyzed,
         ),
-
         oiData: OIData(
-          callOIChange:
-              callOIChange,
+          callOIChange: callOIChange,
 
-          putOIChange:
-              putOIChange,
+          putOIChange: putOIChange,
 
-          callWriting:
-              callOIChange > 0
-                  ? callOIChange
-                  : 0,
+          callWriting: callOIChange > 0 ? callOIChange : 0,
 
-          putWriting:
-              putOIChange > 0
-                  ? putOIChange
-                  : 0,
+          putWriting: putOIChange > 0 ? putOIChange : 0,
         ),
       );
     } catch (e) {
-      debugPrint(
-        '[Quanttora] Option Chain error: $e',
-      );
+      debugPrint('[Quanttora] Option Chain error: $e');
 
       return _OptionAnalytics.empty();
     }
   }
 
-  HeatMap _buildRealHeatMap(
-    Map<String, dynamic> dashboard,
-  ) {
-    final rawSectors =
-        dashboard['sectors']
-            as List<dynamic>?;
+  HeatMap _buildRealHeatMap(Map<String, dynamic> dashboard) {
+    final rawSectors = dashboard['sectors'] as List<dynamic>?;
 
-    if (rawSectors == null ||
-        rawSectors.isEmpty) {
+    if (rawSectors == null || rawSectors.isEmpty) {
       return const HeatMap(
         advancing: 0,
         declining: 0,
@@ -530,14 +382,9 @@ class MarketDataService {
         continue;
       }
 
-      final name =
-          raw['name']?.toString() ??
-              '-';
+      final name = raw['name']?.toString() ?? '-';
 
-      final change =
-          _toDouble(
-        raw['percentageChange'],
-      );
+      final change = _toDouble(raw['percentageChange']);
 
       if (change > 0) {
         advancing++;
@@ -545,14 +392,12 @@ class MarketDataService {
         declining++;
       }
 
-      if (strongestChange == null ||
-          change > strongestChange) {
+      if (strongestChange == null || change > strongestChange) {
         strongestChange = change;
         strongestSector = name;
       }
 
-      if (weakestChange == null ||
-          change < weakestChange) {
+      if (weakestChange == null || change < weakestChange) {
         weakestChange = change;
         weakestSector = name;
       }
@@ -577,27 +422,16 @@ class MarketDataService {
     return HeatMap(
       advancing: advancing,
       declining: declining,
-      strongestSector:
-          strongestSector,
-      weakestSector:
-          weakestSector,
+      strongestSector: strongestSector,
+      weakestSector: weakestSector,
     );
   }
 
-  SectorStrength _buildRealSectorStrength(
-    Map<String, dynamic> dashboard,
-  ) {
-    final rawSectors =
-        dashboard['sectors']
-            as List<dynamic>?;
+  SectorStrength _buildRealSectorStrength(Map<String, dynamic> dashboard) {
+    final rawSectors = dashboard['sectors'] as List<dynamic>?;
 
-    if (rawSectors == null ||
-        rawSectors.isEmpty) {
-      return const SectorStrength(
-        name: '-',
-        strength: 0,
-        leading: false,
-      );
+    if (rawSectors == null || rawSectors.isEmpty) {
+      return const SectorStrength(name: '-', strength: 0, leading: false);
     }
 
     Map<dynamic, dynamic>? strongest;
@@ -612,38 +446,22 @@ class MarketDataService {
         continue;
       }
 
-      final currentChange =
-          _toDouble(
-        raw['percentageChange'],
-      );
+      final currentChange = _toDouble(raw['percentageChange']);
 
-      final strongestChange =
-          _toDouble(
-        strongest['percentageChange'],
-      );
+      final strongestChange = _toDouble(strongest['percentageChange']);
 
-      if (currentChange >
-          strongestChange) {
+      if (currentChange > strongestChange) {
         strongest = raw;
       }
     }
 
     if (strongest == null) {
-      return const SectorStrength(
-        name: '-',
-        strength: 0,
-        leading: false,
-      );
+      return const SectorStrength(name: '-', strength: 0, leading: false);
     }
 
-    final name =
-        strongest['name']?.toString() ??
-            '-';
+    final name = strongest['name']?.toString() ?? '-';
 
-    final percentageChange =
-        _toDouble(
-      strongest['percentageChange'],
-    );
+    final percentageChange = _toDouble(strongest['percentageChange']);
 
     debugPrint(
       '[Quanttora] REAL LEADING SECTOR '
@@ -654,8 +472,7 @@ class MarketDataService {
     return SectorStrength(
       name: name,
       strength: percentageChange,
-      leading:
-          percentageChange > 0,
+      leading: percentageChange > 0,
     );
   }
 
@@ -663,13 +480,9 @@ class MarketDataService {
     required String market,
     required String timeframe,
   }) async {
-    debugPrint(
-      '===== FETCH HISTORICAL CALLED =====',
-    );
+    debugPrint('===== FETCH HISTORICAL CALLED =====');
 
-    final instrumentKey =
-        _instrumentKeys[
-            market.toUpperCase()];
+    final instrumentKey = _instrumentKeys[market.toUpperCase()];
 
     if (instrumentKey == null) {
       debugPrint(
@@ -680,26 +493,17 @@ class MarketDataService {
       return <Candle>[];
     }
 
-    final apiInterval =
-        _apiIntervalFor(timeframe);
+    final apiInterval = _apiIntervalFor(timeframe);
 
     final now = DateTime.now();
 
-    final from =
-        now.subtract(
-      const Duration(days: 10),
-    );
+    final from = now.subtract(const Duration(days: 10));
 
-    final fromDate =
-        _formatDate(from);
+    final fromDate = _formatDate(from);
 
-    final toDate =
-        _formatDate(now);
+    final toDate = _formatDate(now);
 
-    final encodedInstrument =
-        Uri.encodeQueryComponent(
-      instrumentKey,
-    );
+    final encodedInstrument = Uri.encodeQueryComponent(instrumentKey);
 
     final path =
         '/broker/history'
@@ -709,19 +513,13 @@ class MarketDataService {
         '&toDate=$toDate';
 
     try {
-      final response =
-          await _api.get(path);
+      final response = await _api.get(path);
 
-      final data =
-          response['data']
-              as Map<String, dynamic>?;
+      final data = response['data'] as Map<String, dynamic>?;
 
-      final rawCandles =
-          data?['candles']
-              as List<dynamic>?;
+      final rawCandles = data?['candles'] as List<dynamic>?;
 
-      if (rawCandles == null ||
-          rawCandles.isEmpty) {
+      if (rawCandles == null || rawCandles.isEmpty) {
         debugPrint(
           '[Quanttora] Historical API '
           'returned 0 candles.',
@@ -735,61 +533,55 @@ class MarketDataService {
         'received: ${rawCandles.length}',
       );
 
-      final candles =
-          <Candle>[];
+      final candles = <Candle>[];
+
+      // ==========================================================
+      // IMPORTANT:
+      // Index instruments do not have exchange-traded volume.
+      //
+      // VolumeEngine uses -1 to identify an index instrument.
+      // Upstox historical candles may return 0/null for volume,
+      // so we explicitly mark index candles as -1 here.
+      // ==========================================================
+
+      final isIndexInstrument = _isIndexMarket(market);
 
       for (final raw in rawCandles) {
-        if (raw is! List ||
-            raw.length < 6) {
+        if (raw is! List || raw.length < 6) {
           continue;
         }
 
-        final time =
-            DateTime.tryParse(
-          raw[0].toString(),
-        );
+        final time = DateTime.tryParse(raw[0].toString());
 
         if (time == null) {
           continue;
         }
 
+        final apiVolume = _toDouble(raw[5]);
+
+        final candleVolume = isIndexInstrument ? -1.0 : apiVolume;
+
         candles.add(
           Candle(
-            open:
-                _toDouble(raw[1]),
-            high:
-                _toDouble(raw[2]),
-            low:
-                _toDouble(raw[3]),
-            close:
-                _toDouble(raw[4]),
-            volume:
-                _toDouble(raw[5]),
+            open: _toDouble(raw[1]),
+            high: _toDouble(raw[2]),
+            low: _toDouble(raw[3]),
+            close: _toDouble(raw[4]),
+            volume: candleVolume,
             time: time,
           ),
         );
       }
 
-      candles.sort(
-        (a, b) =>
-            a.time.compareTo(
-          b.time,
-        ),
-      );
+      candles.sort((a, b) => a.time.compareTo(b.time));
 
-      final minutes =
-          _timeframeMinutes(
-        timeframe,
-      );
+      final minutes = _timeframeMinutes(timeframe);
 
       if (minutes <= 1) {
         return candles;
       }
 
-      return _aggregateCandles(
-        candles,
-        minutes,
-      );
+      return _aggregateCandles(candles, minutes);
     } catch (e) {
       debugPrint(
         '[Quanttora] Historical candle error: '
@@ -800,28 +592,19 @@ class MarketDataService {
     }
   }
 
-  List<Candle> _aggregateCandles(
-    List<Candle> source,
-    int minutes,
-  ) {
-    if (source.isEmpty ||
-        minutes <= 1) {
+  List<Candle> _aggregateCandles(List<Candle> source, int minutes) {
+    if (source.isEmpty || minutes <= 1) {
       return source;
     }
 
-    final result =
-        <Candle>[];
+    final result = <Candle>[];
 
-    final groups =
-        <DateTime, List<Candle>>{};
+    final groups = <DateTime, List<Candle>>{};
 
     for (final candle in source) {
-      final time =
-          candle.time;
+      final time = candle.time;
 
-      final bucketMinute =
-          (time.minute ~/ minutes) *
-              minutes;
+      final bucketMinute = (time.minute ~/ minutes) * minutes;
 
       final bucket = DateTime(
         time.year,
@@ -831,69 +614,53 @@ class MarketDataService {
         bucketMinute,
       );
 
-      groups.putIfAbsent(
-        bucket,
-        () => <Candle>[],
-      );
+      groups.putIfAbsent(bucket, () => <Candle>[]);
 
-      groups[bucket]!.add(
-        candle,
-      );
+      groups[bucket]!.add(candle);
     }
 
-    final keys =
-        groups.keys.toList()..sort();
+    final keys = groups.keys.toList()..sort();
 
     for (final key in keys) {
-      final group =
-          groups[key]!;
+      final group = groups[key]!;
 
-      group.sort(
-        (a, b) =>
-            a.time.compareTo(
-          b.time,
-        ),
-      );
+      group.sort((a, b) => a.time.compareTo(b.time));
 
       if (group.isEmpty) {
         continue;
       }
 
-      double high =
-          group.first.high;
+      double high = group.first.high;
 
-      double low =
-          group.first.low;
+      double low = group.first.low;
 
       double volume = 0;
 
+      // For index instruments every candle has volume -1.
+      // Keep the index marker instead of summing -1 values.
+      final isIndexCandle = group.any((candle) => candle.volume < 0);
+
       for (final candle in group) {
-        if (candle.high >
-            high) {
+        if (candle.high > high) {
           high = candle.high;
         }
 
-        if (candle.low <
-            low) {
+        if (candle.low < low) {
           low = candle.low;
         }
 
-        volume +=
-            candle.volume;
+        if (!isIndexCandle) {
+          volume += candle.volume;
+        }
       }
 
       result.add(
         Candle(
-          open:
-              group.first.open,
-          high:
-              high,
-          low:
-              low,
-          close:
-              group.last.close,
-          volume:
-              volume,
+          open: group.first.open,
+          high: high,
+          low: low,
+          close: group.last.close,
+          volume: isIndexCandle ? -1 : volume,
           time: key,
         ),
       );
@@ -902,11 +669,8 @@ class MarketDataService {
     return result;
   }
 
-  String _apiIntervalFor(
-    String timeframe,
-  ) {
-    switch (
-        timeframe.trim().toLowerCase()) {
+  String _apiIntervalFor(String timeframe) {
+    switch (timeframe.trim().toLowerCase()) {
       case '30 min':
         return '30minute';
 
@@ -918,11 +682,8 @@ class MarketDataService {
     }
   }
 
-  int _timeframeMinutes(
-    String timeframe,
-  ) {
-    switch (
-        timeframe.trim().toLowerCase()) {
+  int _timeframeMinutes(String timeframe) {
+    switch (timeframe.trim().toLowerCase()) {
       case '1 min':
         return 1;
 
@@ -946,11 +707,23 @@ class MarketDataService {
     }
   }
 
-  String _dashboardKey(
-    String market,
-  ) {
-    switch (
-        market.toUpperCase()) {
+  bool _isIndexMarket(String market) {
+    switch (market.trim().toUpperCase()) {
+      case 'NIFTY':
+      case 'NIFTY 50':
+      case 'BANKNIFTY':
+      case 'BANK NIFTY':
+      case 'SENSEX':
+      case 'INDIA VIX':
+        return true;
+
+      default:
+        return false;
+    }
+  }
+
+  String _dashboardKey(String market) {
+    switch (market.toUpperCase()) {
       case 'BANKNIFTY':
       case 'BANK NIFTY':
         return 'bankNifty';
@@ -968,28 +741,17 @@ class MarketDataService {
     }
   }
 
-  String _formatDate(
-    DateTime date,
-  ) {
-    final year =
-        date.year.toString();
+  String _formatDate(DateTime date) {
+    final year = date.year.toString();
 
-    final month =
-        date.month
-            .toString()
-            .padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
 
-    final day =
-        date.day
-            .toString()
-            .padLeft(2, '0');
+    final day = date.day.toString().padLeft(2, '0');
 
     return '$year-$month-$day';
   }
 
-  double _toDouble(
-    dynamic value,
-  ) {
+  double _toDouble(dynamic value) {
     if (value == null) {
       return 0;
     }
@@ -1006,10 +768,7 @@ class MarketDataService {
       return value.toDouble();
     }
 
-    return double.tryParse(
-          value.toString(),
-        ) ??
-        0;
+    return double.tryParse(value.toString()) ?? 0;
   }
 
   MarketSnapshot emptySnapshot() {
@@ -1024,30 +783,26 @@ class MarketDataService {
           time: DateTime.now(),
         ),
       ],
-      optionChain:
-          const OptionChain(
+      optionChain: const OptionChain(
         pcr: 0,
         maxCallOI: 0,
         maxPutOI: 0,
         callVolume: 0,
         putVolume: 0,
       ),
-      oiData:
-          const OIData(
+      oiData: const OIData(
         callOIChange: 0,
         putOIChange: 0,
         callWriting: 0,
         putWriting: 0,
       ),
-      heatMap:
-          const HeatMap(
+      heatMap: const HeatMap(
         advancing: 0,
         declining: 0,
         strongestSector: '-',
         weakestSector: '-',
       ),
-      sectorStrength:
-          const SectorStrength(
+      sectorStrength: const SectorStrength(
         name: '-',
         strength: 0,
         leading: false,
@@ -1061,23 +816,18 @@ class _OptionAnalytics {
 
   final OIData oiData;
 
-  const _OptionAnalytics({
-    required this.optionChain,
-    required this.oiData,
-  });
+  const _OptionAnalytics({required this.optionChain, required this.oiData});
 
   factory _OptionAnalytics.empty() {
     return const _OptionAnalytics(
-      optionChain:
-          OptionChain(
+      optionChain: OptionChain(
         pcr: 0,
         maxCallOI: 0,
         maxPutOI: 0,
         callVolume: 0,
         putVolume: 0,
       ),
-      oiData:
-          OIData(
+      oiData: OIData(
         callOIChange: 0,
         putOIChange: 0,
         callWriting: 0,

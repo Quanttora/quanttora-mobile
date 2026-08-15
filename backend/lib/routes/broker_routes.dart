@@ -5,6 +5,7 @@ import 'package:backend/models/trade_execution_request.dart'
     as trade_execution_models;
 import 'package:backend/services/broker_dashboard_service.dart';
 import 'package:backend/services/broker_service.dart';
+import 'package:backend/services/paper_trade_store.dart';
 import 'package:backend/services/trade_execution_guard.dart' as execution_guard;
 import 'package:backend/services/upstox_market_feed.dart';
 import 'package:backend/services/upstox_option_chain_service.dart';
@@ -49,6 +50,11 @@ class BrokerRoutes {
     router.delete('/orders/<orderId>', _cancelOrder);
 
     router.get('/trades', _trades);
+
+    // PAPER TRADING
+    router.get('/paper-trades', _paperTrades);
+    router.get('/paper-trades/<tradeId>', _paperTradeDetails);
+    router.post('/paper-trades/<tradeId>/close', _closePaperTrade);
 
     router.get('/market-indices', _marketIndices);
 
@@ -131,6 +137,7 @@ class BrokerRoutes {
       'executionGuard': true,
       'paperTrading': true,
       'liveExecution': false,
+      'paperTradeCount': PaperTradeStore.instance.count,
     });
   }
 
@@ -328,15 +335,26 @@ class BrokerRoutes {
       }
 
       // PAPER TRADE:
-      // Safety checks passed, but nothing
-      // is sent to the real broker.
+      // Safety checks passed, nothing is sent to the real broker.
+      // The approved paper trade is recorded in the in-memory store.
       if (executionRequest.paperTrade) {
+        final trade = PaperTradeStore.instance.create(
+          instrumentToken: executionRequest.instrumentToken,
+          quantity: executionRequest.quantity,
+          product: executionRequest.product,
+          validity: executionRequest.validity,
+          entryPrice: executionRequest.price,
+          orderType: executionRequest.orderType,
+          transactionType: executionRequest.transactionType,
+        );
+
         return _json({
           'success': true,
           'executionAllowed': true,
           'executionMode': 'paper',
           'brokerOrderSubmitted': false,
-          'message': 'Paper trade approved by Quanttora safety guard.',
+          'message': 'Paper trade created successfully.',
+          'trade': trade.toJson(),
           'order': {
             'instrumentToken': executionRequest.instrumentToken,
             'quantity': executionRequest.quantity,
@@ -351,7 +369,7 @@ class BrokerRoutes {
 
       // LIVE EXECUTION IS INTENTIONALLY
       // LOCKED UNTIL THE FINAL SAFETY
-      // ARCHITECTURE IS enabled.
+      // ARCHITECTURE IS ENABLED.
       return _error(
         403,
         'Live broker execution is currently disabled.',
@@ -363,6 +381,48 @@ class BrokerRoutes {
         headers: {'Content-Type': 'application/json'},
       );
     }
+  }
+
+  Future<Response> _paperTrades(Request request) async {
+    final trades = PaperTradeStore.instance.getAll();
+
+    return _json({
+      'success': true,
+      'count': trades.length,
+      'trades': trades.map((trade) => trade.toJson()).toList(),
+    });
+  }
+
+  Future<Response> _paperTradeDetails(Request request, String tradeId) async {
+    if (tradeId.trim().isEmpty) {
+      return _error(400, 'tradeId is required');
+    }
+
+    final trade = PaperTradeStore.instance.getById(tradeId);
+
+    if (trade == null) {
+      return _error(404, 'Paper trade not found');
+    }
+
+    return _json({'success': true, 'trade': trade.toJson()});
+  }
+
+  Future<Response> _closePaperTrade(Request request, String tradeId) async {
+    if (tradeId.trim().isEmpty) {
+      return _error(400, 'tradeId is required');
+    }
+
+    final trade = PaperTradeStore.instance.close(tradeId);
+
+    if (trade == null) {
+      return _error(404, 'Paper trade not found');
+    }
+
+    return _json({
+      'success': true,
+      'message': 'Paper trade closed.',
+      'trade': trade.toJson(),
+    });
   }
 
   Future<Response> _modifyOrder(Request request, String orderId) async {

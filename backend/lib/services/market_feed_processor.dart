@@ -5,8 +5,7 @@ import 'package:backend/services/market_store.dart';
 class MarketFeedProcessor {
   MarketFeedProcessor._();
 
-  static final MarketFeedProcessor instance =
-      MarketFeedProcessor._();
+  static final MarketFeedProcessor instance = MarketFeedProcessor._();
 
   static const Map<String, String> _symbols = {
     // MAIN INDICES
@@ -54,9 +53,15 @@ class MarketFeedProcessor {
       int bidQuantity = 0;
       int askQuantity = 0;
 
+      int volume = 0;
+      double averageTradedPrice = 0;
+
       if (feed.hasFullFeed()) {
         final full = feed.fullFeed;
 
+        // ==============================
+        // INDEX FULL FEED
+        // ==============================
         if (full.hasIndexFF()) {
           final index = full.indexFF;
 
@@ -64,7 +69,11 @@ class MarketFeedProcessor {
             ltp = index.ltpc.ltp;
             previousClose = index.ltpc.cp;
           }
-        } else if (full.hasMarketFF()) {
+        }
+        // ==============================
+        // MARKET FULL FEED
+        // ==============================
+        else if (full.hasMarketFF()) {
           final market = full.marketFF;
 
           if (market.hasLtpc()) {
@@ -72,9 +81,19 @@ class MarketFeedProcessor {
             previousClose = market.ltpc.cp;
           }
 
+          // Real traded volume from Upstox.
+          if (market.hasVtt()) {
+            volume = market.vtt.toInt();
+          }
+
+          // Average traded price from Upstox.
+          if (market.hasAtp()) {
+            averageTradedPrice = market.atp;
+          }
+
+          // Best bid / ask.
           if (market.marketLevel.bidAskQuote.isNotEmpty) {
-            final level1 =
-                market.marketLevel.bidAskQuote.first;
+            final level1 = market.marketLevel.bidAskQuote.first;
 
             bidPrice = level1.bidP.toDouble();
             askPrice = level1.askP.toDouble();
@@ -83,7 +102,11 @@ class MarketFeedProcessor {
             askQuantity = level1.askQ.toInt();
           }
         }
-      } else if (feed.hasLtpc()) {
+      }
+      // ==============================
+      // LTPC-ONLY FEED
+      // ==============================
+      else if (feed.hasLtpc()) {
         ltp = feed.ltpc.ltp;
         previousClose = feed.ltpc.cp;
       }
@@ -92,13 +115,11 @@ class MarketFeedProcessor {
         return;
       }
 
-      final change =
-          ltp - previousClose;
+      final change = ltp - previousClose;
 
-      final changePercent =
-          previousClose > 0
-              ? (change / previousClose) * 100
-              : 0.0;
+      final changePercent = previousClose > 0
+          ? (change / previousClose) * 100
+          : 0.0;
 
       final tick = MarketTick(
         instrumentKey: instrumentKey,
@@ -111,6 +132,8 @@ class MarketFeedProcessor {
         askPrice: askPrice,
         bidQuantity: bidQuantity,
         askQuantity: askQuantity,
+        volume: volume,
+        averageTradedPrice: averageTradedPrice,
         timestamp: DateTime.now(),
       );
 
@@ -124,7 +147,9 @@ class MarketFeedProcessor {
         '(${tick.changePercent >= 0 ? '+' : ''}'
         '${tick.changePercent.toStringAsFixed(2)}%) '
         'Bid:${tick.bidPrice}(${tick.bidQuantity}) '
-        'Ask:${tick.askPrice}(${tick.askQuantity})',
+        'Ask:${tick.askPrice}(${tick.askQuantity}) '
+        'Volume:${tick.volume} '
+        'ATP:${tick.averageTradedPrice.toStringAsFixed(2)}',
       );
     });
   }

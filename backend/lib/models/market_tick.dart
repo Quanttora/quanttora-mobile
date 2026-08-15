@@ -13,6 +13,13 @@ class MarketTick {
   final int bidQuantity;
   final int askQuantity;
 
+  // Real market data from Upstox.
+  // vtt = traded volume.
+  final int volume;
+
+  // atp = average traded price.
+  final double averageTradedPrice;
+
   final DateTime timestamp;
 
   const MarketTick({
@@ -26,6 +33,8 @@ class MarketTick {
     required this.askPrice,
     required this.bidQuantity,
     required this.askQuantity,
+    required this.volume,
+    required this.averageTradedPrice,
     required this.timestamp,
   });
 
@@ -40,26 +49,24 @@ class MarketTick {
     double? askPrice,
     int? bidQuantity,
     int? askQuantity,
+    int? volume,
+    double? averageTradedPrice,
     DateTime? timestamp,
   }) {
     return MarketTick(
-      instrumentKey:
-          instrumentKey ?? this.instrumentKey,
+      instrumentKey: instrumentKey ?? this.instrumentKey,
       symbol: symbol ?? this.symbol,
       ltp: ltp ?? this.ltp,
-      previousClose:
-          previousClose ?? this.previousClose,
+      previousClose: previousClose ?? this.previousClose,
       change: change ?? this.change,
-      changePercent:
-          changePercent ?? this.changePercent,
+      changePercent: changePercent ?? this.changePercent,
       bidPrice: bidPrice ?? this.bidPrice,
       askPrice: askPrice ?? this.askPrice,
-      bidQuantity:
-          bidQuantity ?? this.bidQuantity,
-      askQuantity:
-          askQuantity ?? this.askQuantity,
-      timestamp:
-          timestamp ?? this.timestamp,
+      bidQuantity: bidQuantity ?? this.bidQuantity,
+      askQuantity: askQuantity ?? this.askQuantity,
+      volume: volume ?? this.volume,
+      averageTradedPrice: averageTradedPrice ?? this.averageTradedPrice,
+      timestamp: timestamp ?? this.timestamp,
     );
   }
 
@@ -75,6 +82,8 @@ class MarketTick {
       'askPrice': askPrice,
       'bidQuantity': bidQuantity,
       'askQuantity': askQuantity,
+      'volume': volume,
+      'averageTradedPrice': averageTradedPrice,
       'timestamp': timestamp.toIso8601String(),
     };
   }
@@ -85,6 +94,8 @@ class MarketTick {
         '| Change: $change '
         '($changePercent%) '
         '| Bid: $bidPrice ($bidQuantity) '
-        '| Ask: $askPrice ($askQuantity)';
+        '| Ask: $askPrice ($askQuantity) '
+        '| Volume: $volume '
+        '| ATP: $averageTradedPrice';
   }
 }

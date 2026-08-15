@@ -5,13 +5,13 @@ import 'holdings_screen.dart';
 import 'positions_screen.dart';
 import 'orders_screen.dart';
 import 'trades_screen.dart';
+import 'paper_trades_screen.dart';
 
 class BrokerDashboardScreen extends StatefulWidget {
   const BrokerDashboardScreen({super.key});
 
   @override
-  State<BrokerDashboardScreen> createState() =>
-      _BrokerDashboardScreenState();
+  State<BrokerDashboardScreen> createState() => _BrokerDashboardScreenState();
 }
 
 class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
@@ -76,42 +76,26 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     if (_error != null) {
       return Scaffold(
-        appBar: AppBar(
-          title: const Text('Broker Dashboard'),
-        ),
+        appBar: AppBar(title: const Text('Broker Dashboard')),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(
-                  Icons.error_outline,
-                  size: 50,
-                  color: Colors.red,
-                ),
+                const Icon(Icons.error_outline, size: 50, color: Colors.red),
                 const SizedBox(height: 16),
                 const Text(
                   'Unable to load broker dashboard',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 10),
-                Text(
-                  _error!,
-                  textAlign: TextAlign.center,
-                ),
+                Text(_error!, textAlign: TextAlign.center),
                 const SizedBox(height: 20),
                 FilledButton(
                   onPressed: _loadDashboard,
@@ -132,29 +116,17 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
 
     final name = user['name']?.toString() ?? 'User';
 
-    final availableMargin = _toDouble(
-      _dashboard['availableMargin'],
-    );
+    final availableMargin = _toDouble(_dashboard['availableMargin']);
 
-    final usedMargin = _toDouble(
-      _dashboard['usedMargin'],
-    );
+    final usedMargin = _toDouble(_dashboard['usedMargin']);
 
-    final holdings = _extractList(
-      _dashboard['holdings'],
-    );
+    final holdings = _extractList(_dashboard['holdings']);
 
-    final positions = _extractList(
-      _dashboard['positions'],
-    );
+    final positions = _extractList(_dashboard['positions']);
 
-    final orders = _extractList(
-      _dashboard['orders'],
-    );
+    final orders = _extractList(_dashboard['orders']);
 
-    final trades = _extractList(
-      _dashboard['trades'],
-    );
+    final trades = _extractList(_dashboard['trades']);
 
     return Scaffold(
       appBar: AppBar(
@@ -172,10 +144,7 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            _AccountCard(
-              broker: broker,
-              name: name,
-            ),
+            _AccountCard(broker: broker, name: name),
 
             const SizedBox(height: 18),
 
@@ -203,10 +172,7 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
 
             const Text(
               'Portfolio',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
 
             const SizedBox(height: 12),
@@ -219,9 +185,7 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => const HoldingsScreen(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const HoldingsScreen()),
                 );
               },
             ),
@@ -236,9 +200,7 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => const PositionsScreen(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const PositionsScreen()),
                 );
               },
             ),
@@ -253,9 +215,7 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => const OrdersScreen(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const OrdersScreen()),
                 );
               },
             ),
@@ -270,9 +230,22 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (_) => const TradesScreen(),
-                  ),
+                  MaterialPageRoute(builder: (_) => const TradesScreen()),
+                );
+              },
+            ),
+
+            const SizedBox(height: 12),
+
+            _DataCard(
+              icon: Icons.science_rounded,
+              title: 'Paper Trades',
+              count: 0,
+              color: Colors.indigo,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const PaperTradesScreen()),
                 );
               },
             ),
@@ -287,17 +260,12 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
               ),
               child: const Row(
                 children: [
-                  Icon(
-                    Icons.check_circle,
-                    color: Colors.green,
-                  ),
+                  Icon(Icons.check_circle, color: Colors.green),
                   SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       'Broker connection is active.',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: TextStyle(fontWeight: FontWeight.w600),
                     ),
                   ),
                 ],
@@ -314,10 +282,7 @@ class _AccountCard extends StatelessWidget {
   final String broker;
   final String name;
 
-  const _AccountCard({
-    required this.broker,
-    required this.name,
-  });
+  const _AccountCard({required this.broker, required this.name});
 
   @override
   Widget build(BuildContext context) {
@@ -362,19 +327,11 @@ class _AccountCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  name,
-                  style: TextStyle(
-                    color: Colors.grey.shade700,
-                  ),
-                ),
+                Text(name, style: TextStyle(color: Colors.grey.shade700)),
               ],
             ),
           ),
-          const Icon(
-            Icons.check_circle,
-            color: Colors.green,
-          ),
+          const Icon(Icons.check_circle, color: Colors.green),
         ],
       ),
     );
@@ -405,14 +362,11 @@ class _MoneyCard extends StatelessWidget {
         children: [
           Text(
             title,
-            style: TextStyle(
-              color: Colors.grey.shade700,
-              fontSize: 13,
-            ),
+            style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
           ),
           const SizedBox(height: 8),
           Text(
-            '₹ ${value.toStringAsFixed(2)}',
+            'â‚¹ ${value.toStringAsFixed(2)}',
             style: TextStyle(
               color: color,
               fontSize: 21,
@@ -469,10 +423,7 @@ class _DataCard extends StatelessWidget {
                   color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(
-                  icon,
-                  color: color,
-                ),
+                child: Icon(icon, color: color),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -494,10 +445,7 @@ class _DataCard extends StatelessWidget {
               ),
               if (onTap != null) ...[
                 const SizedBox(width: 8),
-                Icon(
-                  Icons.chevron_right_rounded,
-                  color: Colors.grey.shade500,
-                ),
+                Icon(Icons.chevron_right_rounded, color: Colors.grey.shade500),
               ],
             ],
           ),

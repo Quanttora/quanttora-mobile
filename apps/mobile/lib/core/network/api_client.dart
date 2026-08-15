@@ -74,6 +74,25 @@ class ApiClient {
     return _decodeMapResponse(response);
   }
 
+  Future<Map<String, dynamic>> put(
+    String path,
+    Map<String, dynamic> body,
+  ) async {
+    final response = await http
+        .put(_buildUri(path), headers: _headers, body: jsonEncode(body))
+        .timeout(_timeout);
+
+    return _decodeMapResponse(response);
+  }
+
+  Future<Map<String, dynamic>> delete(String path) async {
+    final response = await http
+        .delete(_buildUri(path), headers: _headers)
+        .timeout(_timeout);
+
+    return _decodeMapResponse(response);
+  }
+
   Future<bool> isServerAlive() async {
     try {
       final response = await http

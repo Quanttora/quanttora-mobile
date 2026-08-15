@@ -6,11 +6,7 @@ import '../market_data/models/option_chain.dart';
 import '../market_data/models/sector_strength.dart';
 
 class MarketDataService {
-
-  Future<MarketSnapshot> fetchSnapshot({
-    required String market,
-  }) async {
-
+  Future<MarketSnapshot> fetchSnapshot({required String market}) async {
     // LIVE DATA WILL COME FROM:
     // Angel One
     // Zerodha
@@ -19,9 +15,7 @@ class MarketDataService {
     // NSE
 
     return MarketSnapshot(
-
       candles: [
-
         Candle(
           open: 25000,
           high: 25110,
@@ -30,7 +24,6 @@ class MarketDataService {
           volume: 1250000,
           time: DateTime.now(),
         ),
-
       ],
 
       optionChain: const OptionChain(
@@ -60,7 +53,6 @@ class MarketDataService {
         strength: 92,
         leading: true,
       ),
-
     );
   }
 }
