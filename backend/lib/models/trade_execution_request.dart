@@ -19,7 +19,11 @@ class TradeExecutionRequest {
   final double riskReward;
   final double minimumRiskReward;
 
+  /// True only when this request is intended for paper trading.
   final bool paperTrade;
+
+  /// Explicit trader confirmation is required before live execution.
+  final bool explicitConfirmation;
 
   const TradeExecutionRequest({
     required this.instrumentToken,
@@ -38,6 +42,7 @@ class TradeExecutionRequest {
     required this.riskReward,
     required this.minimumRiskReward,
     required this.paperTrade,
+    required this.explicitConfirmation,
   });
 
   factory TradeExecutionRequest.fromMap(Map<String, dynamic> map) {
@@ -61,6 +66,7 @@ class TradeExecutionRequest {
       minimumRiskReward:
           double.tryParse(map['minimumRiskReward']?.toString() ?? '') ?? 0,
       paperTrade: map['paperTrade'] == true,
+      explicitConfirmation: map['explicitConfirmation'] == true,
     );
   }
 }

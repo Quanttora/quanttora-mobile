@@ -16,7 +16,7 @@ class UpstoxAuthService {
     final response = await http.post(
       Uri.parse('https://api.upstox.com/v2/login/authorization/token'),
       headers: {
-        'accept': 'application/json',
+        'Accept': 'application/json',
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: {
@@ -35,14 +35,18 @@ class UpstoxAuthService {
       );
     }
 
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final decoded = jsonDecode(response.body);
 
-    final accessToken = data['access_token']?.toString();
+    if (decoded is! Map) {
+      throw Exception('Invalid Upstox token response.');
+    }
 
-    if (accessToken == null || accessToken.isEmpty) {
-      throw Exception(
-        'Upstox token exchange succeeded but no access token was returned.',
-      );
+    final data = Map<String, dynamic>.from(decoded);
+
+    final accessToken = data['access_token']?.toString() ?? '';
+
+    if (accessToken.isEmpty) {
+      throw Exception('Upstox did not return an access token.');
     }
 
     return data;

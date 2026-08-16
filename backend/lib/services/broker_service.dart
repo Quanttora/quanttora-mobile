@@ -1,80 +1,97 @@
 import 'package:backend/models/broker_session.dart';
+import 'package:backend/services/broker_session_manager.dart';
 
 class BrokerService {
   BrokerService._();
 
   static final BrokerService instance = BrokerService._();
 
-  BrokerSession? _session;
+  final BrokerSessionManager _sessionManager = BrokerSessionManager.instance;
 
-  BrokerSession? get session => _session;
+  BrokerSession? get session => _sessionManager.session;
 
-  bool get isConnected => _session != null;
+  bool get isConnected => _sessionManager.isConnected;
 
   void connect(BrokerSession session) {
-    _session = session;
+    _sessionManager.saveSession(session);
   }
 
   void disconnect() {
-    _session = null;
+    _sessionManager.clearSession();
   }
 
   void update(BrokerSession session) {
-    _session = session;
+    _sessionManager.updateSession(session);
   }
 
   bool hasValidSession() {
-    return _session != null &&
-        _session!.accessToken.isNotEmpty;
+    final current = session;
+
+    if (current == null) {
+      return false;
+    }
+
+    return current.hasValidAccessToken;
   }
 
   String get accessToken {
-    if (_session == null) {
+    final current = session;
+
+    if (current == null) {
+      throw StateError('Broker is not connected.');
+    }
+
+    if (!current.hasValidAccessToken) {
       throw StateError(
-        'Broker is not connected.',
+        'Upstox access token has expired. '
+        'Please reconnect your broker.',
       );
     }
 
-    return _session!.accessToken;
+    return current.accessToken;
   }
 
   String get broker {
-    if (_session == null) {
-      throw StateError(
-        'Broker is not connected.',
-      );
+    final current = session;
+
+    if (current == null) {
+      throw StateError('Broker is not connected.');
     }
 
-    return _session!.broker;
+    return current.broker;
   }
 
   String get userId {
-    if (_session == null) {
-      throw StateError(
-        'Broker is not connected.',
-      );
+    final current = session;
+
+    if (current == null) {
+      throw StateError('Broker is not connected.');
     }
 
-    return _session!.userId;
+    return current.userId;
   }
 
   String get userName {
-    if (_session == null) {
-      throw StateError(
-        'Broker is not connected.',
-      );
+    final current = session;
+
+    if (current == null) {
+      throw StateError('Broker is not connected.');
     }
 
-    return _session!.userName;
+    return current.userName;
   }
 
   String get email {
-    if (_session == null) {
-      throw StateError(
-        'Broker is not connected.',
-      );
+    final current = session;
+
+    if (current == null) {
+      throw StateError('Broker is not connected.');
     }
 
-    return _session!.email;
+    return current.email;
   }
+
+  DateTime? get accessTokenExpiresAt => session?.accessTokenExpiresAt;
+
+  bool get isAccessTokenExpired => session?.isAccessTokenExpired ?? true;
 }

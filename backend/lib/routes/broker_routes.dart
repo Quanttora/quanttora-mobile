@@ -53,7 +53,9 @@ class BrokerRoutes {
 
     // PAPER TRADING
     router.get('/paper-trades', _paperTrades);
+
     router.get('/paper-trades/<tradeId>', _paperTradeDetails);
+
     router.post('/paper-trades/<tradeId>/close', _closePaperTrade);
 
     router.get('/market-indices', _marketIndices);
@@ -69,10 +71,12 @@ class BrokerRoutes {
     router.post('/disconnect', _disconnect);
   }
 
-  Response _json(dynamic data) => Response.ok(
-    jsonEncode(data),
-    headers: {'Content-Type': 'application/json'},
-  );
+  Response _json(dynamic data) {
+    return Response.ok(
+      jsonEncode(data),
+      headers: const {'Content-Type': 'application/json'},
+    );
+  }
 
   Response _error(
     int statusCode,
@@ -86,18 +90,12 @@ class BrokerRoutes {
         'error': message,
         if (blockingReasons != null) 'blockingReasons': blockingReasons,
       }),
-      headers: {'Content-Type': 'application/json'},
+      headers: const {'Content-Type': 'application/json'},
     );
   }
 
   String _accessToken() {
-    final session = _brokerService.session;
-
-    if (session == null) {
-      throw Exception('No broker connected');
-    }
-
-    return session.accessToken;
+    return _brokerService.accessToken;
   }
 
   Future<Response> _execute(
@@ -110,7 +108,7 @@ class BrokerRoutes {
     } catch (e) {
       return Response.internalServerError(
         body: jsonEncode({'success': false, 'error': e.toString()}),
-        headers: {'Content-Type': 'application/json'},
+        headers: const {'Content-Type': 'application/json'},
       );
     }
   }
@@ -123,21 +121,25 @@ class BrokerRoutes {
     } catch (e) {
       return Response.internalServerError(
         body: jsonEncode({'success': false, 'error': e.toString()}),
-        headers: {'Content-Type': 'application/json'},
+        headers: const {'Content-Type': 'application/json'},
       );
     }
   }
 
   Future<Response> _status(Request request) async {
+    final session = _brokerService.session;
+
     return _json({
       'connected': _brokerService.isConnected,
       'marketFeed': UpstoxMarketFeed.instance.isConnected,
-      'broker': _brokerService.session?.broker,
-      'user': _brokerService.session?.userName,
+      'broker': session?.broker,
+      'user': session?.userName,
       'executionGuard': true,
       'paperTrading': true,
       'liveExecution': false,
       'paperTradeCount': PaperTradeStore.instance.count,
+      'accessTokenExpired': _brokerService.isAccessTokenExpired,
+      'accessTokenExpiresAt': session?.accessTokenExpiresAt?.toIso8601String(),
     });
   }
 
@@ -162,7 +164,7 @@ class BrokerRoutes {
     } catch (e) {
       return Response.internalServerError(
         body: jsonEncode({'success': false, 'error': e.toString()}),
-        headers: {'Content-Type': 'application/json'},
+        headers: const {'Content-Type': 'application/json'},
       );
     }
   }
@@ -178,7 +180,7 @@ class BrokerRoutes {
     } catch (e) {
       return Response.internalServerError(
         body: jsonEncode({'success': false, 'error': e.toString()}),
-        headers: {'Content-Type': 'application/json'},
+        headers: const {'Content-Type': 'application/json'},
       );
     }
   }
@@ -320,10 +322,15 @@ class BrokerRoutes {
         marketFeedConnected: marketFeedConnected,
         constitutionPassed: executionRequest.constitutionPassed,
         strategyPolicyPassed: executionRequest.strategyPolicyPassed,
+        aiConfidence: executionRequest.aiConfidence,
+        minimumAiScore: executionRequest.minimumAiScore,
         tradesToday: executionRequest.tradesToday,
         maxTradesPerDay: executionRequest.maxTradesPerDay,
+        riskReward: executionRequest.riskReward,
+        minimumRiskReward: executionRequest.minimumRiskReward,
         liveExecutionEnabled: false,
         paperTrade: executionRequest.paperTrade,
+        explicitConfirmation: executionRequest.explicitConfirmation,
       );
 
       if (!guardResult.allowed) {
@@ -335,8 +342,9 @@ class BrokerRoutes {
       }
 
       // PAPER TRADE:
-      // Safety checks passed, nothing is sent to the real broker.
-      // The approved paper trade is recorded in the in-memory store.
+      //
+      // All Quanttora safety checks must pass.
+      // Nothing is sent to the real broker.
       if (executionRequest.paperTrade) {
         final trade = PaperTradeStore.instance.create(
           instrumentToken: executionRequest.instrumentToken,
@@ -367,9 +375,12 @@ class BrokerRoutes {
         });
       }
 
-      // LIVE EXECUTION IS INTENTIONALLY
-      // LOCKED UNTIL THE FINAL SAFETY
-      // ARCHITECTURE IS ENABLED.
+      // LIVE EXECUTION REMAINS LOCKED.
+      //
+      // Even with explicit confirmation,
+      // the final live-execution switch
+      // remains OFF until we deliberately
+      // enable the production execution path.
       return _error(
         403,
         'Live broker execution is currently disabled.',
@@ -378,7 +389,7 @@ class BrokerRoutes {
     } catch (e) {
       return Response.internalServerError(
         body: jsonEncode({'success': false, 'error': e.toString()}),
-        headers: {'Content-Type': 'application/json'},
+        headers: const {'Content-Type': 'application/json'},
       );
     }
   }
@@ -488,7 +499,7 @@ class BrokerRoutes {
     } catch (e) {
       return Response.internalServerError(
         body: jsonEncode({'success': false, 'error': e.toString()}),
-        headers: {'Content-Type': 'application/json'},
+        headers: const {'Content-Type': 'application/json'},
       );
     }
   }
