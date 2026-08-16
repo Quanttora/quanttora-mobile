@@ -5,35 +5,16 @@ import 'package:http/http.dart' as http;
 
 class UpstoxAuthService {
   String getLoginUrl() {
-    return Uri.https(
-      'api.upstox.com',
-      '/v2/login/authorization/dialog',
-      {
-        'response_type': 'code',
-        'client_id': AppConfig.upstoxClientId,
-        'redirect_uri': AppConfig.upstoxRedirectUri,
-      },
-    ).toString();
+    return Uri.https('api.upstox.com', '/v2/login/authorization/dialog', {
+      'response_type': 'code',
+      'client_id': AppConfig.upstoxClientId,
+      'redirect_uri': AppConfig.upstoxRedirectUri,
+    }).toString();
   }
 
-  Future<Map<String, dynamic>> exchangeCode({
-    required String code,
-  }) async {
-    print('');
-    print('========================================');
-    print('UPSTOX TOKEN EXCHANGE');
-    print('========================================');
-    print('Code            : $code');
-    print('Client ID       : ${AppConfig.upstoxClientId}');
-    print('Client ID Length: ${AppConfig.upstoxClientId.length}');
-    print('Redirect URI    : ${AppConfig.upstoxRedirectUri}');
-        print('========================================');
-    print('');
-
+  Future<Map<String, dynamic>> exchangeCode({required String code}) async {
     final response = await http.post(
-      Uri.parse(
-        'https://api.upstox.com/v2/login/authorization/token',
-      ),
+      Uri.parse('https://api.upstox.com/v2/login/authorization/token'),
       headers: {
         'accept': 'application/json',
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -47,29 +28,22 @@ class UpstoxAuthService {
       },
     );
 
-    print('');
-    print('========================================');
-    print('UPSTOX RESPONSE');
-    print('========================================');
-    print('Status Code : ${response.statusCode}');
-    print('Headers     : ${response.headers}');
-    print('Body        : ${response.body}');
-    print('========================================');
-    print('');
-
     if (response.statusCode != 200) {
-      throw Exception(response.body);
+      throw Exception(
+        'Upstox token exchange failed '
+        '(${response.statusCode}).',
+      );
     }
 
     final data = jsonDecode(response.body) as Map<String, dynamic>;
 
-    print('');
-    print('========================================');
-    print('TOKEN RECEIVED');
-    print('========================================');
-    print('Access Token : ${data['access_token']}');
-    print('========================================');
-    print('');
+    final accessToken = data['access_token']?.toString();
+
+    if (accessToken == null || accessToken.isEmpty) {
+      throw Exception(
+        'Upstox token exchange succeeded but no access token was returned.',
+      );
+    }
 
     return data;
   }
