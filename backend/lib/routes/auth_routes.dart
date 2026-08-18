@@ -21,13 +21,10 @@ class AuthRoutes {
   final UpstoxMarketFeed _marketFeed = UpstoxMarketFeed.instance;
 
   static const List<String> _marketInstruments = [
-    // MAIN INDICES
     'NSE_INDEX|Nifty 50',
     'NSE_INDEX|Nifty Bank',
     'BSE_INDEX|SENSEX',
     'NSE_INDEX|India VIX',
-
-    // SECTOR INDICES
     'NSE_INDEX|Nifty Auto',
     'NSE_INDEX|Nifty FMCG',
     'NSE_INDEX|Nifty IT',
@@ -35,8 +32,6 @@ class AuthRoutes {
     'NSE_INDEX|Nifty Pharma',
     'NSE_INDEX|Nifty PSU Bank',
     'NSE_INDEX|Nifty Realty',
-
-    // WATCHLIST EQUITIES
     'NSE_EQ|INE002A01018',
     'NSE_EQ|INE467B01029',
     'NSE_EQ|INE040A01034',
@@ -58,6 +53,13 @@ class AuthRoutes {
       final code = request.requestedUri.queryParameters['code'];
 
       if (code == null || code.isEmpty) {
+        print('');
+        print('==============================');
+        print('UPSTOX CALLBACK ERROR');
+        print('Authorization code missing.');
+        print('==============================');
+        print('');
+
         return Response(
           HttpStatus.badRequest,
           body: 'Authorization Code Missing',
@@ -65,46 +67,59 @@ class AuthRoutes {
       }
 
       try {
+        print('');
+        print('==============================');
+        print('UPSTOX CALLBACK RECEIVED');
+        print('Authorization code received.');
+        print('Exchanging code for access token...');
+        print('==============================');
+        print('');
+
         final token = await _upstox.exchangeCode(code: code);
 
         final accessToken = token['access_token']?.toString() ?? '';
 
         if (accessToken.isEmpty) {
-          return Response.internalServerError(
-            body: 'Upstox access token was not returned.',
-          );
+          throw Exception('Upstox access token was not returned.');
         }
+
+        print('UPSTOX TOKEN EXCHANGE SUCCESSFUL');
 
         final refreshToken = token['refresh_token']?.toString();
 
-        final profileResponse = await http.get(
-          Uri.parse('https://api.upstox.com/v2/user/profile'),
-          headers: {
-            'Accept': 'application/json',
-            'Authorization': 'Bearer $accessToken',
-          },
+        final profileResponse = await http
+            .get(
+              Uri.parse('https://api.upstox.com/v2/user/profile'),
+              headers: {
+                'Accept': 'application/json',
+                'Authorization': 'Bearer $accessToken',
+              },
+            )
+            .timeout(const Duration(seconds: 15));
+
+        print(
+          'UPSTOX PROFILE STATUS: '
+          '${profileResponse.statusCode}',
         );
 
         if (profileResponse.statusCode != 200) {
-          return Response.internalServerError(
-            body: 'Unable to fetch Upstox profile.',
+          throw Exception(
+            'Unable to fetch Upstox profile. '
+            'HTTP ${profileResponse.statusCode}: '
+            '${profileResponse.body}',
           );
         }
 
         final decodedProfile = jsonDecode(profileResponse.body);
 
         if (decodedProfile is! Map) {
-          return Response.internalServerError(
-            body: 'Invalid Upstox profile response.',
-          );
+          throw Exception('Invalid Upstox profile response.');
         }
 
         final profileData = decodedProfile['data'];
 
         if (profileData is! Map) {
-          return Response.internalServerError(
-            body: 'Invalid Upstox profile data.',
-          );
+          throw Exception('Invalid Upstox profile data.');
         }
 
         final userId = profileData['user_id']?.toString() ?? '';
@@ -114,9 +129,7 @@ class AuthRoutes {
         final email = profileData['email']?.toString() ?? '';
 
         if (userId.isEmpty) {
-          return Response.internalServerError(
-            body: 'Upstox user ID was not returned.',
-          );
+          throw Exception('Upstox user ID was not returned.');
         }
 
         final accessTokenExpiresAt = _extractAccessTokenExpiry(accessToken);
@@ -145,6 +158,8 @@ class AuthRoutes {
 
         _brokerService.connect(session);
 
+        print('BROKER SESSION CONNECTED');
+
         await _marketFeed.connect();
 
         await _marketFeed.subscribeMany(_marketInstruments);
@@ -170,18 +185,27 @@ class AuthRoutes {
         print('');
 
         return Response.found('http://localhost:3000/broker-connected');
-      } catch (e) {
-        return Response.internalServerError(body: 'Upstox connection failed.');
+      } catch (e, stackTrace) {
+        print('');
+        print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+        print('UPSTOX CONNECTION FAILED');
+        print('ERROR: $e');
+        print('STACK TRACE:');
+        print(stackTrace);
+        print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+        print('');
+
+        return Response.internalServerError(
+          body:
+              'Upstox connection failed. '
+              'Check backend terminal for the exact error.',
+        );
       }
     });
 
     return router;
   }
 
-  /// Reads the standard JWT `exp` claim from the access token.
-  ///
-  /// This does not validate the JWT. It only reads the expiry timestamp
-  /// already issued by Upstox so Quanttora can track session validity.
   static DateTime? _extractAccessTokenExpiry(String accessToken) {
     try {
       final parts = accessToken.split('.');

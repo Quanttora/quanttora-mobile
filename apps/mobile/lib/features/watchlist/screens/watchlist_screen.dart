@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
+import 'stock_chart_screen.dart';
 
 class WatchlistScreen extends StatefulWidget {
   const WatchlistScreen({super.key});
@@ -14,14 +15,17 @@ class _WatchlistScreenState extends State<WatchlistScreen> {
     const _WatchlistItem(
       symbol: 'RELIANCE',
       name: 'Reliance Industries',
+      instrumentKey: 'NSE_EQ|INE002A01018',
     ),
     const _WatchlistItem(
       symbol: 'TCS',
       name: 'Tata Consultancy Services',
+      instrumentKey: 'NSE_EQ|INE467B01029',
     ),
     const _WatchlistItem(
       symbol: 'HDFCBANK',
       name: 'HDFC Bank',
+      instrumentKey: 'NSE_EQ|INE040A01034',
     ),
   ];
 
@@ -61,6 +65,7 @@ class _WatchlistScreenState extends State<WatchlistScreen> {
                       child: _WatchlistTile(
                         item: entry.value,
                         onRemove: () => _removeItem(entry.key),
+                        onTap: () => _openChart(entry.value),
                       ),
                     ),
                   ),
@@ -187,7 +192,9 @@ class _WatchlistScreenState extends State<WatchlistScreen> {
       const Duration(milliseconds: 500),
     );
 
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
 
     setState(() {});
   }
@@ -219,27 +226,45 @@ class _WatchlistScreenState extends State<WatchlistScreen> {
     );
   }
 
+  void _openChart(_WatchlistItem item) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => StockChartScreen(
+          symbol: item.symbol,
+          name: item.name,
+          instrumentKey: item.instrumentKey,
+        ),
+      ),
+    );
+  }
+
   void _showAddStockSheet() {
     final availableStocks = <_WatchlistItem>[
       const _WatchlistItem(
         symbol: 'INFY',
         name: 'Infosys',
+        instrumentKey: 'NSE_EQ|INE009A01021',
       ),
       const _WatchlistItem(
         symbol: 'ICICIBANK',
         name: 'ICICI Bank',
+        instrumentKey: 'NSE_EQ|INE090A01021',
       ),
       const _WatchlistItem(
         symbol: 'SBIN',
         name: 'State Bank of India',
+        instrumentKey: 'NSE_EQ|INE062A01020',
       ),
       const _WatchlistItem(
         symbol: 'BHARTIARTL',
         name: 'Bharti Airtel',
+        instrumentKey: 'NSE_EQ|INE397D01024',
       ),
       const _WatchlistItem(
         symbol: 'ITC',
         name: 'ITC',
+        instrumentKey: 'NSE_EQ|INE154A01025',
       ),
     ];
 
@@ -373,10 +398,12 @@ class _WatchlistScreenState extends State<WatchlistScreen> {
 class _WatchlistItem {
   final String symbol;
   final String name;
+  final String instrumentKey;
 
   const _WatchlistItem({
     required this.symbol,
     required this.name,
+    required this.instrumentKey,
   });
 }
 
@@ -384,10 +411,12 @@ class _WatchlistTile extends StatelessWidget {
   const _WatchlistTile({
     required this.item,
     required this.onRemove,
+    required this.onTap,
   });
 
   final _WatchlistItem item;
   final VoidCallback onRemove;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -410,79 +439,91 @@ class _WatchlistTile extends StatelessWidget {
           color: Colors.white,
         ),
       ),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: AppColors.border,
-          ),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.10),
-                borderRadius: BorderRadius.circular(13),
-              ),
-              child: const Icon(
-                Icons.candlestick_chart_rounded,
-                color: AppColors.primary,
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: AppColors.border,
               ),
             ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.symbol,
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    item.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            const Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+            child: Row(
               children: [
-                Text(
-                  '--',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
+                Container(
+                  width: 46,
+                  height: 46,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.10),
+                    borderRadius: BorderRadius.circular(13),
+                  ),
+                  child: const Icon(
+                    Icons.candlestick_chart_rounded,
+                    color: AppColors.primary,
                   ),
                 ),
-                SizedBox(height: 4),
-                Text(
-                  'Waiting for data',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.symbol,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        item.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
                   ),
+                ),
+                const SizedBox(width: 12),
+                const Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      'Chart',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Tap to open',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 4),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: AppColors.textSecondary,
                 ),
               ],
             ),
-          ],
+          ),
         ),
       ),
     );

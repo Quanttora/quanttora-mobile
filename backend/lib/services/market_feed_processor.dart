@@ -134,6 +134,7 @@ class MarketFeedProcessor {
         askQuantity: askQuantity,
         volume: volume,
         averageTradedPrice: averageTradedPrice,
+        vwap: 0.0,
         timestamp: DateTime.now(),
       );
 

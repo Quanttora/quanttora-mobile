@@ -1,3 +1,4 @@
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/network/api_client.dart';
@@ -8,6 +9,20 @@ class BrokerService {
   static final BrokerService instance = BrokerService();
 
   final ApiClient _api = ApiClient.instance;
+
+  String get _baseUrl {
+    final value = dotenv.env['API_BASE_URL']?.trim();
+
+    if (value == null || value.isEmpty) {
+      throw StateError('API_BASE_URL is not configured in .env');
+    }
+
+    if (value.endsWith('/')) {
+      return value.substring(0, value.length - 1);
+    }
+
+    return value;
+  }
 
   Future<Map<String, dynamic>> getDashboard() {
     return _api.get('/broker/dashboard');
@@ -41,10 +56,6 @@ class BrokerService {
     return _api.get('/broker/orders/$orderId');
   }
 
-  /// Fetches the live Upstox quote for an instrument.
-  ///
-  /// Example:
-  /// NSE_INDEX|Nifty 50
   Future<Map<String, dynamic>> getQuote({required String instrumentKey}) {
     final encodedInstrument = Uri.encodeQueryComponent(instrumentKey);
 
@@ -168,7 +179,7 @@ class BrokerService {
   }
 
   Future<void> connectBroker() async {
-    final uri = Uri.parse('http://localhost:8080/auth/upstox/login');
+    final uri = Uri.parse('$_baseUrl/auth/upstox/login');
 
     final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
 
@@ -189,7 +200,6 @@ class BrokerService {
         final status = await getBrokerStatus();
 
         final connected = status['connected'] == true;
-
         final broker = status['broker']?.toString();
 
         if (connected && broker != null && broker.isNotEmpty) {

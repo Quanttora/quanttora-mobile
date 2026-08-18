@@ -13,12 +13,14 @@ class MarketTick {
   final int bidQuantity;
   final int askQuantity;
 
-  // Real market data from Upstox.
-  // vtt = traded volume.
+  // Real traded volume from Upstox.
   final int volume;
 
-  // atp = average traded price.
+  // Upstox Average Traded Price.
   final double averageTradedPrice;
+
+  // Quanttora calculated VWAP.
+  final double vwap;
 
   final DateTime timestamp;
 
@@ -35,6 +37,7 @@ class MarketTick {
     required this.askQuantity,
     required this.volume,
     required this.averageTradedPrice,
+    required this.vwap,
     required this.timestamp,
   });
 
@@ -51,6 +54,7 @@ class MarketTick {
     int? askQuantity,
     int? volume,
     double? averageTradedPrice,
+    double? vwap,
     DateTime? timestamp,
   }) {
     return MarketTick(
@@ -66,6 +70,7 @@ class MarketTick {
       askQuantity: askQuantity ?? this.askQuantity,
       volume: volume ?? this.volume,
       averageTradedPrice: averageTradedPrice ?? this.averageTradedPrice,
+      vwap: vwap ?? this.vwap,
       timestamp: timestamp ?? this.timestamp,
     );
   }
@@ -84,6 +89,7 @@ class MarketTick {
       'askQuantity': askQuantity,
       'volume': volume,
       'averageTradedPrice': averageTradedPrice,
+      'vwap': vwap,
       'timestamp': timestamp.toIso8601String(),
     };
   }
@@ -96,6 +102,7 @@ class MarketTick {
         '| Bid: $bidPrice ($bidQuantity) '
         '| Ask: $askPrice ($askQuantity) '
         '| Volume: $volume '
-        '| ATP: $averageTradedPrice';
+        '| ATP: $averageTradedPrice '
+        '| VWAP: $vwap';
   }
 }

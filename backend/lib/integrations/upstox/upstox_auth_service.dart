@@ -13,26 +13,43 @@ class UpstoxAuthService {
   }
 
   Future<Map<String, dynamic>> exchangeCode({required String code}) async {
-    final response = await http.post(
-      Uri.parse('https://api.upstox.com/v2/login/authorization/token'),
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: {
-        'code': code,
-        'client_id': AppConfig.upstoxClientId,
-        'client_secret': AppConfig.upstoxClientSecret,
-        'redirect_uri': AppConfig.upstoxRedirectUri,
-        'grant_type': 'authorization_code',
-      },
-    );
+    if (code.trim().isEmpty) {
+      throw Exception('Upstox authorization code is empty.');
+    }
 
-    if (response.statusCode != 200) {
+    final response = await http
+        .post(
+          Uri.parse('https://api.upstox.com/v2/login/authorization/token'),
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: {
+            'code': code,
+            'client_id': AppConfig.upstoxClientId,
+            'client_secret': AppConfig.upstoxClientSecret,
+            'redirect_uri': AppConfig.upstoxRedirectUri,
+            'grant_type': 'authorization_code',
+          },
+        )
+        .timeout(const Duration(seconds: 15));
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      String errorDetails = response.body.trim();
+
+      if (errorDetails.isEmpty) {
+        errorDetails = 'No error details returned by Upstox.';
+      }
+
       throw Exception(
         'Upstox token exchange failed '
-        '(${response.statusCode}).',
+        '(${response.statusCode}): '
+        '$errorDetails',
       );
+    }
+
+    if (response.body.trim().isEmpty) {
+      throw Exception('Upstox returned an empty token response.');
     }
 
     final decoded = jsonDecode(response.body);

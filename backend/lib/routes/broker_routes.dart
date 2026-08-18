@@ -5,6 +5,7 @@ import 'package:backend/models/trade_execution_request.dart'
     as trade_execution_models;
 import 'package:backend/services/broker_dashboard_service.dart';
 import 'package:backend/services/broker_service.dart';
+import 'package:backend/services/market_candle_service.dart';
 import 'package:backend/services/paper_trade_store.dart';
 import 'package:backend/services/trade_execution_guard.dart' as execution_guard;
 import 'package:backend/services/upstox_market_feed.dart';
@@ -19,6 +20,8 @@ class BrokerRoutes {
 
   final BrokerService _brokerService = BrokerService.instance;
 
+  final MarketCandleService _candleService = MarketCandleService.instance;
+
   static const execution_guard.TradeExecutionGuard _executionGuard =
       execution_guard.TradeExecutionGuard();
 
@@ -30,6 +33,7 @@ class BrokerRoutes {
     router.get('/funds', _funds);
     router.get('/quotes', _quotes);
     router.get('/history', _history);
+    router.get('/candles', _candles);
 
     // REAL OPTION CHAIN
     router.get('/option-chain', _optionChain);
@@ -552,5 +556,53 @@ class BrokerRoutes {
         fromDate,
       ),
     );
+  }
+
+  Future<Response> _candles(Request request) async {
+    final q = request.url.queryParameters;
+
+    final instrumentKey = q['instrumentKey'];
+    final interval = q['interval'] ?? '1minute';
+    final fromDate = q['fromDate'];
+    final toDate = q['toDate'];
+
+    if (instrumentKey == null ||
+        instrumentKey.isEmpty ||
+        fromDate == null ||
+        toDate == null) {
+      return _error(400, 'instrumentKey, fromDate and toDate are required');
+    }
+
+    try {
+      final candles = await _candleService.getHistoricalCandles(
+        instrumentKey: instrumentKey,
+        interval: interval,
+        fromDate: fromDate,
+        toDate: toDate,
+      );
+
+      final vwap = await _candleService.calculateHistoricalVwap(
+        instrumentKey: instrumentKey,
+        interval: interval,
+        fromDate: fromDate,
+        toDate: toDate,
+      );
+
+      return _json({
+        'status': 'success',
+        'instrumentKey': instrumentKey,
+        'interval': interval,
+        'fromDate': fromDate,
+        'toDate': toDate,
+        'candleCount': candles.length,
+        'vwap': vwap,
+        'candles': candles.map((candle) => candle.toJson()).toList(),
+      });
+    } catch (e) {
+      return Response.internalServerError(
+        body: jsonEncode({'status': 'error', 'message': e.toString()}),
+        headers: const {'Content-Type': 'application/json'},
+      );
+    }
   }
 }
