@@ -443,7 +443,7 @@ class _StockChartScreenState extends State<StockChartScreen> {
                 Row(
                   children: [
                     Text(
-                      price == null ? '--' : 'â‚¹${price.toStringAsFixed(2)}',
+                      price == null ? '--' : '₹${price.toStringAsFixed(2)}',
                       style: const TextStyle(
                         fontSize: 25,
                         fontWeight: FontWeight.w800,
@@ -483,7 +483,7 @@ class _StockChartScreenState extends State<StockChartScreen> {
               ),
               const SizedBox(height: 4),
               Text(
-                _vwap == null ? '--' : 'â‚¹${_vwap!.toStringAsFixed(2)}',
+                _vwap == null ? '--' : '₹${_vwap!.toStringAsFixed(2)}',
                 style: const TextStyle(
                   color: Color(0xFF6D4AFF),
                   fontSize: 16,
@@ -941,6 +941,10 @@ class _StockChartScreenState extends State<StockChartScreen> {
             dashArray: const [5, 5],
           );
         },
+      ),
+      extraLinesData: ExtraLinesData(
+        horizontalLines: horizontalLines,
+        verticalLines: verticalLines,
       ),
       borderData: FlBorderData(show: false),
       titlesData: FlTitlesData(
