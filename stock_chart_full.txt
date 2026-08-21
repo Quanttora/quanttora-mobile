@@ -1,0 +1,1377 @@
+﻿import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/material.dart';
+
+import '../../../core/market_data/models/candle.dart';
+import '../../../core/network/api_client.dart';
+
+import 'dart:ui' as ui;
+
+class StockChartScreen extends StatefulWidget {
+  const StockChartScreen({
+    super.key,
+    required this.symbol,
+    required this.name,
+    required this.instrumentKey,
+  });
+
+  final String symbol;
+  final String name;
+  final String instrumentKey;
+
+  @override
+  State<StockChartScreen> createState() => _StockChartScreenState();
+}
+
+class _StockChartScreenState extends State<StockChartScreen> {
+  final ApiClient _api = ApiClient.instance;
+
+  String _timeframe = '3 min';
+  String _period = '5D';
+
+  List<Candle> _candles = [];
+
+  bool _loading = true;
+
+  String? _error;
+
+  double? _vwap;
+
+  bool _showVwap = true;
+  bool _showEma22 = true;
+  bool _showEma33 = true;
+  bool _crosshairEnabled = true;
+
+  int? _selectedIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadChart();
+  }
+
+  Future<void> _loadChart() async {
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _loading = true;
+      _error = null;
+      _selectedIndex = null;
+    });
+
+    try {
+      final now = DateTime.now();
+
+      final range = _dateRangeForPeriod(now, _period);
+
+      final interval = _apiInterval(_timeframe);
+
+      final encodedInstrument = Uri.encodeQueryComponent(widget.instrumentKey);
+
+      final path =
+          '/broker/candles'
+          '?instrumentKey=$encodedInstrument'
+          '&interval=$interval'
+          '&fromDate=${_formatDate(range.from)}'
+          '&toDate=${_formatDate(range.to)}';
+
+      final response = await _api.get(path);
+
+      final rawCandles = response['candles'] as List<dynamic>? ?? [];
+
+      final parsed = <Candle>[];
+
+      for (final raw in rawCandles) {
+        if (raw is! Map) {
+          continue;
+        }
+
+        final time = DateTime.tryParse(raw['timestamp']?.toString() ?? '');
+
+        if (time == null) {
+          continue;
+        }
+
+        final open = _toDouble(raw['open']);
+        final high = _toDouble(raw['high']);
+        final low = _toDouble(raw['low']);
+        final close = _toDouble(raw['close']);
+        final volume = _toDouble(raw['volume']);
+
+        if (open == null ||
+            high == null ||
+            low == null ||
+            close == null ||
+            volume == null) {
+          continue;
+        }
+
+        parsed.add(
+          Candle(
+            open: open,
+            high: high,
+            low: low,
+            close: close,
+            volume: volume,
+            time: time,
+          ),
+        );
+      }
+
+      parsed.sort((a, b) => a.time.compareTo(b.time));
+
+      final candles = _aggregateIfRequired(parsed, _timeframe, interval);
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _candles = candles;
+        _vwap = _toDouble(response['vwap']);
+        _loading = false;
+        _error = null;
+      });
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _loading = false;
+        _error = e.toString();
+      });
+    }
+  }
+
+  List<Candle> _aggregateIfRequired(
+    List<Candle> source,
+    String timeframe,
+    String apiInterval,
+  ) {
+    final minutes = _timeframeMinutes(timeframe);
+
+    if (minutes <= 1) {
+      return source;
+    }
+
+    if (apiInterval == '30minute' ||
+        apiInterval == '1hour' ||
+        apiInterval == 'day') {
+      return source;
+    }
+
+    if (source.isEmpty) {
+      return source;
+    }
+
+    final groups = <DateTime, List<Candle>>{};
+
+    for (final candle in source) {
+      final local = candle.time.toLocal();
+
+      final bucketMinute = (local.minute ~/ minutes) * minutes;
+
+      final bucket = DateTime(
+        local.year,
+        local.month,
+        local.day,
+        local.hour,
+        bucketMinute,
+      );
+
+      groups.putIfAbsent(bucket, () => <Candle>[]);
+
+      groups[bucket]!.add(candle);
+    }
+
+    final keys = groups.keys.toList()..sort();
+
+    final result = <Candle>[];
+
+    for (final key in keys) {
+      final group = groups[key]!;
+
+      group.sort((a, b) => a.time.compareTo(b.time));
+
+      if (group.isEmpty) {
+        continue;
+      }
+
+      double high = group.first.high;
+
+      double low = group.first.low;
+
+      double volume = 0;
+
+      for (final candle in group) {
+        if (candle.high > high) {
+          high = candle.high;
+        }
+
+        if (candle.low < low) {
+          low = candle.low;
+        }
+
+        if (candle.volume > 0) {
+          volume += candle.volume;
+        }
+      }
+
+      result.add(
+        Candle(
+          open: group.first.open,
+          high: high,
+          low: low,
+          close: group.last.close,
+          volume: volume,
+          time: key,
+        ),
+      );
+    }
+
+    return result;
+  }
+
+  String _apiInterval(String timeframe) {
+    switch (timeframe) {
+      case '1 min':
+      case '3 min':
+      case '5 min':
+      case '15 min':
+        return '1minute';
+
+      case '30 min':
+        return '30minute';
+
+      case '1 hour':
+        return '1hour';
+
+      case '1 day':
+        return 'day';
+
+      default:
+        return '1minute';
+    }
+  }
+
+  int _timeframeMinutes(String timeframe) {
+    switch (timeframe) {
+      case '1 min':
+        return 1;
+
+      case '3 min':
+        return 3;
+
+      case '5 min':
+        return 5;
+
+      case '15 min':
+        return 15;
+
+      case '30 min':
+        return 30;
+
+      case '1 hour':
+        return 60;
+
+      default:
+        return 1;
+    }
+  }
+
+  List<String> _availablePeriods() {
+    switch (_timeframe) {
+      case '1 min':
+      case '3 min':
+      case '5 min':
+      case '15 min':
+        return const ['1D', '5D', '1M'];
+
+      case '30 min':
+      case '1 hour':
+        return const ['1D', '5D', '1M', '3M'];
+
+      case '1 day':
+        return const ['1M', '3M', '6M', '1Y'];
+
+      default:
+        return const ['1D', '5D', '1M'];
+    }
+  }
+
+  _DateRange _dateRangeForPeriod(DateTime now, String period) {
+    switch (period) {
+      case '1D':
+        return _DateRange(from: now.subtract(const Duration(days: 1)), to: now);
+
+      case '5D':
+        return _DateRange(from: now.subtract(const Duration(days: 5)), to: now);
+
+      case '1M':
+        return _DateRange(
+          from: DateTime(now.year, now.month - 1, now.day),
+          to: now,
+        );
+
+      case '3M':
+        return _DateRange(
+          from: DateTime(now.year, now.month - 3, now.day),
+          to: now,
+        );
+
+      case '6M':
+        return _DateRange(
+          from: DateTime(now.year, now.month - 6, now.day),
+          to: now,
+        );
+
+      case '1Y':
+        return _DateRange(
+          from: DateTime(now.year - 1, now.month, now.day),
+          to: now,
+        );
+
+      default:
+        return _DateRange(from: now.subtract(const Duration(days: 5)), to: now);
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    final year = date.year.toString().padLeft(4, '0');
+
+    final month = date.month.toString().padLeft(2, '0');
+
+    final day = date.day.toString().padLeft(2, '0');
+
+    return '$year-$month-$day';
+  }
+
+  double? _toDouble(dynamic value) {
+    if (value is num) {
+      return value.toDouble();
+    }
+
+    return double.tryParse(value?.toString() ?? '');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final latest = _candles.isNotEmpty ? _candles.last : null;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF4F7FB),
+
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: Colors.white,
+        surfaceTintColor: Colors.white,
+        titleSpacing: 0,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.symbol,
+              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18),
+            ),
+            Text(
+              widget.name,
+              style: const TextStyle(fontSize: 11, color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          IconButton(
+            tooltip: 'Refresh',
+            onPressed: _loading ? null : _loadChart,
+            icon: const Icon(Icons.refresh_rounded),
+          ),
+        ],
+      ),
+
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildPriceHeader(latest),
+
+            _buildTimeframeBar(),
+
+            _buildPeriodBar(),
+
+            Expanded(child: _buildChartBody()),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPriceHeader(Candle? latest) {
+    final price = latest?.close;
+
+    final change = latest == null ? null : latest.close - latest.open;
+
+    final changePercent = latest == null || latest.open == 0
+        ? null
+        : (change! / latest.open) * 100;
+
+    final positive = change != null && change >= 0;
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.045),
+            blurRadius: 18,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'LTP',
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Text(
+                      price == null
+                          ? '--'
+                          : '\u20B9${price.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontSize: 25,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    if (change != null)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 10),
+                        child: Text(
+                          '${positive ? '+' : ''}'
+                          '${change.toStringAsFixed(2)}'
+                          '${changePercent == null ? '' : ' (${positive ? '+' : ''}${changePercent.toStringAsFixed(2)}%)'}',
+                          style: TextStyle(
+                            color: positive
+                                ? const Color(0xFF16A34A)
+                                : const Color(0xFFDC2626),
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              const Text(
+                'VWAP',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                _vwap == null ? '--' : '\u20B9${_vwap!.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  color: Color(0xFF6D4AFF),
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimeframeBar() {
+    const timeframes = [
+      '1 min',
+      '3 min',
+      '5 min',
+      '15 min',
+      '30 min',
+      '1 hour',
+      '1 day',
+    ];
+
+    return SizedBox(
+      height: 46,
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        scrollDirection: Axis.horizontal,
+        itemCount: timeframes.length,
+        separatorBuilder: (context, index) => const SizedBox(width: 7),
+        itemBuilder: (context, index) {
+          final timeframe = timeframes[index];
+
+          final selected = timeframe == _timeframe;
+
+          return ChoiceChip(
+            label: Text(_shortTimeframe(timeframe)),
+            selected: selected,
+            showCheckmark: selected,
+            selectedColor: const Color(0xFFE4E9FF),
+            backgroundColor: Colors.white,
+            side: BorderSide(
+              color: selected
+                  ? const Color(0xFF5B6FEA)
+                  : const Color(0xFFD0D5DD),
+            ),
+            labelStyle: TextStyle(
+              color: selected
+                  ? const Color(0xFF3949AB)
+                  : const Color(0xFF344054),
+              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              fontSize: 12,
+            ),
+            onSelected: (_) {
+              if (_timeframe == timeframe) {
+                return;
+              }
+
+              final periods = _periodsFor(timeframe);
+
+              setState(() {
+                _timeframe = timeframe;
+
+                if (!periods.contains(_period)) {
+                  _period = periods.first;
+                }
+              });
+
+              _loadChart();
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildPeriodBar() {
+    final periods = _availablePeriods();
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 2, 16, 6),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.calendar_month_rounded,
+            size: 16,
+            color: Colors.grey,
+          ),
+          const SizedBox(width: 6),
+          const Text(
+            'History',
+            style: TextStyle(
+              color: Colors.grey,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const Spacer(),
+          PopupMenuButton<String>(
+            initialValue: _period,
+            onSelected: (period) {
+              if (_period == period) {
+                return;
+              }
+
+              setState(() {
+                _period = period;
+              });
+
+              _loadChart();
+            },
+            itemBuilder: (context) {
+              return periods
+                  .map(
+                    (period) => PopupMenuItem<String>(
+                      value: period,
+                      child: Row(
+                        children: [
+                          if (_period == period)
+                            const Icon(
+                              Icons.check_rounded,
+                              size: 18,
+                              color: Color(0xFF4F46E5),
+                            )
+                          else
+                            const SizedBox(width: 18),
+                          const SizedBox(width: 8),
+                          Text(period),
+                        ],
+                      ),
+                    ),
+                  )
+                  .toList();
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFD0D5DD)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _period,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.keyboard_arrow_down_rounded, size: 17),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChartBody() {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_error != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.error_outline_rounded,
+                size: 48,
+                color: Colors.redAccent,
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Unable to load chart data',
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _error!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.grey, fontSize: 12),
+              ),
+              const SizedBox(height: 18),
+              FilledButton(onPressed: _loadChart, child: const Text('RETRY')),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_candles.isEmpty) {
+      return const Center(
+        child: Text(
+          'No historical candle data available.',
+          style: TextStyle(color: Colors.grey),
+        ),
+      );
+    }
+
+    final latest = _candles.last;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(10, 2, 10, 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.035),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        children: [
+          _buildChartToolsBar(),
+
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(4, 8, 4, 2),
+              child: CandlestickChart(
+                _buildChartData(latest),
+                duration: const Duration(milliseconds: 120),
+                transformationConfig: const FlTransformationConfig(
+                  scaleAxis: FlScaleAxis.horizontal,
+                  minScale: 1,
+                  maxScale: 8,
+                  panEnabled: true,
+                  scaleEnabled: true,
+                  trackpadScrollCausesScale: true,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChartToolsBar() {
+    return Container(
+      height: 46,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: const BoxDecoration(
+        color: Color(0xFFFBFCFE),
+        border: Border(bottom: BorderSide(color: Color(0xFFE5E7EB))),
+      ),
+      child: Row(
+        children: [
+          _chartToolButton(
+            icon: Icons.auto_graph_rounded,
+            label: 'Indicators',
+            onTap: _showIndicatorsMenu,
+          ),
+          const SizedBox(width: 6),
+          _chartToolButton(
+            icon: Icons.edit_rounded,
+            label: 'Tools',
+            onTap: _showToolsMenu,
+          ),
+          const Spacer(),
+          IconButton(
+            tooltip: 'Chart settings',
+            onPressed: _showChartSettings,
+            icon: const Icon(
+              Icons.tune_rounded,
+              size: 19,
+              color: Color(0xFF475467),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _chartToolButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(9),
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(9),
+          border: Border.all(color: const Color(0xFFD0D5DD)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: const Color(0xFF475467)),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: Color(0xFF344054),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showIndicatorsMenu() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const ListTile(
+                title: Text(
+                  'Indicators',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+              SwitchListTile(
+                title: const Text('VWAP'),
+                subtitle: const Text('Volume weighted average price'),
+                value: _showVwap,
+                onChanged: (value) {
+                  setState(() => _showVwap = value);
+                  Navigator.pop(context);
+                },
+              ),
+              const ListTile(
+                leading: Icon(Icons.show_chart_rounded),
+                title: Text('More indicators'),
+                subtitle: Text('EMA, RSI, MACD and more can be added next'),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showToolsMenu() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const ListTile(
+                title: Text(
+                  'Chart Tools',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+              SwitchListTile(
+                title: const Text('Crosshair'),
+                subtitle: const Text('Tap a candle to inspect its price'),
+                value: _crosshairEnabled,
+                onChanged: (value) {
+                  setState(() => _crosshairEnabled = value);
+                  Navigator.pop(context);
+                },
+              ),
+              const ListTile(
+                leading: Icon(Icons.horizontal_rule_rounded),
+                title: Text('Drawing tools'),
+                subtitle: Text(
+                  'Trendline and horizontal line tools can be added next',
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showChartSettings() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const ListTile(
+                title: Text(
+                  'Chart Settings',
+                  style: TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+              const ListTile(
+                leading: Icon(Icons.candlestick_chart_rounded),
+                title: Text('Candlestick'),
+                subtitle: Text('Current chart type'),
+              ),
+              const ListTile(
+                leading: Icon(Icons.touch_app_rounded),
+                title: Text('Drag / pinch to zoom'),
+                subtitle: Text('Use one finger to pan and pinch to zoom'),
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  List<double?> _calculateEma(int period) {
+    if (_candles.isEmpty) {
+      return <double?>[];
+    }
+
+    final result = List<double?>.filled(_candles.length, null);
+
+    if (_candles.length < period) {
+      return result;
+    }
+
+    final multiplier = 2.0 / (period + 1);
+
+    double ema = 0;
+
+    for (var i = 0; i < period; i++) {
+      ema += _candles[i].close;
+    }
+
+    ema /= period;
+    result[period - 1] = ema;
+
+    for (var i = period; i < _candles.length; i++) {
+      ema = ((_candles[i].close - ema) * multiplier) + ema;
+      result[i] = ema;
+    }
+
+    return result;
+  }
+
+  CandlestickChartData _buildChartData(Candle latest) {
+    final spots = List.generate(_candles.length, (index) {
+      final candle = _candles[index];
+
+      return CandlestickSpot(
+        x: index.toDouble(),
+        open: candle.open,
+        high: candle.high,
+        low: candle.low,
+        close: candle.close,
+      );
+    });
+
+    final prices = <double>[
+      ..._candles.map((candle) => candle.high),
+      ..._candles.map((candle) => candle.low),
+    ];
+
+    var minPrice = prices.reduce((a, b) => a < b ? a : b);
+
+    var maxPrice = prices.reduce((a, b) => a > b ? a : b);
+
+    if (minPrice == maxPrice) {
+      minPrice -= 1;
+      maxPrice += 1;
+    }
+
+    final range = maxPrice - minPrice;
+
+    final padding = range * 0.06;
+
+    minPrice -= padding;
+    maxPrice += padding;
+
+    final selectedIndex = _selectedIndex;
+    final ema22 = _calculateEma(22);
+    final ema33 = _calculateEma(33);
+
+    final horizontalLines = <HorizontalLine>[];
+
+    if (_showVwap &&
+        _vwap != null &&
+        _vwap! >= minPrice &&
+        _vwap! <= maxPrice) {
+      horizontalLines.add(
+        HorizontalLine(
+          y: _vwap!,
+          color: const Color(0xFF7C5CFC).withValues(alpha: 0.75),
+          strokeWidth: 1.5,
+          dashArray: const [6, 5],
+        ),
+      );
+    }
+
+    if (selectedIndex != null &&
+        selectedIndex >= 0 &&
+        selectedIndex < _candles.length) {
+      final selectedCandle = _candles[selectedIndex];
+
+      horizontalLines.add(
+        HorizontalLine(
+          y: selectedCandle.close,
+          color: const Color(0xFF98A2B3).withValues(alpha: 0.55),
+          strokeWidth: 1,
+          dashArray: const [4, 5],
+        ),
+      );
+    }
+
+    final verticalLines = <VerticalLine>[];
+
+    if (selectedIndex != null &&
+        selectedIndex >= 0 &&
+        selectedIndex < _candles.length) {
+      verticalLines.add(
+        VerticalLine(
+          x: selectedIndex.toDouble(),
+          color: const Color(0xFF98A2B3).withValues(alpha: 0.55),
+          strokeWidth: 1,
+          dashArray: const [4, 5],
+        ),
+      );
+    }
+
+    return CandlestickChartData(
+      minX: 0,
+      maxX: _candles.length <= 1 ? 1 : (_candles.length - 1).toDouble(),
+      minY: minPrice,
+      maxY: maxPrice,
+      candlestickSpots: spots,
+      backgroundColor: Colors.white,
+      candlestickPainter: DefaultCandlestickPainter(
+        candlestickStyleProvider: (spot, index) {
+          final bullish = spot.close >= spot.open;
+
+          final bodyColor = bullish
+              ? const Color(0xFF16A34A)
+              : const Color(0xFFEF4444);
+
+          return CandlestickStyle(
+            lineColor: bodyColor,
+            lineWidth: 1,
+            bodyStrokeColor: bodyColor,
+            bodyStrokeWidth: 0.8,
+            bodyFillColor: bodyColor,
+            bodyWidth: 8,
+            bodyRadius: 1.5,
+          );
+        },
+      ),
+      gridData: FlGridData(
+        show: true,
+        drawVerticalLine: true,
+        drawHorizontalLine: true,
+        verticalInterval: _verticalGridInterval(_candles.length),
+        horizontalInterval: _horizontalGridInterval(range),
+        getDrawingHorizontalLine: (value) {
+          return FlLine(
+            color: const Color(0xFFDDE3EA).withValues(alpha: 0.72),
+            strokeWidth: 0.8,
+            dashArray: const [5, 5],
+          );
+        },
+        getDrawingVerticalLine: (value) {
+          return FlLine(
+            color: const Color(0xFFDDE3EA).withValues(alpha: 0.65),
+            strokeWidth: 0.8,
+            dashArray: const [5, 5],
+          );
+        },
+      ),
+
+      borderData: FlBorderData(show: false),
+      titlesData: FlTitlesData(
+        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+        rightTitles: AxisTitles(
+          sideTitles: SideTitles(
+            showTitles: true,
+            reservedSize: 64,
+            getTitlesWidget: (value, meta) {
+              return Padding(
+                padding: const EdgeInsets.only(left: 4),
+                child: Text(
+                  _formatPriceScale(value),
+                  style: const TextStyle(
+                    color: Color(0xFF667085),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        bottomTitles: AxisTitles(
+          sideTitles: SideTitles(
+            showTitles: true,
+            reservedSize: 38,
+            interval: _bottomTitleInterval(_candles.length),
+            getTitlesWidget: (value, meta) {
+              final index = value.round();
+
+              if (index < 0 || index >= _candles.length) {
+                return const SizedBox.shrink();
+              }
+
+              final time = _candles[index].time.toLocal();
+
+              return Padding(
+                padding: const EdgeInsets.only(top: 7),
+                child: Text(
+                  _formatXAxisTime(time, index),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Color(0xFF667085),
+                    fontSize: 9,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+      candlestickTouchData: CandlestickTouchData(
+        enabled: _crosshairEnabled,
+        handleBuiltInTouches: false,
+        touchSpotThreshold: 18,
+        touchCallback: (event, response) {
+          final touched = response?.touchedSpot;
+
+          if (touched == null) {
+            return;
+          }
+
+          final index = touched.spotIndex;
+
+          if (index < 0 || index >= _candles.length) {
+            return;
+          }
+
+          if (!mounted) {
+            return;
+          }
+
+          if (_selectedIndex != index) {
+            setState(() {
+              _selectedIndex = index;
+            });
+          }
+        },
+      ),
+    );
+  }
+
+  List<String> _periodsFor(String timeframe) {
+    switch (timeframe) {
+      case '1 min':
+      case '3 min':
+      case '5 min':
+      case '15 min':
+        return const ['1D', '5D', '1M'];
+
+      case '30 min':
+      case '1 hour':
+        return const ['1D', '5D', '1M', '3M'];
+
+      case '1 day':
+        return const ['1M', '3M', '6M', '1Y'];
+
+      default:
+        return const ['1D', '5D', '1M'];
+    }
+  }
+
+  String _shortTimeframe(String timeframe) {
+    switch (timeframe) {
+      case '1 min':
+        return '1m';
+
+      case '3 min':
+        return '3m';
+
+      case '5 min':
+        return '5m';
+
+      case '15 min':
+        return '15m';
+
+      case '30 min':
+        return '30m';
+
+      case '1 hour':
+        return '1H';
+
+      case '1 day':
+        return '1D';
+
+      default:
+        return timeframe;
+    }
+  }
+
+  double _verticalGridInterval(int count) {
+    if (count <= 30) {
+      return 1;
+    }
+
+    if (count <= 100) {
+      return 5;
+    }
+
+    if (count <= 250) {
+      return 10;
+    }
+
+    return 20;
+  }
+
+  double _horizontalGridInterval(double range) {
+    if (range <= 2) {
+      return 0.25;
+    }
+
+    if (range <= 10) {
+      return 1;
+    }
+
+    if (range <= 50) {
+      return 5;
+    }
+
+    if (range <= 200) {
+      return 10;
+    }
+
+    if (range <= 500) {
+      return 25;
+    }
+
+    return 50;
+  }
+
+  double _bottomTitleInterval(int count) {
+    if (count <= 10) {
+      return 1;
+    }
+
+    if (count <= 30) {
+      return 3;
+    }
+
+    if (count <= 80) {
+      return 8;
+    }
+
+    if (count <= 160) {
+      return 16;
+    }
+
+    return (count / 8).ceilToDouble();
+  }
+
+  String _formatXAxisTime(DateTime time, int index) {
+    final previous = index > 0 ? _candles[index - 1].time.toLocal() : null;
+
+    final dayChanged =
+        previous == null ||
+        previous.day != time.day ||
+        previous.month != time.month;
+
+    final hour = time.hour.toString().padLeft(2, '0');
+
+    final minute = time.minute.toString().padLeft(2, '0');
+
+    if (dayChanged) {
+      return '${time.day.toString().padLeft(2, '0')} '
+          '${_monthName(time.month)}\n'
+          '$hour:$minute';
+    }
+
+    return '$hour:$minute';
+  }
+
+  String _formatDateTime(DateTime time) {
+    final local = time.toLocal();
+
+    final day = local.day.toString().padLeft(2, '0');
+
+    final month = _monthName(local.month);
+
+    final hour = local.hour.toString().padLeft(2, '0');
+
+    final minute = local.minute.toString().padLeft(2, '0');
+
+    return '$day $month $hour:$minute';
+  }
+
+  String _monthName(int month) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+
+    return months[month - 1];
+  }
+
+  String _formatPriceScale(double value) {
+    if (value >= 1000) {
+      return value.toStringAsFixed(0);
+    }
+
+    if (value >= 100) {
+      return value.toStringAsFixed(1);
+    }
+
+    return value.toStringAsFixed(2);
+  }
+
+  String _formatVolume(double value) {
+    if (value >= 10000000) {
+      return '${(value / 10000000).toStringAsFixed(2)}Cr';
+    }
+
+    if (value >= 100000) {
+      return '${(value / 100000).toStringAsFixed(2)}L';
+    }
+
+    if (value >= 1000) {
+      return '${(value / 1000).toStringAsFixed(2)}K';
+    }
+
+    return value.toStringAsFixed(0);
+  }
+}
+
+class _DateRange {
+  const _DateRange({required this.from, required this.to});
+
+  final DateTime from;
+  final DateTime to;
+}
+

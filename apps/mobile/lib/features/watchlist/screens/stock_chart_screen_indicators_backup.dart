@@ -27,7 +27,7 @@ class _StockChartScreenState extends State<StockChartScreen> {
   final ApiClient _api = ApiClient.instance;
 
   String _timeframe = '3 min';
-  String _period = '1D';
+  String _period = '5D';
 
   List<Candle> _candles = [];
 
@@ -710,7 +710,7 @@ class _StockChartScreenState extends State<StockChartScreen> {
                       padding: const EdgeInsets.fromLTRB(4, 8, 4, 2),
                       child: CandlestickChart(
                         _buildChartData(),
-                        duration: Duration.zero,
+                        duration: const Duration(milliseconds: 120),
                         transformationConfig: const FlTransformationConfig(
                           scaleAxis: FlScaleAxis.horizontal,
                           minScale: 1,
