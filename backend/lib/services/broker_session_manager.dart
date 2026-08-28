@@ -1,45 +1,86 @@
-import 'package:backend/models/broker_session.dart';
+import '../models/broker_session.dart';
 
 class BrokerSessionManager {
   BrokerSessionManager._();
 
   static final BrokerSessionManager instance = BrokerSessionManager._();
 
-  BrokerSession? _session;
+  final Map<int, BrokerSession> _sessions = {};
 
-  BrokerSession? get session => _session;
-
-  bool get isConnected => _session != null && _session!.accessToken.isNotEmpty;
-
-  String get accessToken {
-    final current = _session;
-
-    if (current == null || current.accessToken.isEmpty) {
-      throw StateError('Broker is not connected.');
-    }
-
-    return current.accessToken;
+  /// Read-only view of all active broker sessions.
+  ///
+  /// This is primarily used by BrokerService's legacy compatibility API.
+  Map<int, BrokerSession> get sessions {
+    return Map.unmodifiable(_sessions);
   }
 
-  void saveSession(BrokerSession session) {
+  /// Returns the broker session for a specific Quanttora user.
+  BrokerSession? sessionForUser(int userId) {
+    return _sessions[userId];
+  }
+
+  /// Saves a broker session for a specific Quanttora user.
+  void saveSessionForUser({
+    required int userId,
+    required BrokerSession session,
+  }) {
     if (session.accessToken.isEmpty) {
       throw ArgumentError(
         'Cannot save broker session without an access token.',
       );
     }
 
-    _session = session;
+    _sessions[userId] = session;
   }
 
-  void updateSession(BrokerSession session) {
-    saveSession(session);
+  /// Updates the broker session for a specific Quanttora user.
+  void updateSessionForUser({
+    required int userId,
+    required BrokerSession session,
+  }) {
+    saveSessionForUser(userId: userId, session: session);
   }
 
-  void clearSession() {
-    _session = null;
+  /// Clears only one user's broker session.
+  void clearSessionForUser(int userId) {
+    _sessions.remove(userId);
   }
 
-  bool hasValidSession() {
-    return isConnected;
+  /// Returns whether a user currently has a connected broker session.
+  bool isConnectedForUser(int userId) {
+    final session = _sessions[userId];
+
+    return session != null && session.accessToken.isNotEmpty;
+  }
+
+  /// Returns the access token for a specific user.
+  String accessTokenForUser(int userId) {
+    final session = sessionForUser(userId);
+
+    if (session == null || session.accessToken.isEmpty) {
+      throw StateError('Broker is not connected.');
+    }
+
+    return session.accessToken;
+  }
+
+  /// Returns whether a user has a valid, non-expired broker session.
+  bool hasValidSessionForUser(int userId) {
+    final session = sessionForUser(userId);
+
+    return session != null && session.hasValidAccessToken;
+  }
+
+  /// Clears all broker sessions.
+  ///
+  /// This is intended for application shutdown/reset operations.
+  /// User-facing disconnect operations should use clearSessionForUser().
+  void clearAllSessions() {
+    _sessions.clear();
+  }
+
+  /// Number of currently connected Quanttora users.
+  int get connectedUserCount {
+    return _sessions.length;
   }
 }

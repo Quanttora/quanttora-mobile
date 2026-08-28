@@ -4,20 +4,18 @@ import 'broker_service.dart';
 class BrokerDashboardService {
   BrokerDashboardService._();
 
-  static final BrokerDashboardService instance =
-      BrokerDashboardService._();
+  static final BrokerDashboardService instance = BrokerDashboardService._();
 
-  final BrokerService _brokerService =
-      BrokerService.instance;
+  final BrokerService _brokerService = BrokerService.instance;
 
-  Future<Map<String, dynamic>> getDashboard() async {
-    final session = _brokerService.session;
+  Future<Map<String, dynamic>> getDashboard({required int userId}) async {
+    final session = _brokerService.sessionForUser(userId);
 
     if (session == null) {
-      throw Exception('No broker connected');
+      throw Exception('No broker connected for authenticated user');
     }
 
-    final token = session.accessToken;
+    final token = _brokerService.accessTokenForUser(userId);
     final broker = BrokerMarketService.instance.current;
 
     final results = await Future.wait([
@@ -39,31 +37,24 @@ class BrokerDashboardService {
       final equity = fundsData['equity'];
 
       if (equity is Map<String, dynamic>) {
-        availableMargin =
-            _toDouble(equity['available_margin']);
-
-        usedMargin =
-            _toDouble(equity['used_margin']);
+        availableMargin = _toDouble(equity['available_margin']);
+        usedMargin = _toDouble(equity['used_margin']);
       }
     }
 
     return {
       'connected': true,
       'broker': session.broker,
-
       'user': {
         'name': session.userName,
         'email': session.email,
         'userId': session.userId,
       },
-
       'userName': session.userName,
       'email': session.email,
       'userId': session.userId,
-
       'availableMargin': availableMargin,
       'usedMargin': usedMargin,
-
       'funds': funds,
       'holdings': results[1],
       'positions': results[2],
@@ -77,9 +68,6 @@ class BrokerDashboardService {
       return value.toDouble();
     }
 
-    return double.tryParse(
-          value?.toString() ?? '',
-        ) ??
-        0;
+    return double.tryParse(value?.toString() ?? '') ?? 0;
   }
 }

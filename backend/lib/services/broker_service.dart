@@ -1,5 +1,5 @@
-import 'package:backend/models/broker_session.dart';
-import 'package:backend/services/broker_session_manager.dart';
+import '../models/broker_session.dart';
+import 'broker_session_manager.dart';
 
 class BrokerService {
   BrokerService._();
@@ -8,47 +8,81 @@ class BrokerService {
 
   final BrokerSessionManager _sessionManager = BrokerSessionManager.instance;
 
-  BrokerSession? get session => _sessionManager.session;
+  // ---------------------------------------------------------------------------
+  // Legacy compatibility API
+  //
+  // These methods/getters are retained because several existing backend
+  // services still use the original BrokerService singleton API.
+  // ---------------------------------------------------------------------------
 
-  bool get isConnected => _sessionManager.isConnected;
+  BrokerSession? get session {
+    final sessions = _sessionManager.sessions;
 
-  void connect(BrokerSession session) {
-    _sessionManager.saveSession(session);
-  }
-
-  void disconnect() {
-    _sessionManager.clearSession();
-  }
-
-  void update(BrokerSession session) {
-    _sessionManager.updateSession(session);
-  }
-
-  bool hasValidSession() {
-    final current = session;
-
-    if (current == null) {
-      return false;
+    if (sessions.isEmpty) {
+      return null;
     }
 
-    return current.hasValidAccessToken;
+    return sessions.values.first;
+  }
+
+  bool get isConnected {
+    final current = session;
+
+    return current != null && current.accessToken.isNotEmpty;
   }
 
   String get accessToken {
     final current = session;
 
-    if (current == null) {
+    if (current == null || current.accessToken.isEmpty) {
       throw StateError('Broker is not connected.');
     }
 
-    if (!current.hasValidAccessToken) {
-      throw StateError(
-        'Upstox access token has expired. '
-        'Please reconnect your broker.',
+    return current.accessToken;
+  }
+
+  bool hasValidSession() {
+    final current = session;
+
+    return current != null && current.hasValidAccessToken;
+  }
+
+  void connect(BrokerSession session) {
+    final userId = int.tryParse(session.userId);
+
+    if (userId == null) {
+      throw ArgumentError(
+        'Broker session userId must contain a valid Quanttora user ID.',
       );
     }
 
-    return current.accessToken;
+    _sessionManager.saveSessionForUser(userId: userId, session: session);
+  }
+
+  void update(BrokerSession session) {
+    final userId = int.tryParse(session.userId);
+
+    if (userId == null) {
+      throw ArgumentError(
+        'Broker session userId must contain a valid Quanttora user ID.',
+      );
+    }
+
+    _sessionManager.updateSessionForUser(userId: userId, session: session);
+  }
+
+  void disconnect() {
+    final current = session;
+
+    if (current == null) {
+      return;
+    }
+
+    final userId = int.tryParse(current.userId);
+
+    if (userId != null) {
+      _sessionManager.clearSessionForUser(userId);
+    }
   }
 
   String get broker {
@@ -91,7 +125,95 @@ class BrokerService {
     return current.email;
   }
 
-  DateTime? get accessTokenExpiresAt => session?.accessTokenExpiresAt;
+  DateTime? get accessTokenExpiresAt {
+    return session?.accessTokenExpiresAt;
+  }
 
-  bool get isAccessTokenExpired => session?.isAccessTokenExpired ?? true;
+  bool get isAccessTokenExpired {
+    return session?.isAccessTokenExpired ?? true;
+  }
+
+  // ---------------------------------------------------------------------------
+  // User-scoped API
+  // ---------------------------------------------------------------------------
+
+  BrokerSession? sessionForUser(int userId) {
+    return _sessionManager.sessionForUser(userId);
+  }
+
+  bool isConnectedForUser(int userId) {
+    return _sessionManager.isConnectedForUser(userId);
+  }
+
+  void connectForUser({required int userId, required BrokerSession session}) {
+    _sessionManager.saveSessionForUser(userId: userId, session: session);
+  }
+
+  void disconnectForUser(int userId) {
+    _sessionManager.clearSessionForUser(userId);
+  }
+
+  void updateForUser({required int userId, required BrokerSession session}) {
+    _sessionManager.updateSessionForUser(userId: userId, session: session);
+  }
+
+  bool hasValidSessionForUser(int userId) {
+    return _sessionManager.hasValidSessionForUser(userId);
+  }
+
+  String accessTokenForUser(int userId) {
+    return _sessionManager.accessTokenForUser(userId);
+  }
+
+  String brokerForUser(int userId) {
+    final current = sessionForUser(userId);
+
+    if (current == null) {
+      throw StateError('Broker is not connected.');
+    }
+
+    return current.broker;
+  }
+
+  String userIdForUser(int userId) {
+    final current = sessionForUser(userId);
+
+    if (current == null) {
+      throw StateError('Broker is not connected.');
+    }
+
+    return current.userId;
+  }
+
+  String userNameForUser(int userId) {
+    final current = sessionForUser(userId);
+
+    if (current == null) {
+      throw StateError('Broker is not connected.');
+    }
+
+    return current.userName;
+  }
+
+  String emailForUser(int userId) {
+    final current = sessionForUser(userId);
+
+    if (current == null) {
+      throw StateError('Broker is not connected.');
+    }
+
+    return current.email;
+  }
+
+  DateTime? accessTokenExpiresAtForUser(int userId) {
+    return sessionForUser(userId)?.accessTokenExpiresAt;
+  }
+
+  bool isAccessTokenExpiredForUser(int userId) {
+    return sessionForUser(userId)?.isAccessTokenExpired ?? true;
+  }
+
+  int get connectedUserCount {
+    return _sessionManager.connectedUserCount;
+  }
 }

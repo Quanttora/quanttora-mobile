@@ -1,54 +1,36 @@
-﻿import 'dart:io';
+import 'dart:io';
 
 import 'package:backend/database/database.dart';
-import 'package:backend/generated/market_data_v3.pb.dart';
+import 'package:backend/middleware/auth_middleware.dart';
 import 'package:backend/routes/auth_routes.dart';
 import 'package:backend/routes/broker_routes.dart';
-import 'package:backend/routes/market_routes.dart';
-import 'package:backend/routes/news_routes.dart';
-import 'package:backend/services/market_feed_processor.dart';
-import 'package:backend/services/upstox_market_feed.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as io;
 import 'package:shelf_router/shelf_router.dart';
 
 Future<void> main() async {
+  // Initialize the database before registering the server.
   await Database.initialize();
 
   final router = Router();
 
-  router.get('/health', (_) {
+  router.get('/health', (Request request) {
     return Response.ok('Backend Running 🚀');
   });
 
   router.mount('/auth/', AuthRoutes().router.call);
 
-  router.mount('/broker/', BrokerRoutes().router.call);
+  final brokerHandler = Pipeline()
+      .addMiddleware(AuthMiddleware.requireAuthentication())
+      .addHandler(BrokerRoutes().router.call);
 
-  router.mount('/market/', MarketRoutes().router.call);
-
-  router.mount('/news/', NewsRoutes().router.call);
+  router.mount('/broker/', brokerHandler);
 
   final handler = Pipeline()
       .addMiddleware(logRequests())
       .addHandler(router.call);
 
-  final server = await io.serve(
-    handler,
-    InternetAddress.anyIPv4,
-    8080,
-  );
-
-  UpstoxMarketFeed.instance.listen((FeedResponse response) {
-    MarketFeedProcessor.instance.process(response);
-  });
-
-  ProcessSignal.sigint.watch().listen((_) async {
-    await UpstoxMarketFeed.instance.disconnect();
-    await Database.close();
-    await server.close(force: true);
-    exit(0);
-  });
+  final server = await io.serve(handler, InternetAddress.anyIPv4, 8080);
 
   print('');
   print('========================================');
