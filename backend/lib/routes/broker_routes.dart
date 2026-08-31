@@ -32,6 +32,7 @@ class BrokerRoutes {
     router.get('/history', _history);
     router.get('/candles', _candles);
     router.get('/option-chain', _optionChain);
+    router.get('/option-contracts', _optionContracts);
 
     router.post('/orders', _placeOrder);
     router.put('/orders/<orderId>', _modifyOrder);
@@ -353,6 +354,36 @@ class BrokerRoutes {
           'current_week';
 
       final result = await UpstoxOptionChainService.instance.getOptionChain(
+        instrumentKey: instrumentKey.trim(),
+        expiryDate: expiry,
+      );
+
+      return _json(result);
+    } catch (error) {
+      return _brokerError(error);
+    }
+  }
+
+  Future<Response> _optionContracts(Request request) async {
+    try {
+      if (!_hasValidSession(request)) {
+        return _brokerRequired();
+      }
+
+      final instrumentKey = request.url.queryParameters['instrumentKey'];
+
+      if (instrumentKey == null || instrumentKey.trim().isEmpty) {
+        return _validationError(
+          'INSTRUMENT_REQUIRED',
+          'instrumentKey is required.',
+        );
+      }
+
+      final expiry =
+          request.url.queryParameters['expiry'] ??
+          request.url.queryParameters['expiryDate'];
+
+      final result = await UpstoxOptionChainService.instance.getOptionContracts(
         instrumentKey: instrumentKey.trim(),
         expiryDate: expiry,
       );

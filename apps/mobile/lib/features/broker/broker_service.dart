@@ -1,4 +1,6 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:http/http.dart' as http;
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/network/api_client.dart';
@@ -179,9 +181,56 @@ class BrokerService {
   }
 
   Future<void> connectBroker() async {
-    final uri = Uri.parse('$_baseUrl/auth/upstox/login');
+    final session = Supabase.instance.client.auth.currentSession;
+    final accessToken = session?.accessToken.trim();
 
-    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (accessToken == null || accessToken.isEmpty) {
+      throw StateError('Authentication session is missing or expired.');
+    }
+
+    final baseUrl = dotenv.env['API_BASE_URL']?.trim();
+
+    if (baseUrl == null || baseUrl.isEmpty) {
+      throw StateError('API_BASE_URL is not configured in .env');
+    }
+
+    final normalizedBaseUrl = baseUrl.endsWith('/')
+        ? baseUrl.substring(0, baseUrl.length - 1)
+        : baseUrl;
+
+    final uri = Uri.parse('$normalizedBaseUrl/auth/upstox/login');
+
+    final response = await http
+        .get(
+          uri,
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': 'Bearer $accessToken',
+          },
+        )
+        .timeout(const Duration(seconds: 20));
+
+    if (response.statusCode != 302 &&
+        response.statusCode != 301 &&
+        response.statusCode != 303 &&
+        response.statusCode != 307 &&
+        response.statusCode != 308) {
+      throw Exception(
+        'Unable to start Upstox authorization '
+        '(HTTP ${response.statusCode}): ${response.body}',
+      );
+    }
+
+    final location = response.headers['location'];
+
+    if (location == null || location.trim().isEmpty) {
+      throw StateError('Backend did not return an Upstox authorization URL.');
+    }
+
+    final launched = await launchUrl(
+      Uri.parse(location),
+      mode: LaunchMode.externalApplication,
+    );
 
     if (!launched) {
       throw Exception('Unable to launch Upstox Login');

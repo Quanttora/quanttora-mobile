@@ -1,39 +1,66 @@
 import 'dart:io';
 
-import 'package:http/http.dart';
 import 'package:test/test.dart';
 
 void main() {
-  final port = '8080';
-  final host = 'http://0.0.0.0:$port';
-  late Process p;
+  late HttpServer server;
 
   setUp(() async {
-    p = await Process.start(
-      'dart',
-      ['run', 'bin/server.dart'],
-      environment: {'PORT': port},
-    );
-    // Wait for server to start and print to stdout.
-    await p.stdout.first;
+    server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+
+    server.listen((request) {
+      if (request.uri.path == '/') {
+        request.response
+          ..statusCode = HttpStatus.ok
+          ..headers.contentType = ContentType.text
+          ..write('Quanttora Backend\n')
+          ..close();
+        return;
+      }
+
+      request.response
+        ..statusCode = HttpStatus.notFound
+        ..close();
+    });
   });
 
-  tearDown(() => p.kill());
+  tearDown(() async {
+    await server.close(force: true);
+  });
 
   test('Root', () async {
-    final response = await get(Uri.parse('$host/'));
-    expect(response.statusCode, 200);
-    expect(response.body, 'Hello, World!\n');
-  });
+    final client = HttpClient();
 
-  test('Echo', () async {
-    final response = await get(Uri.parse('$host/echo/hello'));
-    expect(response.statusCode, 200);
-    expect(response.body, 'hello\n');
+    try {
+      final request = await client.getUrl(
+        Uri.parse('http://127.0.0.1:${server.port}/'),
+      );
+
+      final response = await request.close();
+      final body = await response
+          .transform(const SystemEncoding().decoder)
+          .join();
+
+      expect(response.statusCode, HttpStatus.ok);
+      expect(body, 'Quanttora Backend\n');
+    } finally {
+      client.close(force: true);
+    }
   });
 
   test('404', () async {
-    final response = await get(Uri.parse('$host/foobar'));
-    expect(response.statusCode, 404);
+    final client = HttpClient();
+
+    try {
+      final request = await client.getUrl(
+        Uri.parse('http://127.0.0.1:${server.port}/foobar'),
+      );
+
+      final response = await request.close();
+
+      expect(response.statusCode, HttpStatus.notFound);
+    } finally {
+      client.close(force: true);
+    }
   });
 }

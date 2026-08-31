@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ApiClient {
   ApiClient._();
@@ -30,10 +31,22 @@ class ApiClient {
     return Uri.parse('$_baseUrl$normalizedPath');
   }
 
-  Map<String, String> get _headers => const {
-    'Accept': 'application/json',
-    'Content-Type': 'application/json',
-  };
+  Map<String, String> get _headers {
+    final headers = <String, String>{
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+    };
+
+    final session = Supabase.instance.client.auth.currentSession;
+
+    final accessToken = session?.accessToken.trim();
+
+    if (accessToken != null && accessToken.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $accessToken';
+    }
+
+    return headers;
+  }
 
   Future<Map<String, dynamic>> get(String path) async {
     final response = await http

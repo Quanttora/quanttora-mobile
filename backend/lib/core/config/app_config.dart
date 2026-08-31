@@ -13,6 +13,11 @@ class AppConfig {
 
   static String get marketauxApiToken => _env['MARKETAUX_API_TOKEN'] ?? '';
 
+  static String get supabaseUrl => _required('SUPABASE_URL');
+
+  static String get supabasePublishableKey =>
+      _required('SUPABASE_PUBLISHABLE_KEY');
+
   static String get databaseHost => _required('DATABASE_HOST');
 
   static int get databasePort =>

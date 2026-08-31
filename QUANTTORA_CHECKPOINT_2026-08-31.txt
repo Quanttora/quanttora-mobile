@@ -1,0 +1,47 @@
+QUANTTORA CHECKPOINT — 2026-08-31
+
+CURRENT STATUS:
+- Flutter mobile app substantially built
+- Dart backend running successfully
+- PostgreSQL connected
+- Supabase authentication foundation implemented
+- API client updated
+- Market dashboard endpoint returns HTTP 200
+- Backend analyzer: No issues found
+- Android emulator environment has been unstable
+- APK builds successfully
+- Current main blocker: Upstox broker connection/authentication flow
+
+NEXT SESSION — START HERE:
+1. Inspect/finalize api_client.dart
+2. Inspect/finalize features/broker/broker_service.dart
+3. Inspect backend auth_routes.dart
+4. Verify Supabase access token -> backend AuthMiddleware
+5. Verify /auth/upstox/login
+6. Verify Flutter -> backend -> Upstox OAuth
+7. Test broker connection/status
+8. Then continue remaining end-to-end testing
+
+IMPORTANT:
+Do NOT restart or rewrite the Quanttora architecture.
+Continue with:
+Flutter -> Dart Backend -> Supabase/PostgreSQL -> Upstox
+
+Remaining major work:
+- Broker connection
+- Authentication integration
+- Live market feed verification
+- Home/API verification
+- Watchlist/charts verification
+- Paper trading verification
+- Live trading safeguards
+- Orders/positions/holdings/trades
+- Error handling
+- Security/production configuration
+- Backend deployment
+- Production database/configuration
+- Android release build
+- Real-device testing
+
+ESTIMATED REMAINING:
+Approximately 7–10 weeks for full end-to-end launch, depending on integration/testing issues.

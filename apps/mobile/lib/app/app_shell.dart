@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile/features/home/home_screen.dart';
 import 'package:mobile/features/strategy/presentation/screens/strategy_screen.dart';
 import 'package:mobile/features/trading_mode/screens/trading_mode_screen.dart';
+import 'package:mobile/features/broker/screens/upstox_login_screen.dart';
 
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
@@ -45,7 +46,6 @@ class _AppShellState extends State<AppShell> {
 
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
 
-      // Analyze Trade button appears ONLY on Home.
       floatingActionButton: _selectedIndex == 0
           ? Container(
               height: 62,
@@ -109,7 +109,6 @@ class _AppShellState extends State<AppShell> {
                   onTap: () => _changeTab(0),
                 ),
               ),
-
               Expanded(
                 child: _NavItem(
                   icon: Icons.auto_graph_rounded,
@@ -118,9 +117,7 @@ class _AppShellState extends State<AppShell> {
                   onTap: () => _changeTab(1),
                 ),
               ),
-
               const SizedBox(width: 90),
-
               Expanded(
                 child: _NavItem(
                   icon: Icons.smart_toy_rounded,
@@ -129,7 +126,6 @@ class _AppShellState extends State<AppShell> {
                   onTap: () => _changeTab(2),
                 ),
               ),
-
               Expanded(
                 child: _NavItem(
                   icon: Icons.person_rounded,
@@ -180,9 +176,7 @@ class _NavItem extends StatelessWidget {
             ),
             child: Icon(icon, color: color, size: 24),
           ),
-
           const SizedBox(height: 4),
-
           Text(
             title,
             style: TextStyle(
@@ -233,16 +227,12 @@ class AIScreen extends StatelessWidget {
                   color: Color(0xFF155EEF),
                 ),
               ),
-
               SizedBox(height: 20),
-
               Text(
                 "Quanttora AI",
                 style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
               ),
-
               SizedBox(height: 10),
-
               Text(
                 "AI Scanner, Trade Assistant,\n"
                 "Market Insights and Decision Engine\n"
@@ -261,6 +251,13 @@ class AIScreen extends StatelessWidget {
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
+  void _openBrokerConnections(BuildContext context) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const UpstoxLoginScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -268,9 +265,9 @@ class ProfileScreen extends StatelessWidget {
       appBar: AppBar(title: const Text("Profile"), centerTitle: true),
       body: Center(
         child: Container(
-          constraints: const BoxConstraints(maxWidth: 520),
+          constraints: const BoxConstraints(maxWidth: 620),
           margin: const EdgeInsets.all(24),
-          padding: const EdgeInsets.all(28),
+          padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(24),
@@ -282,10 +279,10 @@ class ProfileScreen extends StatelessWidget {
               ),
             ],
           ),
-          child: const Column(
+          child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              CircleAvatar(
+              const CircleAvatar(
                 radius: 38,
                 backgroundColor: Color(0xFFEAF2FF),
                 child: Icon(
@@ -295,21 +292,125 @@ class ProfileScreen extends StatelessWidget {
                 ),
               ),
 
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-              Text(
+              const Text(
                 "Profile",
                 style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
               ),
 
-              SizedBox(height: 10),
+              const SizedBox(height: 24),
 
-              Text(
-                "Account, Broker Connections,\n"
-                "Subscription and Settings\n"
-                "will appear here.",
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 15, color: Colors.black54),
+              _ProfileMenuTile(
+                icon: Icons.person_outline_rounded,
+                title: "Account",
+                subtitle: "Manage your Quanttora account",
+                onTap: () {},
+              ),
+
+              const SizedBox(height: 12),
+
+              _ProfileMenuTile(
+                icon: Icons.account_balance_rounded,
+                title: "Broker Connections",
+                subtitle: "Connect and manage your Upstox account",
+                iconColor: const Color(0xFF155EEF),
+                onTap: () => _openBrokerConnections(context),
+              ),
+
+              const SizedBox(height: 12),
+
+              _ProfileMenuTile(
+                icon: Icons.workspace_premium_outlined,
+                title: "Subscription",
+                subtitle: "Manage your Quanttora subscription",
+                onTap: () {},
+              ),
+
+              const SizedBox(height: 12),
+
+              _ProfileMenuTile(
+                icon: Icons.settings_outlined,
+                title: "Settings",
+                subtitle: "Application preferences and settings",
+                onTap: () {},
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileMenuTile extends StatelessWidget {
+  const _ProfileMenuTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+    this.iconColor,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+  final Color? iconColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final effectiveIconColor = iconColor ?? const Color(0xFF64748B);
+
+    return Material(
+      color: const Color(0xFFF8FAFC),
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: effectiveIconColor.withValues(alpha: .10),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, color: effectiveIconColor, size: 25),
+              ),
+
+              const SizedBox(width: 14),
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Colors.black54,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: Colors.black38,
+                size: 28,
               ),
             ],
           ),

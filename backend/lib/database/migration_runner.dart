@@ -2,6 +2,7 @@ import 'package:backend/database/database.dart';
 import 'package:backend/database/migrations/migration.dart';
 import 'package:backend/database/migrations/migration_001_create_users.dart';
 import 'package:backend/database/migrations/migration_002_create_user_sessions.dart';
+import 'package:backend/database/migrations/migration_003_add_supabase_identity.dart';
 import 'package:postgres/postgres.dart';
 
 class MigrationRunner {
@@ -10,6 +11,7 @@ class MigrationRunner {
   static final List<Migration> _migrations = [
     Migration001CreateUsers(),
     Migration002CreateUserSessions(),
+    Migration003AddSupabaseIdentity(),
   ];
 
   static Future<void> initialize() async {
@@ -31,9 +33,7 @@ class MigrationRunner {
       ORDER BY version ASC
     ''');
 
-    final appliedVersions = appliedResult
-        .map((row) => row[0] as int)
-        .toSet();
+    final appliedVersions = appliedResult.map((row) => row[0] as int).toSet();
 
     for (final migration in _migrations) {
       if (appliedVersions.contains(migration.version)) {
@@ -48,10 +48,7 @@ class MigrationRunner {
             INSERT INTO schema_migrations (version, name)
             VALUES (@version, @name)
           '''),
-          parameters: {
-            'version': migration.version,
-            'name': migration.name,
-          },
+          parameters: {'version': migration.version, 'name': migration.name},
         );
       });
 
@@ -63,22 +60,14 @@ class MigrationRunner {
   }
 
   static Future<List<Map<String, dynamic>>> getAppliedMigrations() async {
-    final result = await Database.execute(
-      '''
+    final result = await Database.execute('''
       SELECT version, name, applied_at
       FROM schema_migrations
       ORDER BY version ASC
-      ''',
-    );
+      ''');
 
     return result
-        .map(
-          (row) => {
-            'version': row[0],
-            'name': row[1],
-            'applied_at': row[2],
-          },
-        )
+        .map((row) => {'version': row[0], 'name': row[1], 'applied_at': row[2]})
         .toList();
   }
 }

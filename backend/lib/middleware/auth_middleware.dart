@@ -2,6 +2,7 @@ import 'package:backend/api/api_response.dart';
 import 'package:backend/models/user.dart';
 import 'package:backend/repositories/user_repository.dart';
 import 'package:backend/services/auth/authentication_service.dart';
+import 'package:backend/services/auth/supabase_auth_service.dart';
 import 'package:shelf/shelf.dart';
 
 class AuthMiddleware {
@@ -13,11 +14,9 @@ class AuthMiddleware {
   static Middleware requireAuthentication() {
     return (Handler handler) {
       return (Request request) async {
-        final authorization =
-            request.headers['authorization'];
+        final authorization = request.headers['authorization'];
 
-        if (authorization == null ||
-            authorization.trim().isEmpty) {
+        if (authorization == null || authorization.trim().isEmpty) {
           return ApiResponse.error(
             statusCode: 401,
             code: 'AUTH_REQUIRED',
@@ -39,36 +38,53 @@ class AuthMiddleware {
 
         final token = parts[1].trim();
 
-        final session =
-            await AuthenticationService.authenticateToken(token);
+        // First try the existing Quanttora session system.
+        final session = await AuthenticationService.authenticateToken(token);
 
-        if (session == null) {
-          return ApiResponse.error(
-            statusCode: 401,
-            code: 'INVALID_SESSION',
-            message: 'Authentication session is invalid or expired.',
+        if (session != null) {
+          final user = await UserRepository.findById(session.userId);
+
+          if (user == null || !user.isActive) {
+            return ApiResponse.error(
+              statusCode: 401,
+              code: 'INVALID_USER',
+              message: 'Authentication session is invalid.',
+            );
+          }
+
+          final updatedRequest = request.change(
+            context: {userContextKey: user, sessionContextKey: session},
           );
+
+          return handler(updatedRequest);
         }
 
-        final user =
-            await UserRepository.findById(session.userId);
+        // If it is not a Quanttora session token,
+        // try the Supabase access token.
+        try {
+          final supabaseUser =
+              await SupabaseAuthService.authenticateAccessToken(token);
 
-        if (user == null || !user.isActive) {
+          if (supabaseUser == null) {
+            return ApiResponse.error(
+              statusCode: 401,
+              code: 'INVALID_SESSION',
+              message: 'Authentication session is invalid or expired.',
+            );
+          }
+
+          final updatedRequest = request.change(
+            context: {userContextKey: supabaseUser},
+          );
+
+          return handler(updatedRequest);
+        } catch (_) {
           return ApiResponse.error(
             statusCode: 401,
-            code: 'INVALID_USER',
-            message: 'Authentication session is invalid.',
+            code: 'AUTHENTICATION_FAILED',
+            message: 'Authentication could not be verified.',
           );
         }
-
-        final updatedRequest = request.change(
-          context: {
-            userContextKey: user,
-            sessionContextKey: session,
-          },
-        );
-
-        return handler(updatedRequest);
       };
     };
   }
