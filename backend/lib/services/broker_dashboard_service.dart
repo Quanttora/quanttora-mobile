@@ -18,26 +18,55 @@ class BrokerDashboardService {
     final token = _brokerService.accessTokenForUser(userId);
     final broker = BrokerMarketService.instance.current;
 
-    final results = await Future.wait([
-      broker.getFunds(token),
-      broker.getHoldings(token),
-      broker.getPositions(token),
-      broker.getOrderBook(token),
-      broker.getTradeBook(token),
-    ]);
+    print('');
+    print('========================================');
+    print('BROKER DASHBOARD REQUEST');
+    print('QUANTTORA USER ID: $userId');
+    print('BROKER: ${session.broker}');
+    print('UPSTOX USER ID: ${session.userId}');
+    print('========================================');
 
-    final funds = results[0];
+    final funds = await _safeCall(
+      name: 'FUNDS',
+      call: () => broker.getFunds(token),
+    );
+
+    final holdings = await _safeCall(
+      name: 'HOLDINGS',
+      call: () => broker.getHoldings(token),
+    );
+
+    final positions = await _safeCall(
+      name: 'POSITIONS',
+      call: () => broker.getPositions(token),
+    );
+
+    final orders = await _safeCall(
+      name: 'ORDERS',
+      call: () => broker.getOrderBook(token),
+    );
+
+    final trades = await _safeCall(
+      name: 'TRADES',
+      call: () => broker.getTradeBook(token),
+    );
+
+    print('========================================');
+    print('BROKER DASHBOARD COMPLETE');
+    print('========================================');
+    print('');
 
     double availableMargin = 0;
     double usedMargin = 0;
 
     final fundsData = funds['data'];
 
-    if (fundsData is Map<String, dynamic>) {
+    if (fundsData is Map) {
       final equity = fundsData['equity'];
 
-      if (equity is Map<String, dynamic>) {
+      if (equity is Map) {
         availableMargin = _toDouble(equity['available_margin']);
+
         usedMargin = _toDouble(equity['used_margin']);
       }
     }
@@ -45,22 +74,72 @@ class BrokerDashboardService {
     return {
       'connected': true,
       'broker': session.broker,
+
       'user': {
         'name': session.userName,
         'email': session.email,
         'userId': session.userId,
       },
+
       'userName': session.userName,
       'email': session.email,
       'userId': session.userId,
+
       'availableMargin': availableMargin,
       'usedMargin': usedMargin,
-      'funds': funds,
-      'holdings': results[1],
-      'positions': results[2],
-      'orders': results[3],
-      'trades': results[4],
+
+      'funds': funds['data'],
+
+      'holdings': holdings['data'],
+      'positions': positions['data'],
+      'orders': orders['data'],
+      'trades': trades['data'],
+
+      'apiStatus': {
+        'funds': funds['success'],
+        'holdings': holdings['success'],
+        'positions': positions['success'],
+        'orders': orders['success'],
+        'trades': trades['success'],
+      },
+
+      'apiErrors': {
+        'funds': funds['error'],
+        'holdings': holdings['error'],
+        'positions': positions['error'],
+        'orders': orders['error'],
+        'trades': trades['error'],
+      },
     };
+  }
+
+  Future<Map<String, dynamic>> _safeCall({
+    required String name,
+    required Future<Map<String, dynamic>> Function() call,
+  }) async {
+    try {
+      print('[Broker Dashboard] Calling $name...');
+
+      final result = await call();
+
+      print('[Broker Dashboard] $name SUCCESS');
+
+      return {
+        'success': true,
+        'data': result['data'],
+        'raw': result,
+        'error': null,
+      };
+    } catch (e) {
+      print('[Broker Dashboard] $name FAILED: $e');
+
+      return {
+        'success': false,
+        'data': null,
+        'raw': null,
+        'error': e.toString(),
+      };
+    }
   }
 
   double _toDouble(dynamic value) {

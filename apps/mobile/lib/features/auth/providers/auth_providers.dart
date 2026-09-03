@@ -1,16 +1,19 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../data/auth_service.dart';
 
-final supabaseClientProvider = Provider<SupabaseClient>(
-  (ref) => Supabase.instance.client,
+final authServiceProvider = Provider<AuthService>(
+  (ref) => AuthService.instance,
 );
 
-final authServiceProvider = Provider<AuthService>((ref) {
-  return AuthService(ref.read(supabaseClientProvider));
+final authStateProvider = StreamProvider<bool>((ref) {
+  return ref.read(authServiceProvider).authStateChanges;
 });
 
-final authStateProvider = StreamProvider<AuthState>((ref) {
-  return ref.read(authServiceProvider).authStateChanges;
+final isAuthenticatedProvider = Provider<bool>((ref) {
+  return ref.read(authServiceProvider).isAuthenticated;
+});
+
+final currentUserProvider = Provider<Map<String, dynamic>?>((ref) {
+  return ref.read(authServiceProvider).currentUser;
 });

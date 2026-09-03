@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../../core/theme/app_colors.dart';
 import '../../../../../core/theme/app_radius.dart';
@@ -37,6 +36,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       return;
     }
 
+    FocusScope.of(context).unfocus();
+
     setState(() {
       _isLoading = true;
     });
@@ -45,13 +46,29 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       await ref
           .read(authServiceProvider)
           .signIn(
-            email: _emailController.text,
+            email: _emailController.text.trim(),
             password: _passwordController.text,
           );
-    } on AuthException catch (error) {
-      _showMessage(error.message);
-    } catch (_) {
-      _showMessage('Unable to sign in. Please try again.');
+
+      if (!mounted) {
+        return;
+      }
+
+      // AuthGate listens to authStateProvider.
+      // A successful sign-in should therefore switch
+      // automatically from LoginScreen to AppShell.
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      final message = error.toString();
+
+      _showMessage(
+        message.startsWith('Exception: ')
+            ? message.substring('Exception: '.length)
+            : message,
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -72,13 +89,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     try {
       await ref.read(authServiceProvider).resetPassword(email: email);
 
+      if (!mounted) {
+        return;
+      }
+
       _showMessage(
         'Password reset instructions have been sent if the account exists.',
       );
-    } on AuthException catch (error) {
-      _showMessage(error.message);
-    } catch (_) {
-      _showMessage('Unable to request a password reset.');
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      final message = error.toString();
+
+      _showMessage(
+        message.startsWith('Exception: ')
+            ? message.substring('Exception: '.length)
+            : message,
+      );
     }
   }
 
@@ -163,6 +192,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             controller: _passwordController,
                             obscureText: _obscurePassword,
                             autofillHints: const [AutofillHints.password],
+                            textInputAction: TextInputAction.done,
                             onFieldSubmitted: (_) {
                               if (!_isLoading) {
                                 _signIn();

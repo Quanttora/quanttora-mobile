@@ -12,6 +12,20 @@ class BrokerService {
 
   final ApiClient _api = ApiClient.instance;
 
+  String get _baseUrl {
+    final value = dotenv.env['API_BASE_URL']?.trim();
+
+    if (value == null || value.isEmpty) {
+      throw StateError('API_BASE_URL is not configured in .env');
+    }
+
+    if (value.endsWith('/')) {
+      return value.substring(0, value.length - 1);
+    }
+
+    return value;
+  }
+
   Future<Map<String, dynamic>> getDashboard() {
     return _api.get('/broker/dashboard');
   }
@@ -186,49 +200,40 @@ class BrokerService {
 
     final uri = Uri.parse('$normalizedBaseUrl/auth/upstox/login');
 
-    final client = http.Client();
+    final response = await http
+        .get(
+          uri,
+          headers: {
+            'Accept': 'application/json',
+            'Authorization': 'Bearer $accessToken',
+          },
+        )
+        .timeout(const Duration(seconds: 20));
 
-    try {
-      final request = http.Request('GET', uri)
-        ..headers.addAll({
-          'Accept': 'application/json',
-          'Authorization': 'Bearer $accessToken',
-        })
-        ..followRedirects = false;
-
-      final streamedResponse = await client
-          .send(request)
-          .timeout(const Duration(seconds: 20));
-
-      final response = await http.Response.fromStream(streamedResponse);
-
-      if (response.statusCode != 301 &&
-          response.statusCode != 302 &&
-          response.statusCode != 303 &&
-          response.statusCode != 307 &&
-          response.statusCode != 308) {
-        throw Exception(
-          'Unable to start Upstox authorization '
-          '(HTTP ${response.statusCode}): ${response.body}',
-        );
-      }
-
-      final location = response.headers['location'];
-
-      if (location == null || location.trim().isEmpty) {
-        throw StateError('Backend did not return an Upstox authorization URL.');
-      }
-
-      final launched = await launchUrl(
-        Uri.parse(location),
-        mode: LaunchMode.externalApplication,
+    if (response.statusCode != 302 &&
+        response.statusCode != 301 &&
+        response.statusCode != 303 &&
+        response.statusCode != 307 &&
+        response.statusCode != 308) {
+      throw Exception(
+        'Unable to start Upstox authorization '
+        '(HTTP ${response.statusCode}): ${response.body}',
       );
+    }
 
-      if (!launched) {
-        throw Exception('Unable to launch Upstox Login');
-      }
-    } finally {
-      client.close();
+    final location = response.headers['location'];
+
+    if (location == null || location.trim().isEmpty) {
+      throw StateError('Backend did not return an Upstox authorization URL.');
+    }
+
+    final launched = await launchUrl(
+      Uri.parse(location),
+      mode: LaunchMode.externalApplication,
+    );
+
+    if (!launched) {
+      throw Exception('Unable to launch Upstox Login');
     }
   }
 
