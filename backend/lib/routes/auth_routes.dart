@@ -20,7 +20,8 @@ import 'package:shelf_router/shelf_router.dart';
 class AuthRoutes {
   final UpstoxAuthService _upstox = UpstoxAuthService();
 
-  final BrokerConnectionRepository _repository = BrokerConnectionRepository();
+  final BrokerConnectionRepository _repository =
+      BrokerConnectionRepository();
 
   final BrokerService _brokerService = BrokerService.instance;
 
@@ -69,7 +70,10 @@ class AuthRoutes {
 
     router.post('/logout', _logout);
 
-    router.get('/me', AuthMiddleware.requireAuthentication()(_me));
+    router.get(
+      '/me',
+      AuthMiddleware.requireAuthentication()(_me),
+    );
 
     /*
      * IMPORTANT:
@@ -77,7 +81,7 @@ class AuthRoutes {
      * The login endpoint is authenticated because we need to know which
      * Quanttora user is starting the Upstox connection.
      */
-    router.get(
+    router.post(
       '/upstox/login',
       AuthMiddleware.requireAuthentication()(_upstoxLogin),
     );
@@ -118,7 +122,10 @@ class AuthRoutes {
     final baseUri = Uri.parse(baseUrl);
 
     final loginUri = baseUri.replace(
-      queryParameters: {...baseUri.queryParameters, 'state': state},
+      queryParameters: {
+        ...baseUri.queryParameters,
+        'state': state,
+      },
     );
 
     print('');
@@ -160,13 +167,18 @@ class AuthRoutes {
     if (state == null || state.trim().isEmpty) {
       print('UPSTOX CALLBACK ERROR: OAuth state missing.');
 
-      return Response(HttpStatus.badRequest, body: 'OAuth state is missing.');
+      return Response(
+        HttpStatus.badRequest,
+        body: 'OAuth state is missing.',
+      );
     }
 
     final oauthState = _oauthStates.remove(state);
 
     if (oauthState == null) {
-      print('UPSTOX CALLBACK ERROR: Invalid or expired OAuth state.');
+      print(
+        'UPSTOX CALLBACK ERROR: Invalid or expired OAuth state.',
+      );
 
       return Response(
         HttpStatus.badRequest,
@@ -206,7 +218,9 @@ class AuthRoutes {
       final accessToken = token['access_token']?.toString() ?? '';
 
       if (accessToken.isEmpty) {
-        throw Exception('Upstox access token was not returned.');
+        throw Exception(
+          'Upstox access token was not returned.',
+        );
       }
 
       print('UPSTOX TOKEN EXCHANGE SUCCESSFUL');
@@ -215,7 +229,9 @@ class AuthRoutes {
 
       final profileResponse = await http
           .get(
-            Uri.parse('https://api.upstox.com/v2/user/profile'),
+            Uri.parse(
+              'https://api.upstox.com/v2/user/profile',
+            ),
             headers: {
               'Accept': 'application/json',
               'Authorization': 'Bearer $accessToken',
@@ -236,29 +252,41 @@ class AuthRoutes {
         );
       }
 
-      final decodedProfile = jsonDecode(profileResponse.body);
+      final decodedProfile = jsonDecode(
+        profileResponse.body,
+      );
 
       if (decodedProfile is! Map) {
-        throw Exception('Invalid Upstox profile response.');
+        throw Exception(
+          'Invalid Upstox profile response.',
+        );
       }
 
       final profileData = decodedProfile['data'];
 
       if (profileData is! Map) {
-        throw Exception('Invalid Upstox profile data.');
+        throw Exception(
+          'Invalid Upstox profile data.',
+        );
       }
 
-      final upstoxUserId = profileData['user_id']?.toString() ?? '';
+      final upstoxUserId =
+          profileData['user_id']?.toString() ?? '';
 
-      final userName = profileData['user_name']?.toString() ?? '';
+      final userName =
+          profileData['user_name']?.toString() ?? '';
 
-      final email = profileData['email']?.toString() ?? '';
+      final email =
+          profileData['email']?.toString() ?? '';
 
       if (upstoxUserId.isEmpty) {
-        throw Exception('Upstox user ID was not returned.');
+        throw Exception(
+          'Upstox user ID was not returned.',
+        );
       }
 
-      final accessTokenExpiresAt = _extractAccessTokenExpiry(accessToken);
+      final accessTokenExpiresAt =
+          _extractAccessTokenExpiry(accessToken);
 
       /*
        * BrokerConnection keeps the Upstox identity.
@@ -269,14 +297,20 @@ class AuthRoutes {
         userName: userName,
         email: email,
         accessToken: accessToken,
-        extendedToken: token['extended_token']?.toString() ?? '',
+        extendedToken:
+            token['extended_token']?.toString() ?? '',
       );
 
-      _repository.save(connection);
+      /*
+       * Persist the broker connection against the
+       * authenticated Quanttora user.
+       */
+      await _repository.save(
+        connection,
+        quanttoraUserId: quanttoraUserId,
+      );
 
       /*
-       * IMPORTANT:
-       *
        * BrokerSession.userId is the Upstox user ID because that is the
        * broker identity.
        *
@@ -294,14 +328,12 @@ class AuthRoutes {
       );
 
       /*
-       * THIS is the critical fix.
-       *
-       * Previously the broker session was connected without associating
-       * it with the authenticated Quanttora user.
-       *
-       * Now the session belongs to quanttoraUserId.
+       * The in-memory session remains available for the current process.
        */
-      _brokerService.connectForUser(userId: quanttoraUserId, session: session);
+      _brokerService.connectForUser(
+        userId: quanttoraUserId,
+        session: session,
+      );
 
       print('BROKER SESSION CONNECTED');
       print('QUANTTORA USER ID: $quanttoraUserId');
@@ -313,7 +345,9 @@ class AuthRoutes {
       try {
         await _marketFeed.connect();
 
-        await _marketFeed.subscribeMany(_marketInstruments);
+        await _marketFeed.subscribeMany(
+          _marketInstruments,
+        );
 
         print(
           'MARKET INSTRUMENTS SUBSCRIBED: '
@@ -327,7 +361,9 @@ class AuthRoutes {
          * session. Log it and allow the user to continue.
          */
         print('');
-        print('UPSTOX MARKET FEED CONNECTION WARNING');
+        print(
+          'UPSTOX MARKET FEED CONNECTION WARNING',
+        );
         print('ERROR: $e');
         print('STACK TRACE:');
         print(stackTrace);
@@ -355,7 +391,9 @@ class AuthRoutes {
       print('==============================');
       print('');
 
-      return Response.found('http://localhost:3000/broker-connected');
+      return Response.found(
+        'http://localhost:3000/broker-connected',
+      );
     } catch (e, stackTrace) {
       print('');
       print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
@@ -390,17 +428,22 @@ class AuthRoutes {
     final password = body['password'];
     final displayName = body['displayName'];
 
-    if (email is! String || password is! String || displayName is! String) {
+    if (email is! String ||
+        password is! String ||
+        displayName is! String) {
       return ApiResponse.error(
         statusCode: HttpStatus.badRequest,
         code: 'INVALID_REQUEST',
-        message: 'Email, password and displayName are required.',
+        message:
+            'Email, password and displayName are required.',
       );
     }
 
-    final normalizedEmail = email.trim().toLowerCase();
+    final normalizedEmail =
+        email.trim().toLowerCase();
 
-    final normalizedDisplayName = displayName.trim();
+    final normalizedDisplayName =
+        displayName.trim();
 
     if (normalizedEmail.isEmpty) {
       return ApiResponse.error(
@@ -426,13 +469,17 @@ class AuthRoutes {
       );
     }
 
-    final existingUser = await UserRepository.findByEmail(normalizedEmail);
+    final existingUser =
+        await UserRepository.findByEmail(
+      normalizedEmail,
+    );
 
     if (existingUser != null) {
       return ApiResponse.error(
         statusCode: HttpStatus.conflict,
         code: 'EMAIL_ALREADY_EXISTS',
-        message: 'An account with this email already exists.',
+        message:
+            'An account with this email already exists.',
       );
     }
 
@@ -443,19 +490,25 @@ class AuthRoutes {
         displayName: normalizedDisplayName,
       );
 
-      final user = await UserRepository.findById(result.userId);
+      final user =
+          await UserRepository.findById(
+        result.userId,
+      );
 
       if (user == null) {
         return ApiResponse.error(
           statusCode: HttpStatus.internalServerError,
           code: 'REGISTRATION_FAILED',
-          message: 'Unable to load the newly created user.',
+          message:
+              'Unable to load the newly created user.',
         );
       }
 
       return ApiResponse.success(
         statusCode: HttpStatus.created,
-        data: {'user': user.toPublicMap()},
+        data: {
+          'user': user.toPublicMap(),
+        },
       );
     } catch (_) {
       return ApiResponse.error(
@@ -484,17 +537,21 @@ class AuthRoutes {
       return ApiResponse.error(
         statusCode: HttpStatus.badRequest,
         code: 'INVALID_REQUEST',
-        message: 'Email and password are required.',
+        message:
+            'Email and password are required.',
       );
     }
 
-    final normalizedEmail = email.trim().toLowerCase();
+    final normalizedEmail =
+        email.trim().toLowerCase();
 
-    if (normalizedEmail.isEmpty || password.isEmpty) {
+    if (normalizedEmail.isEmpty ||
+        password.isEmpty) {
       return ApiResponse.error(
         statusCode: HttpStatus.badRequest,
         code: 'INVALID_CREDENTIALS',
-        message: 'Email and password are required.',
+        message:
+            'Email and password are required.',
       );
     }
 
@@ -509,7 +566,9 @@ class AuthRoutes {
           'user': result.user.toPublicMap(),
           'session': {
             'token': result.session.token,
-            'expiresAt': result.session.expiresAt.toUtc().toIso8601String(),
+            'expiresAt': result.session.expiresAt
+                .toUtc()
+                .toIso8601String(),
           },
         },
       );
@@ -523,17 +582,23 @@ class AuthRoutes {
   }
 
   Future<Response> _logout(Request request) async {
-    final authorization = request.headers[HttpHeaders.authorizationHeader];
+    final authorization =
+        request.headers[
+          HttpHeaders.authorizationHeader
+        ];
 
-    if (authorization == null || authorization.trim().isEmpty) {
+    if (authorization == null ||
+        authorization.trim().isEmpty) {
       return ApiResponse.error(
         statusCode: HttpStatus.unauthorized,
         code: 'AUTH_REQUIRED',
-        message: 'Authentication is required.',
+        message:
+            'Authentication is required.',
       );
     }
 
-    final parts = authorization.trim().split(' ');
+    final parts =
+        authorization.trim().split(' ');
 
     if (parts.length != 2 ||
         parts[0].toLowerCase() != 'bearer' ||
@@ -541,55 +606,75 @@ class AuthRoutes {
       return ApiResponse.error(
         statusCode: HttpStatus.unauthorized,
         code: 'INVALID_AUTH_HEADER',
-        message: 'Invalid authentication header.',
+        message:
+            'Invalid authentication header.',
       );
     }
 
     final token = parts[1].trim();
 
     try {
-      final session = await AuthenticationService.authenticateToken(token);
+      final session =
+          await AuthenticationService
+              .authenticateToken(token);
 
       if (session == null) {
         return ApiResponse.error(
           statusCode: HttpStatus.unauthorized,
           code: 'INVALID_SESSION',
-          message: 'Session is invalid or expired.',
+          message:
+              'Session is invalid or expired.',
         );
       }
 
-      await AuthenticationService.logout(token);
+      await AuthenticationService.logout(
+        token,
+      );
 
-      return ApiResponse.success(data: {'loggedOut': true});
+      return ApiResponse.success(
+        data: {'loggedOut': true},
+      );
     } catch (_) {
       return ApiResponse.error(
         statusCode: HttpStatus.unauthorized,
         code: 'INVALID_SESSION',
-        message: 'Session is invalid or expired.',
+        message:
+            'Session is invalid or expired.',
       );
     }
   }
 
   Future<Response> _me(Request request) async {
-    final user = AuthMiddleware.getUser(request);
+    final user =
+        AuthMiddleware.getUser(request);
 
     if (user == null) {
       return ApiResponse.error(
         statusCode: HttpStatus.unauthorized,
         code: 'AUTH_REQUIRED',
-        message: 'Authentication is required.',
+        message:
+            'Authentication is required.',
       );
     }
 
-    return ApiResponse.success(data: {'user': user.toPublicMap()});
+    return ApiResponse.success(
+      data: {
+        'user': user.toPublicMap(),
+      },
+    );
   }
 
   String _generateOAuthState() {
     final random = Random.secure();
 
-    final bytes = List<int>.generate(32, (_) => random.nextInt(256));
+    final bytes = List<int>.generate(
+      32,
+      (_) => random.nextInt(256),
+    );
 
-    return base64Url.encode(bytes).replaceAll('=', '');
+    return base64Url
+        .encode(bytes)
+        .replaceAll('=', '');
   }
 
   void _cleanupExpiredOAuthStates() {
@@ -597,23 +682,34 @@ class AuthRoutes {
 
     _oauthStates.removeWhere(
       (_, value) =>
-          now.difference(value.createdAt) > const Duration(minutes: 10),
+          now.difference(value.createdAt) >
+          const Duration(minutes: 10),
     );
   }
 
-  static DateTime? _extractAccessTokenExpiry(String accessToken) {
+  static DateTime? _extractAccessTokenExpiry(
+    String accessToken,
+  ) {
     try {
-      final parts = accessToken.split('.');
+      final parts =
+          accessToken.split('.');
 
       if (parts.length != 3) {
         return null;
       }
 
-      final normalizedPayload = base64Url.normalize(parts[1]);
+      final normalizedPayload =
+          base64Url.normalize(parts[1]);
 
-      final payloadBytes = base64Url.decode(normalizedPayload);
+      final payloadBytes =
+          base64Url.decode(
+        normalizedPayload,
+      );
 
-      final payload = jsonDecode(utf8.decode(payloadBytes));
+      final payload =
+          jsonDecode(
+        utf8.decode(payloadBytes),
+      );
 
       if (payload is! Map) {
         return null;
@@ -622,11 +718,16 @@ class AuthRoutes {
       final exp = payload['exp'];
 
       if (exp is int) {
-        return DateTime.fromMillisecondsSinceEpoch(exp * 1000, isUtc: true);
+        return DateTime
+            .fromMillisecondsSinceEpoch(
+          exp * 1000,
+          isUtc: true,
+        );
       }
 
       if (exp is num) {
-        return DateTime.fromMillisecondsSinceEpoch(
+        return DateTime
+            .fromMillisecondsSinceEpoch(
           exp.toInt() * 1000,
           isUtc: true,
         );
@@ -643,5 +744,8 @@ class _UpstoxOAuthState {
   final int userId;
   final DateTime createdAt;
 
-  const _UpstoxOAuthState({required this.userId, required this.createdAt});
+  const _UpstoxOAuthState({
+    required this.userId,
+    required this.createdAt,
+  });
 }
