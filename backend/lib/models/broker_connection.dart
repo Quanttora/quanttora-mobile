@@ -4,9 +4,11 @@ class BrokerConnection {
   final String userName;
   final String email;
 
-  // These stay on the backend only
+  // These stay on the backend only.
   final String accessToken;
   final String extendedToken;
+  final String refreshToken;
+  final DateTime? accessTokenExpiresAt;
 
   const BrokerConnection({
     required this.broker,
@@ -15,6 +17,8 @@ class BrokerConnection {
     required this.email,
     required this.accessToken,
     required this.extendedToken,
+    required this.refreshToken,
+    required this.accessTokenExpiresAt,
   });
 
   Map<String, dynamic> toPublicJson() {

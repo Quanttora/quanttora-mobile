@@ -13,6 +13,8 @@ class AppConfig {
 
   static String get marketauxApiToken => _env['MARKETAUX_API_TOKEN'] ?? '';
 
+    static String get brokerTokenEncryptionKey => _required('BROKER_TOKEN_ENCRYPTION_KEY');
+
   static String get supabaseUrl => _required('SUPABASE_URL');
 
   static String get supabasePublishableKey =>

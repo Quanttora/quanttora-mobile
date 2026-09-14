@@ -225,6 +225,11 @@ class AuthRoutes {
 
       print('UPSTOX TOKEN EXCHANGE SUCCESSFUL');
 
+      /*
+       * Standard Upstox OAuth does not require a refresh token for the
+       * normal access-token lifecycle. Keep reading the field if Upstox
+       * supplies one, so the backend remains forward-compatible.
+       */
       final refreshToken = token['refresh_token']?.toString();
 
       final profileResponse = await http
@@ -285,8 +290,12 @@ class AuthRoutes {
         );
       }
 
+      /*
+       * Upstox standard access tokens remain valid until 3:30 AM
+       * on the following day.
+       */
       final accessTokenExpiresAt =
-          _extractAccessTokenExpiry(accessToken);
+          _calculateUpstoxAccessTokenExpiry();
 
       /*
        * BrokerConnection keeps the Upstox identity.
@@ -299,6 +308,8 @@ class AuthRoutes {
         accessToken: accessToken,
         extendedToken:
             token['extended_token']?.toString() ?? '',
+        refreshToken: refreshToken ?? '',
+        accessTokenExpiresAt: accessTokenExpiresAt,
       );
 
       /*
@@ -380,14 +391,14 @@ class AuthRoutes {
         'MARKET INSTRUMENTS: '
         '${_marketInstruments.length}',
       );
-
-      if (accessTokenExpiresAt != null) {
-        print(
-          'ACCESS TOKEN EXPIRY: '
-          '$accessTokenExpiresAt',
-        );
-      }
-
+      print(
+        'ACCESS TOKEN EXPIRY: '
+        '${accessTokenExpiresAt.toUtc().toIso8601String()}',
+      );
+      print(
+        'REFRESH TOKEN: '
+        '${refreshToken != null && refreshToken.isNotEmpty ? 'present' : 'not provided'}',
+      );
       print('==============================');
       print('');
 
@@ -687,56 +698,18 @@ class AuthRoutes {
     );
   }
 
-  static DateTime? _extractAccessTokenExpiry(
-    String accessToken,
-  ) {
-    try {
-      final parts =
-          accessToken.split('.');
+  static DateTime _calculateUpstoxAccessTokenExpiry() {
+    final now = DateTime.now();
 
-      if (parts.length != 3) {
-        return null;
-      }
+    final tomorrow = DateTime(
+      now.year,
+      now.month,
+      now.day + 1,
+      3,
+      30,
+    );
 
-      final normalizedPayload =
-          base64Url.normalize(parts[1]);
-
-      final payloadBytes =
-          base64Url.decode(
-        normalizedPayload,
-      );
-
-      final payload =
-          jsonDecode(
-        utf8.decode(payloadBytes),
-      );
-
-      if (payload is! Map) {
-        return null;
-      }
-
-      final exp = payload['exp'];
-
-      if (exp is int) {
-        return DateTime
-            .fromMillisecondsSinceEpoch(
-          exp * 1000,
-          isUtc: true,
-        );
-      }
-
-      if (exp is num) {
-        return DateTime
-            .fromMillisecondsSinceEpoch(
-          exp.toInt() * 1000,
-          isUtc: true,
-        );
-      }
-
-      return null;
-    } catch (_) {
-      return null;
-    }
+    return tomorrow.toUtc();
   }
 }
 

@@ -4,6 +4,7 @@ import 'package:backend/database/migrations/migration_001_create_users.dart';
 import 'package:backend/database/migrations/migration_002_create_user_sessions.dart';
 import 'package:backend/database/migrations/migration_003_add_supabase_identity.dart';
 import 'package:backend/database/migrations/migration_004_create_broker_connections.dart';
+import 'package:backend/database/migrations/migration_005_add_broker_token_lifecycle.dart';
 import 'package:postgres/postgres.dart';
 
 class MigrationRunner {
@@ -14,6 +15,7 @@ class MigrationRunner {
     Migration002CreateUserSessions(),
     Migration003AddSupabaseIdentity(),
     Migration004CreateBrokerConnections(),
+    Migration005AddBrokerTokenLifecycle(),
   ];
 
   static Future<void> initialize() async {
@@ -35,7 +37,8 @@ class MigrationRunner {
       ORDER BY version ASC
     ''');
 
-    final appliedVersions = appliedResult.map((row) => row[0] as int).toSet();
+    final appliedVersions =
+        appliedResult.map((row) => row[0] as int).toSet();
 
     for (final migration in _migrations) {
       if (appliedVersions.contains(migration.version)) {
