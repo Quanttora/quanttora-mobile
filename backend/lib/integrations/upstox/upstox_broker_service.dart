@@ -18,7 +18,10 @@ class UpstoxBrokerService implements BrokerMarketInterface {
     };
   }
 
-  Future<Map<String, dynamic>> _get(String endpoint, String accessToken) async {
+  Future<Map<String, dynamic>> _get(
+    String endpoint,
+    String accessToken,
+  ) async {
     final url = Uri.parse('$_apiBaseUrl$endpoint');
 
     final response = await http
@@ -170,17 +173,82 @@ class UpstoxBrokerService implements BrokerMarketInterface {
     String interval,
     String toDate,
     String fromDate,
-  ) {
+  ) async {
     final timeframe = _parseTimeframe(interval);
+    final startDate = _parseDateOnly(fromDate, 'fromDate');
+    final endDate = _parseDateOnly(toDate, 'toDate');
 
+    if (endDate.isBefore(startDate)) {
+      throw ArgumentError('toDate must be greater than or equal to fromDate.');
+    }
+
+    final chunkDays = _historicalChunkDays(timeframe);
+    final candles = <List<dynamic>>[];
+
+    var chunkStart = startDate;
+
+    while (!chunkStart.isAfter(endDate)) {
+      final candidateEnd = chunkStart.add(
+        Duration(days: chunkDays - 1),
+      );
+      final chunkEnd = candidateEnd.isBefore(endDate)
+          ? candidateEnd
+          : endDate;
+
+      final response = await _getHistoricalCandleChunk(
+        accessToken: accessToken,
+        instrumentKey: instrumentKey,
+        timeframe: timeframe,
+        fromDate: _formatDateOnly(chunkStart),
+        toDate: _formatDateOnly(chunkEnd),
+      );
+
+      candles.addAll(_extractCandles(response));
+
+      if (chunkEnd.isAtSameMomentAs(endDate)) {
+        break;
+      }
+
+      chunkStart = chunkEnd.add(const Duration(days: 1));
+    }
+
+    final uniqueCandles = <String, List<dynamic>>{};
+
+    for (final candle in candles) {
+      if (candle.isEmpty) {
+        continue;
+      }
+
+      final timestamp = candle.first.toString();
+      if (timestamp.isNotEmpty) {
+        uniqueCandles[timestamp] = candle;
+      }
+    }
+
+    final mergedCandles = uniqueCandles.values.toList()
+      ..sort((a, b) => _candleTimestamp(a).compareTo(_candleTimestamp(b)));
+
+    return <String, dynamic>{
+      'status': 'success',
+      'data': <String, dynamic>{
+        'candles': mergedCandles,
+      },
+    };
+  }
+
+  Future<Map<String, dynamic>> _getHistoricalCandleChunk({
+    required String accessToken,
+    required String instrumentKey,
+    required _Timeframe timeframe,
+    required String toDate,
+    required String fromDate,
+  }) {
     final encodedKey = Uri.encodeComponent(instrumentKey);
-
     final encodedUnit = Uri.encodeComponent(timeframe.unit);
-
-    final encodedInterval = Uri.encodeComponent(timeframe.interval.toString());
-
+    final encodedInterval = Uri.encodeComponent(
+      timeframe.interval.toString(),
+    );
     final encodedToDate = Uri.encodeComponent(toDate);
-
     final encodedFromDate = Uri.encodeComponent(fromDate);
 
     return _getV3(
@@ -194,6 +262,134 @@ class UpstoxBrokerService implements BrokerMarketInterface {
     );
   }
 
+  int _historicalChunkDays(_Timeframe timeframe) {
+    if (timeframe.unit == 'minutes') {
+      return timeframe.interval <= 15 ? 28 : 85;
+    }
+
+    if (timeframe.unit == 'hours') {
+      return 85;
+    }
+
+    if (timeframe.unit == 'days') {
+      return 3650;
+    }
+
+    if (timeframe.unit == 'weeks') {
+      return 3650;
+    }
+
+    if (timeframe.unit == 'months') {
+      return 3650;
+    }
+
+    throw ArgumentError(
+      'Unsupported historical timeframe unit: ${timeframe.unit}',
+    );
+  }
+
+  List<List<dynamic>> _extractCandles(Map<String, dynamic> response) {
+    final data = response['data'];
+
+    if (data is! Map) {
+      return <List<dynamic>>[];
+    }
+
+    final rawCandles = data['candles'];
+
+    if (rawCandles is! List) {
+      return <List<dynamic>>[];
+    }
+
+    return rawCandles
+        .whereType<List>()
+        .map((candle) => List<dynamic>.from(candle))
+        .toList();
+  }
+
+  int _candleTimestamp(List<dynamic> candle) {
+    if (candle.isEmpty) {
+      return 0;
+    }
+
+    final rawTimestamp = candle.first;
+
+    if (rawTimestamp is num) {
+      return rawTimestamp.toInt();
+    }
+
+    if (rawTimestamp is String) {
+      return DateTime.parse(rawTimestamp).millisecondsSinceEpoch;
+    }
+
+    return 0;
+  }
+
+  DateTime _parseDateOnly(String value, String fieldName) {
+    try {
+      final parsed = DateTime.parse(value);
+      return DateTime(parsed.year, parsed.month, parsed.day);
+    } catch (_) {
+      throw ArgumentError(
+        '$fieldName must use YYYY-MM-DD format: $value',
+      );
+    }
+  }
+
+  String _formatDateOnly(DateTime value) {
+    final month = value.month.toString().padLeft(2, '0');
+    final day = value.day.toString().padLeft(2, '0');
+
+    return '${value.year.toString().padLeft(4, '0')}-$month-$day';
+  }
+
+  /// Returns candles for the current trading day.
+  ///
+  /// Upstox V3 provides current-day candles through the dedicated
+  /// intraday endpoint instead of the date-range historical endpoint.
+  @override
+  Future<Map<String, dynamic>> getIntradayCandles(
+    String accessToken,
+    String instrumentKey,
+    String interval,
+  ) {
+    final timeframe = _parseIntradayTimeframe(interval);
+
+    final encodedKey = Uri.encodeComponent(instrumentKey);
+    final encodedUnit = Uri.encodeComponent(timeframe.unit);
+    final encodedInterval = Uri.encodeComponent(
+      timeframe.interval.toString(),
+    );
+
+    return _getV3(
+      '/historical-candle/intraday/'
+      '$encodedKey/'
+      '$encodedUnit/'
+      '$encodedInterval',
+      accessToken,
+    );
+  }
+
+  _Timeframe _parseIntradayTimeframe(String value) {
+    final timeframe = _parseTimeframe(value);
+
+    if (timeframe.unit != 'minutes' &&
+        timeframe.unit != 'hours' &&
+        timeframe.unit != 'days') {
+      throw ArgumentError(
+        'Intraday timeframe must use minutes, hours or days.',
+      );
+    }
+
+    if (timeframe.unit == 'days' && timeframe.interval != 1) {
+      throw ArgumentError(
+        'Intraday day timeframe must be 1 day.',
+      );
+    }
+
+    return timeframe;
+  }
+
   _Timeframe _parseTimeframe(String value) {
     final normalized = value.trim().toLowerCase();
 
@@ -201,11 +397,15 @@ class UpstoxBrokerService implements BrokerMarketInterface {
       throw ArgumentError('Historical candle timeframe is required.');
     }
 
-    if (normalized == 'day' || normalized == '1day' || normalized == '1d') {
+    if (normalized == 'day' ||
+        normalized == '1day' ||
+        normalized == '1d') {
       return const _Timeframe(unit: 'days', interval: 1);
     }
 
-    if (normalized == 'week' || normalized == '1week' || normalized == '1w') {
+    if (normalized == 'week' ||
+        normalized == '1week' ||
+        normalized == '1w') {
       return const _Timeframe(unit: 'weeks', interval: 1);
     }
 
@@ -332,7 +532,12 @@ class UpstoxBrokerService implements BrokerMarketInterface {
       body['tag'] = tag.trim();
     }
 
-    return _orderRequest('POST', '/order/place', accessToken, body: body);
+    return _orderRequest(
+      'POST',
+      '/order/place',
+      accessToken,
+      body: body,
+    );
   }
 
   Future<Map<String, dynamic>> modifyOrder({
@@ -365,7 +570,12 @@ class UpstoxBrokerService implements BrokerMarketInterface {
       'market_protection': marketProtection,
     };
 
-    return _orderRequest('PUT', '/order/modify', accessToken, body: body);
+    return _orderRequest(
+      'PUT',
+      '/order/modify',
+      accessToken,
+      body: body,
+    );
   }
 
   Future<Map<String, dynamic>> cancelOrder({
@@ -432,5 +642,8 @@ class _Timeframe {
   final String unit;
   final int interval;
 
-  const _Timeframe({required this.unit, required this.interval});
+  const _Timeframe({
+    required this.unit,
+    required this.interval,
+  });
 }
