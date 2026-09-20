@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 
 import 'package:backend/integrations/upstox/upstox_broker_service.dart';
 import 'package:backend/middleware/auth_middleware.dart';
@@ -9,6 +9,7 @@ import 'package:backend/services/broker_service.dart';
 import 'package:backend/services/market_candle_service.dart';
 import 'package:backend/services/paper_trade_store.dart';
 import 'package:backend/services/trade_execution_guard.dart' as execution_guard;
+import 'package:backend/services/upstox_instrument_search_service.dart';
 import 'package:backend/services/upstox_market_feed.dart';
 import 'package:backend/services/upstox_option_chain_service.dart';
 import 'package:shelf/shelf.dart';
@@ -28,6 +29,7 @@ class BrokerRoutes {
     router.get('/orders/<orderId>', _orderDetails);
     router.get('/trades', _trades);
     router.get('/quotes', _quotes);
+    router.get('/instruments/search', _instrumentSearch);
     router.get('/market-indices', _marketIndices);
     router.get('/history', _history);
     router.get('/candles', _candles);
@@ -67,6 +69,9 @@ class BrokerRoutes {
   final BrokerService _brokerService = BrokerService.instance;
 
   final MarketCandleService _candleService = MarketCandleService.instance;
+
+  final UpstoxInstrumentSearchService _instrumentSearchService =
+      UpstoxInstrumentSearchService();
 
   static const execution_guard.TradeExecutionGuard _executionGuard =
       execution_guard.TradeExecutionGuard();
@@ -219,6 +224,47 @@ class BrokerRoutes {
     return _execute(request, (token) => _broker.getTradeBook(token));
   }
 
+  Future<Response> _instrumentSearch(Request request) async {
+    final query = request.url.queryParameters['query'];
+
+    if (query == null || query.trim().isEmpty) {
+      return _validationError(
+        'QUERY_REQUIRED',
+        'query is required.',
+      );
+    }
+
+    final q = request.url.queryParameters;
+
+    final exchanges = q['exchanges'] ?? 'NSE';
+    final segments = q['segments'] ?? 'EQ';
+    final instrumentTypes = q['instrumentTypes'];
+    final expiry = q['expiry'];
+
+    final pageNumber =
+        int.tryParse(q['pageNumber'] ?? '1') ?? 1;
+
+    final records =
+        int.tryParse(q['records'] ?? '30') ?? 30;
+
+    final atmOffset =
+        int.tryParse(q['atmOffset'] ?? '');
+
+    return _execute(
+      request,
+      (token) => _instrumentSearchService.search(
+        accessToken: token,
+        query: query.trim(),
+        exchanges: exchanges,
+        segments: segments,
+        instrumentTypes: instrumentTypes,
+        expiry: expiry,
+        atmOffset: atmOffset,
+        pageNumber: pageNumber,
+        records: records,
+      ),
+    );
+  }
   Future<Response> _quotes(Request request) async {
     final instrumentKey =
         request.url.queryParameters['instrumentKey'] ??
@@ -839,3 +885,4 @@ class BrokerRoutes {
     }
   }
 }
+
