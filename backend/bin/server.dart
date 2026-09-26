@@ -1,4 +1,4 @@
-﻿import 'dart:io';
+import 'dart:io';
 
 import 'package:backend/database/database.dart';
 import 'package:backend/middleware/auth_middleware.dart';
@@ -7,6 +7,7 @@ import 'package:backend/routes/broker_routes.dart';
 import 'package:backend/routes/market_routes.dart';
 import 'package:backend/services/broker_startup_service.dart';
 import 'package:shelf/shelf.dart';
+import 'package:backend/routes/risk_guard/risk_guard_routes.dart';
 import 'package:shelf/shelf_io.dart' as io;
 import 'package:shelf_router/shelf_router.dart';
 
@@ -17,7 +18,7 @@ Future<void> main() async {
 
   router.get('/health', (Request request) {
     return Response.ok(
-      'Backend Running 🚀',
+      'Backend Running ??',
       headers: const {
         'Content-Type': 'text/plain',
       },
@@ -36,10 +37,25 @@ Future<void> main() async {
 
   router.mount('/broker/', brokerHandler);
 
-  router.mount(
-    '/market/',
-    MarketRoutes().router.call,
-  );
+  final marketHandler = Pipeline()
+      .addMiddleware(
+        AuthMiddleware.requireAuthentication(),
+      )
+      .addHandler(
+        MarketRoutes().router.call,
+      );
+
+  final riskGuardHandler = Pipeline()
+    .addMiddleware(
+      AuthMiddleware.requireAuthentication(),
+    )
+    .addHandler(
+      RiskGuardRoutes().router.call,
+    );
+
+router.mount('/risk-guard/', riskGuardHandler);
+
+router.mount('/market/', marketHandler);
 
   // Restore persisted broker connections and reconnect
   // the real Upstox market feed before accepting traffic.
@@ -57,7 +73,9 @@ Future<void> main() async {
 
   print('');
   print('========================================');
-  print('🚀 Quanttora Backend Started');
-  print('🌐 http://0.0.0.0:8080');
+  print('?? Quanttora Backend Started');
+  print('?? http://0.0.0.0:8080');
   print('========================================');
 }
+
+

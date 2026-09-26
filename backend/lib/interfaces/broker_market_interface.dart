@@ -35,4 +35,10 @@ abstract class BrokerMarketInterface {
     String toDate,
     String fromDate,
   );
+
+  Future<Map<String, dynamic>> getIntradayCandles(
+    String accessToken,
+    String instrumentKey,
+    String interval,
+  );
 }
