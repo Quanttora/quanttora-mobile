@@ -1,0 +1,431 @@
+﻿import React, { useEffect, useRef, useState } from 'react';
+import {
+  CandlestickSeries,
+  ColorType,
+  createChart,
+  HistogramSeries,
+  type IChartApi,
+  type ISeriesApi,
+  type CandlestickData,
+  type HistogramData,
+  type Time,
+} from 'lightweight-charts';
+import { getHistoricalCandles } from '../services/quanttoraApi';
+
+interface TradingChartProps {
+  instrumentKey: string;
+  symbol: string;
+  interval?: string;
+  fromDate: string;
+  toDate: string;
+  height?: number;
+}
+
+interface ChartCandle {
+  time: Time;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+const TIMEFRAMES = [
+  { label: '1m', value: '1minute' },
+  { label: '5m', value: '5minute' },
+  { label: '15m', value: '15minute' },
+  { label: '30m', value: '30minute' },
+  { label: '1H', value: '1hour' },
+  { label: '1D', value: '1day' },
+];
+
+const INDIA_TIMEZONE_OFFSET_SECONDS = 5 * 60 * 60 + 30 * 60;
+
+function formatDateOnly(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
+function getSixMonthStartDate(toDate: string): string {
+  const parsed = new Date(`${toDate}T00:00:00`);
+
+  if (Number.isNaN(parsed.getTime())) {
+    const fallback = new Date();
+    fallback.setMonth(fallback.getMonth() - 6);
+    return formatDateOnly(fallback);
+  }
+
+  parsed.setMonth(parsed.getMonth() - 6);
+
+  return formatDateOnly(parsed);
+}
+
+function normalizeCandleTimestamp(timestampValue: string): number | null {
+  const timestamp = new Date(timestampValue);
+
+  if (Number.isNaN(timestamp.getTime())) {
+    return null;
+  }
+
+  /*
+   * Upstox timestamps represent the actual market timestamp.
+   * lightweight-charts renders Unix timestamps in UTC.
+   *
+   * India has a fixed UTC+05:30 offset, so shift the timestamp
+   * before sending it to lightweight-charts so the visible axis
+   * represents Indian market time correctly.
+   */
+  return (
+    Math.floor(timestamp.getTime() / 1000) +
+    INDIA_TIMEZONE_OFFSET_SECONDS
+  );
+}
+
+export const TradingChart: React.FC<TradingChartProps> = ({
+  instrumentKey,
+  symbol,
+  interval = '1minute',
+  fromDate,
+  toDate,
+  height = 420,
+}) => {
+  const chartContainerRef = useRef<HTMLDivElement | null>(null);
+  const chartRef = useRef<IChartApi | null>(null);
+  const candleSeriesRef =
+    useRef<ISeriesApi<'Candlestick'> | null>(null);
+  const volumeSeriesRef =
+    useRef<ISeriesApi<'Histogram'> | null>(null);
+
+  const [selectedInterval, setSelectedInterval] = useState(interval);
+  const [candles, setCandles] = useState<ChartCandle[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadCandles = async () => {
+    if (!instrumentKey || !toDate) {
+      setCandles([]);
+      setError('Chart parameters are incomplete.');
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      /*
+       * Always request the previous six calendar months.
+       *
+       * The HomeDashboard currently passes today's date. The chart
+       * now expands that into a genuine six-month historical range.
+       */
+      const historicalToDate = toDate;
+      const historicalFromDate = getSixMonthStartDate(historicalToDate);
+
+      const response = await getHistoricalCandles(
+        instrumentKey,
+        selectedInterval,
+        historicalFromDate,
+        historicalToDate,
+      );
+
+      const mapped: ChartCandle[] = response.candles
+        .map((candle) => {
+          const timestamp = normalizeCandleTimestamp(candle.timestamp);
+
+          if (timestamp === null) {
+            return null;
+          }
+
+          return {
+            time: timestamp as Time,
+            open: candle.open,
+            high: candle.high,
+            low: candle.low,
+            close: candle.close,
+            volume: candle.volume,
+          };
+        })
+        .filter((candle): candle is ChartCandle => candle !== null);
+
+      /*
+       * Remove duplicate timestamps.
+       *
+       * This protects the chart if two historical API chunks overlap
+       * on their boundary candle.
+       */
+      const unique = new Map<number, ChartCandle>();
+
+      for (const candle of mapped) {
+        unique.set(Number(candle.time), candle);
+      }
+
+      const normalizedCandles = Array.from(unique.values());
+
+      normalizedCandles.sort(
+        (a, b) => Number(a.time) - Number(b.time),
+      );
+
+      setCandles(normalizedCandles);
+
+      if (normalizedCandles.length === 0) {
+        setError(
+          'No candle data is available for this instrument and timeframe.',
+        );
+      }
+    } catch (err) {
+      console.error(
+        '[Quanttora] Trading chart load failed:',
+        err,
+      );
+
+      setCandles([]);
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Unable to load market candle data.',
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadCandles();
+  }, [instrumentKey, selectedInterval, fromDate, toDate]);
+
+  useEffect(() => {
+    if (!chartContainerRef.current) {
+      return;
+    }
+
+    const chart = createChart(chartContainerRef.current, {
+      width: chartContainerRef.current.clientWidth,
+      height,
+      layout: {
+        background: {
+          type: ColorType.Solid,
+          color: '#ffffff',
+        },
+        textColor: '#475569',
+      },
+      grid: {
+        vertLines: {
+          color: '#e2e8f0',
+        },
+        horzLines: {
+          color: '#e2e8f0',
+        },
+      },
+      crosshair: {
+        mode: 1,
+      },
+      rightPriceScale: {
+        borderColor: '#cbd5e1',
+      },
+      timeScale: {
+        borderColor: '#cbd5e1',
+        timeVisible: true,
+        secondsVisible: false,
+      },
+    });
+
+    const candleSeries = chart.addSeries(CandlestickSeries, {
+      upColor: '#16a34a',
+      downColor: '#dc2626',
+      borderVisible: false,
+      wickUpColor: '#16a34a',
+      wickDownColor: '#dc2626',
+    });
+
+    const volumeSeries = chart.addSeries(HistogramSeries, {
+      priceFormat: {
+        type: 'volume',
+      },
+      priceScaleId: '',
+      lastValueVisible: false,
+      priceLineVisible: false,
+    });
+
+    volumeSeries.priceScale().applyOptions({
+      scaleMargins: {
+        top: 0.82,
+        bottom: 0,
+      },
+    });
+
+    candleSeries.priceScale().applyOptions({
+      scaleMargins: {
+        top: 0.08,
+        bottom: 0.20,
+      },
+    });
+
+    chartRef.current = chart;
+    candleSeriesRef.current = candleSeries;
+    volumeSeriesRef.current = volumeSeries;
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      const entry = entries[0];
+
+      if (!entry || !chartRef.current) {
+        return;
+      }
+
+      chartRef.current.applyOptions({
+        width: entry.contentRect.width,
+      });
+    });
+
+    resizeObserver.observe(chartContainerRef.current);
+
+    return () => {
+      resizeObserver.disconnect();
+      chart.remove();
+
+      chartRef.current = null;
+      candleSeriesRef.current = null;
+      volumeSeriesRef.current = null;
+    };
+  }, [height]);
+
+  useEffect(() => {
+    if (
+      !candleSeriesRef.current ||
+      !volumeSeriesRef.current ||
+      candles.length === 0
+    ) {
+      return;
+    }
+
+    const candleData: CandlestickData<Time>[] = candles.map(
+      (candle) => ({
+        time: candle.time,
+        open: candle.open,
+        high: candle.high,
+        low: candle.low,
+        close: candle.close,
+      }),
+    );
+
+    const volumeData: HistogramData<Time>[] = candles.map(
+      (candle) => ({
+        time: candle.time,
+        value: candle.volume,
+        color:
+          candle.close >= candle.open
+            ? 'rgba(22, 163, 74, 0.35)'
+            : 'rgba(220, 38, 38, 0.35)',
+      }),
+    );
+
+    candleSeriesRef.current.setData(candleData);
+    volumeSeriesRef.current.setData(volumeData);
+
+    chartRef.current?.timeScale().fitContent();
+  }, [candles]);
+
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-bold text-slate-900">
+              {symbol}
+            </h3>
+
+            <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+              REAL MARKET DATA
+            </span>
+          </div>
+
+          <p className="mt-0.5 text-xs text-slate-500">
+            {candles.length > 0
+              ? `${candles.length.toLocaleString()} candles`
+              : 'OHLC + volume'}
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-1">
+          {TIMEFRAMES.map((timeframe) => {
+            const active =
+              selectedInterval === timeframe.value;
+
+            return (
+              <button
+                key={timeframe.value}
+                type="button"
+                onClick={() =>
+                  setSelectedInterval(timeframe.value)
+                }
+                className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ${
+                  active
+                    ? 'bg-slate-900 text-white'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                {timeframe.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="relative">
+        {loading && (
+          <div
+            className="absolute inset-0 z-10 flex items-center justify-center bg-white/80 backdrop-blur-[1px]"
+            style={{ height }}
+          >
+            <div className="text-center">
+              <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-slate-900" />
+              <p className="mt-2 text-xs font-medium text-slate-500">
+                Loading six months of real market candles…
+              </p>
+            </div>
+          </div>
+        )}
+
+        {!loading && error && (
+          <div
+            className="flex items-center justify-center px-6 text-center"
+            style={{ height }}
+          >
+            <div>
+              <p className="text-sm font-semibold text-slate-700">
+                No chart data
+              </p>
+
+              <p className="mt-1 max-w-md text-xs text-slate-500">
+                {error}
+              </p>
+            </div>
+          </div>
+        )}
+
+        <div
+          ref={chartContainerRef}
+          className={
+            error && !loading ? 'hidden' : 'w-full'
+          }
+          style={{ height }}
+        />
+      </div>
+
+      <div className="flex items-center justify-between border-t border-slate-200 px-4 py-2">
+        <span className="text-[10px] text-slate-400">
+          Upstox market feed · 6-month historical range
+        </span>
+
+        <span className="text-[10px] text-slate-400">
+          Candles: {candles.length.toLocaleString()}
+        </span>
+      </div>
+    </section>
+  );
+};
+
+export default TradingChart;

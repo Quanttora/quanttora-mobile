@@ -1,0 +1,1977 @@
+﻿
+========== lib\interfaces\broker\broker_option_chain_interface.dart ==========
+
+abstract class BrokerOptionChainInterface {
+  Future<Map<String, dynamic>> getOptionChain({
+    required String instrumentKey,
+    String expiryDate = 'current_week',
+  });
+}
+
+========== lib\services\broker\broker_option_chain_service.dart ==========
+
+import 'package:backend/interfaces/broker/broker_option_chain_interface.dart';
+import 'package:backend/services/broker_service.dart';
+import 'package:backend/services/upstox_option_chain_service.dart';
+
+class BrokerOptionChainService {
+  BrokerOptionChainService._();
+
+  static final BrokerOptionChainService instance =
+      BrokerOptionChainService._();
+
+  BrokerOptionChainInterface get current {
+    final broker =
+        BrokerService.instance.session?.broker;
+
+    switch (broker?.toLowerCase()) {
+      case 'upstox':
+        return UpstoxOptionChainService.instance;
+
+      default:
+        throw UnsupportedError(
+          'Option chain is not supported for broker: $broker',
+        );
+    }
+  }
+
+  bool get isSupported {
+    final broker =
+        BrokerService.instance.session?.broker;
+
+    switch (broker?.toLowerCase()) {
+      case 'upstox':
+        return true;
+
+      default:
+        return false;
+    }
+  }
+
+  Future<Map<String, dynamic>> getOptionContracts({
+    required String instrumentKey,
+    String? expiryDate,
+  }) {
+    final broker =
+        BrokerService.instance.session?.broker;
+
+    switch (broker?.toLowerCase()) {
+      case 'upstox':
+        return UpstoxOptionChainService.instance
+            .getOptionContracts(
+          instrumentKey: instrumentKey,
+          expiryDate: expiryDate,
+        );
+
+      default:
+        throw UnsupportedError(
+          'Option contracts are not supported for broker: $broker',
+        );
+    }
+  }
+}
+
+========== lib\services\upstox_option_chain_service.dart ==========
+
+import 'dart:convert';
+
+import 'package:backend/interfaces/broker/broker_option_chain_interface.dart';
+import 'package:backend/services/broker_service.dart';
+import 'package:http/http.dart' as http;
+
+class UpstoxOptionChainService implements BrokerOptionChainInterface {
+  UpstoxOptionChainService._();
+
+  static final UpstoxOptionChainService instance = UpstoxOptionChainService._();
+
+  static const String _optionChainBaseUrl =
+      'https://api.upstox.com/v2/option/chain';
+
+  static const String _optionContractBaseUrl =
+      'https://api.upstox.com/v2/option/contract';
+
+  @override
+  Future<Map<String, dynamic>> getOptionChain({
+    required String instrumentKey,
+    String expiryDate = 'current_week',
+  }) async {
+    final broker = BrokerService.instance;
+
+    if (!broker.hasValidSession()) {
+      throw StateError('Broker is not connected.');
+    }
+
+    final resolvedExpiry = await _resolveExpiry(
+      instrumentKey: instrumentKey,
+      expiryDate: expiryDate,
+    );
+
+    final uri = Uri.parse(_optionChainBaseUrl).replace(
+      queryParameters: {
+        'instrument_key': instrumentKey,
+        'expiry_date': resolvedExpiry,
+      },
+    );
+
+    final response = await http.get(
+      uri,
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ${broker.accessToken}',
+      },
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Upstox Option Chain failed '
+        '(${response.statusCode}): ${response.body}',
+      );
+    }
+
+    final decoded = jsonDecode(response.body);
+
+    if (decoded is! Map<String, dynamic>) {
+      throw Exception('Invalid Option Chain response.');
+    }
+
+    if (decoded['status'] != 'success') {
+      throw Exception(
+        'Upstox Option Chain returned '
+        'status: ${decoded['status']}',
+      );
+    }
+
+    final data = decoded['data'];
+
+    if (data is! List) {
+      throw Exception('Option Chain data is unavailable.');
+    }
+
+    return {
+      'status': 'success',
+      'instrumentKey': instrumentKey,
+      'requestedExpiry': expiryDate,
+      'expiry': resolvedExpiry,
+      'count': data.length,
+      'data': data,
+    };
+  }
+
+  Future<String> _resolveExpiry({
+    required String instrumentKey,
+    required String expiryDate,
+  }) async {
+    final requested = expiryDate.trim();
+
+    if (requested.isEmpty) {
+      return _resolveExpiryFromContracts(
+        instrumentKey: instrumentKey,
+        mode: 'current_week',
+      );
+    }
+
+    if (_isDate(requested)) {
+      return requested;
+    }
+
+    final normalized = requested.toLowerCase();
+
+    if (normalized == 'current_week' ||
+        normalized == 'current-week' ||
+        normalized == 'week' ||
+        normalized == 'weekly') {
+      return _resolveExpiryFromContracts(
+        instrumentKey: instrumentKey,
+        mode: 'current_week',
+      );
+    }
+
+    if (normalized == 'current_month' ||
+        normalized == 'current-month' ||
+        normalized == 'month' ||
+        normalized == 'monthly') {
+      return _resolveExpiryFromContracts(
+        instrumentKey: instrumentKey,
+        mode: 'current_month',
+      );
+    }
+
+    throw ArgumentError(
+      'Invalid expiryDate "$expiryDate". '
+      'Use YYYY-MM-DD, current_week, or current_month.',
+    );
+  }
+
+  bool _isDate(String value) {
+    final parsed = DateTime.tryParse(value);
+
+    if (parsed == null) {
+      return false;
+    }
+
+    final normalized =
+        '${parsed.year.toString().padLeft(4, '0')}-'
+        '${parsed.month.toString().padLeft(2, '0')}-'
+        '${parsed.day.toString().padLeft(2, '0')}';
+
+    return normalized == value;
+  }
+
+  Future<String> _resolveExpiryFromContracts({
+    required String instrumentKey,
+    required String mode,
+  }) async {
+    final contracts = await getOptionContracts(instrumentKey: instrumentKey);
+
+    final rawData = contracts['data'];
+
+    if (rawData is! List || rawData.isEmpty) {
+      throw StateError('No option contracts found for $instrumentKey.');
+    }
+
+    final expiryDates = <DateTime>[];
+
+    for (final item in rawData) {
+      if (item is! Map) {
+        continue;
+      }
+
+      final expiry = item['expiry'];
+
+      if (expiry is! String || expiry.trim().isEmpty) {
+        continue;
+      }
+
+      final parsed = DateTime.tryParse(expiry.trim());
+
+      if (parsed == null) {
+        continue;
+      }
+
+      final normalized = DateTime.utc(parsed.year, parsed.month, parsed.day);
+
+      if (!expiryDates.contains(normalized)) {
+        expiryDates.add(normalized);
+      }
+    }
+
+    if (expiryDates.isEmpty) {
+      throw StateError('No valid expiry dates found for $instrumentKey.');
+    }
+
+    expiryDates.sort();
+
+    final today = DateTime.now();
+
+    final todayDate = DateTime.utc(today.year, today.month, today.day);
+
+    final futureExpiries = expiryDates
+        .where((expiry) => !expiry.isBefore(todayDate))
+        .toList();
+
+    if (futureExpiries.isEmpty) {
+      throw StateError('No upcoming option expiry found for $instrumentKey.');
+    }
+
+    if (mode == 'current_week') {
+      return _formatDate(futureExpiries.first);
+    }
+
+    final monthlyExpiries = futureExpiries
+        .where(
+          (expiry) =>
+              expiry.year == todayDate.year && expiry.month == todayDate.month,
+        )
+        .toList();
+
+    if (monthlyExpiries.isNotEmpty) {
+      return _formatDate(monthlyExpiries.last);
+    }
+
+    return _formatDate(futureExpiries.first);
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.year.toString().padLeft(4, '0')}-'
+        '${date.month.toString().padLeft(2, '0')}-'
+        '${date.day.toString().padLeft(2, '0')}';
+  }
+
+  Future<Map<String, dynamic>> getOptionContracts({
+    required String instrumentKey,
+    String? expiryDate,
+  }) async {
+    final broker = BrokerService.instance;
+
+    if (!broker.hasValidSession()) {
+      throw StateError('Broker is not connected.');
+    }
+
+    final queryParameters = <String, String>{'instrument_key': instrumentKey};
+
+    if (expiryDate != null && expiryDate.trim().isNotEmpty) {
+      queryParameters['expiry_date'] = expiryDate.trim();
+    }
+
+    final uri = Uri.parse(
+      _optionContractBaseUrl,
+    ).replace(queryParameters: queryParameters);
+
+    final response = await http.get(
+      uri,
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ${broker.accessToken}',
+      },
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception(
+        'Upstox Option Contracts failed '
+        '(${response.statusCode}): ${response.body}',
+      );
+    }
+
+    final decoded = jsonDecode(response.body);
+
+    if (decoded is! Map<String, dynamic>) {
+      throw Exception('Invalid Option Contracts response.');
+    }
+
+    if (decoded['status'] != 'success') {
+      throw Exception(
+        'Upstox Option Contracts returned '
+        'status: ${decoded['status']}',
+      );
+    }
+
+    final data = decoded['data'];
+
+    if (data is! List) {
+      throw Exception('Option Contracts data is unavailable.');
+    }
+
+    return {
+      'status': 'success',
+      'instrumentKey': instrumentKey,
+      'expiry': expiryDate,
+      'count': data.length,
+      'data': data,
+    };
+  }
+}
+
+========== lib\integrations\zerodha\zerodha_broker_service.dart ==========
+
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:backend/interfaces/broker_market_interface.dart';
+import 'package:http/http.dart' as http;
+
+class ZerodhaBrokerService implements BrokerMarketInterface {
+  static const String _apiBaseUrl = 'https://api.kite.trade';
+
+  String get _apiKey {
+    final processValue =
+        Platform.environment['ZERODHA_API_KEY']?.trim() ?? '';
+
+    if (processValue.isNotEmpty) {
+      return processValue;
+    }
+
+    final envFile = File('.env');
+
+    if (!envFile.existsSync()) {
+      throw StateError(
+        'Backend .env file was not found. '
+        'Expected .env in the backend working directory.',
+      );
+    }
+
+    final lines = envFile.readAsLinesSync();
+
+    for (final line in lines) {
+      final trimmed = line.trim();
+
+      if (trimmed.isEmpty || trimmed.startsWith('#')) {
+        continue;
+      }
+
+      final separatorIndex = trimmed.indexOf('=');
+
+      if (separatorIndex <= 0) {
+        continue;
+      }
+
+      final key = trimmed.substring(0, separatorIndex).trim();
+
+      if (key != 'ZERODHA_API_KEY') {
+        continue;
+      }
+
+      var value = trimmed.substring(separatorIndex + 1).trim();
+
+      if (value.length >= 2) {
+        final first = value[0];
+        final last = value[value.length - 1];
+
+        if ((first == '"' && last == '"') ||
+            (first == "'" && last == "'")) {
+          value = value.substring(1, value.length - 1).trim();
+        }
+      }
+
+      if (value.isNotEmpty) {
+        return value;
+      }
+    }
+
+    throw StateError(
+      'ZERODHA_API_KEY was not found in the backend .env file.',
+    );
+  }
+
+  Map<String, String> _headers(String accessToken) {
+    final apiKey = _apiKey;
+    final token = accessToken.trim();
+
+    if (token.isEmpty) {
+      throw StateError('Zerodha access token is empty.');
+    }
+
+    return {
+      'X-Kite-Version': '3',
+      'Authorization': 'token $apiKey:$token',
+      'Accept': 'application/json',
+      'Content-Type': 'application/x-www-form-urlencoded',
+    };
+  }
+
+  Future<dynamic> _request(
+    String method,
+    String endpoint,
+    String accessToken, {
+    Map<String, String>? body,
+  }) async {
+    final url = Uri.parse('$_apiBaseUrl$endpoint');
+    final headers = _headers(accessToken);
+
+    late http.Response response;
+
+    switch (method) {
+      case 'GET':
+        response = await http
+            .get(url, headers: headers)
+            .timeout(const Duration(seconds: 15));
+        break;
+
+      case 'POST':
+        response = await http
+            .post(url, headers: headers, body: body)
+            .timeout(const Duration(seconds: 15));
+        break;
+
+      case 'PUT':
+        response = await http
+            .put(url, headers: headers, body: body)
+            .timeout(const Duration(seconds: 15));
+        break;
+
+      case 'DELETE':
+        response = await http
+            .delete(url, headers: headers)
+            .timeout(const Duration(seconds: 15));
+        break;
+
+      default:
+        throw ArgumentError('Unsupported HTTP method: $method');
+    }
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(
+        'Zerodha $method failed (${response.statusCode}): ${response.body}',
+      );
+    }
+
+    if (response.body.trim().isEmpty) {
+      return <String, dynamic>{};
+    }
+
+    final decoded = jsonDecode(response.body);
+
+    if (decoded is Map) {
+      return Map<String, dynamic>.from(decoded);
+    }
+
+    return decoded;
+  }
+
+  @override
+  Future<Map<String, dynamic>> getFunds(String accessToken) async {
+    return _asMap(await _request('GET', '/user/margins', accessToken));
+  }
+
+  @override
+  Future<Map<String, dynamic>> getProfile(String accessToken) async {
+    return _asMap(await _request('GET', '/user/profile', accessToken));
+  }
+
+  @override
+  Future<Map<String, dynamic>> getHoldings(String accessToken) async {
+    return _asMap(await _request('GET', '/portfolio/holdings', accessToken));
+  }
+
+  @override
+  Future<Map<String, dynamic>> getPositions(String accessToken) async {
+    return _asMap(await _request('GET', '/portfolio/positions', accessToken));
+  }
+
+  @override
+  Future<Map<String, dynamic>> getOrderBook(String accessToken) async {
+    return _asMap(await _request('GET', '/orders', accessToken));
+  }
+
+  @override
+  Future<Map<String, dynamic>> getTradeBook(String accessToken) async {
+    return _asMap(await _request('GET', '/trades', accessToken));
+  }
+
+  @override
+  Future<Map<String, dynamic>> getQuotes(
+    String accessToken,
+    String instrumentKeys,
+  ) async {
+    final instruments = instrumentKeys
+        .split(',')
+        .map((value) => value.trim())
+        .where((value) => value.isNotEmpty);
+
+    final query = instruments
+        .map((instrument) => 'i=${Uri.encodeQueryComponent(instrument)}')
+        .join('&');
+
+    if (query.isEmpty) {
+      throw ArgumentError('At least one instrument is required.');
+    }
+
+    return _asMap(await _request('GET', '/quote?$query', accessToken));
+  }
+
+  @override
+  Future<Map<String, dynamic>> getHistoricalCandles(
+    String accessToken,
+    String instrumentKey,
+    String interval,
+    String toDate,
+    String fromDate,
+  ) async {
+    final intervalValue = _normalizeInterval(interval);
+    final instrumentToken = _resolveHistoricalInstrumentToken(instrumentKey);
+
+    final from = _parseDate(fromDate, 'fromDate');
+    final to = _parseDate(toDate, 'toDate');
+
+    if (from.isAfter(to)) {
+      throw ArgumentError('fromDate cannot be after toDate.');
+    }
+
+    final chunkDays = _historicalChunkDays(intervalValue);
+    final allCandles = <dynamic>[];
+    var chunkStart = from;
+
+    while (!chunkStart.isAfter(to)) {
+      var chunkEnd = chunkStart.add(Duration(days: chunkDays));
+
+      if (chunkEnd.isAfter(to)) {
+        chunkEnd = to;
+      }
+
+      final endpoint = '/instruments/historical/'
+          '$instrumentToken/'
+          '$intervalValue'
+          '?from=${Uri.encodeQueryComponent(_formatDate(chunkStart))}'
+          '&to=${Uri.encodeQueryComponent(_formatDate(chunkEnd))}';
+
+      final response = _asMap(
+        await _request('GET', endpoint, accessToken),
+      );
+
+      final data = response['data'];
+      if (data is Map) {
+        final candles = data['candles'];
+        if (candles is List) {
+          allCandles.addAll(candles);
+        }
+      }
+
+      if (chunkEnd.isAtSameMomentAs(to)) {
+        break;
+      }
+
+      chunkStart = chunkEnd.add(const Duration(days: 1));
+    }
+
+    final deduplicated = <String, dynamic>{};
+    for (final candle in allCandles) {
+      if (candle is List && candle.isNotEmpty) {
+        deduplicated[candle[0].toString()] = candle;
+      }
+    }
+
+    final candles = deduplicated.values.toList();
+    candles.sort((a, b) => a[0].toString().compareTo(b[0].toString()));
+
+    return <String, dynamic>{
+      'status': 'success',
+      'data': <String, dynamic>{
+        'candles': candles,
+      },
+    };
+  }
+
+  @override
+  Future<Map<String, dynamic>> getIntradayCandles(
+    String accessToken,
+    String instrumentKey,
+    String interval,
+  ) async {
+    throw UnsupportedError(
+      'Zerodha intraday candles use the historical candle endpoint '
+      'with the current trading-day date range.',
+    );
+  }
+
+  String _resolveHistoricalInstrumentToken(String value) {
+    final normalized = value.trim();
+
+    if (RegExp(r'^\d+$').hasMatch(normalized)) {
+      return normalized;
+    }
+
+    final key = normalized.toUpperCase();
+
+    const tokenMap = <String, String>{
+      'NSE_INDEX|NIFTY 50': '256265',
+      'NSE_INDEX|NIFTY BANK': '260105',
+      'BSE_INDEX|SENSEX': '265',
+      'NSE:NIFTY 50': '256265',
+      'NSE:NIFTY BANK': '260105',
+      'BSE:SENSEX': '265',
+    };
+
+    final token = tokenMap[key];
+    if (token != null) {
+      return token;
+    }
+
+    throw ArgumentError(
+      'Unsupported Zerodha historical instrument: $value. '
+      'Pass a Zerodha instrument token or a supported index key.',
+    );
+  }
+
+  int _historicalChunkDays(String interval) {
+    switch (interval) {
+      case 'minute':
+        return 60;
+      case '3minute':
+      case '5minute':
+      case '10minute':
+        return 100;
+      case '15minute':
+      case '30minute':
+        return 200;
+      case '60minute':
+        return 400;
+      case 'day':
+      case 'week':
+      case 'month':
+        return 2000;
+      default:
+        return 60;
+    }
+  }
+
+  DateTime _parseDate(String value, String fieldName) {
+    try {
+      return DateTime.parse(value.trim());
+    } catch (_) {
+      throw ArgumentError(
+        '$fieldName must use YYYY-MM-DD format: $value',
+      );
+    }
+  }
+
+  String _formatDate(DateTime value) {
+    final year = value.year.toString().padLeft(4, '0');
+    final month = value.month.toString().padLeft(2, '0');
+    final day = value.day.toString().padLeft(2, '0');
+    return '$year-$month-$day';
+  }
+
+  String _normalizeInterval(String value) {
+    final normalized = value.trim().toLowerCase();
+
+    switch (normalized) {
+      case 'minute':
+      case '1minute':
+      case '1m':
+        return 'minute';
+      case '3minute':
+      case '3m':
+        return '3minute';
+      case '5minute':
+      case '5m':
+        return '5minute';
+      case '10minute':
+      case '10m':
+        return '10minute';
+      case '15minute':
+      case '15m':
+        return '15minute';
+      case '30minute':
+      case '30m':
+        return '30minute';
+      case '60minute':
+      case '1hour':
+      case '1h':
+        return '60minute';
+      case 'day':
+      case '1day':
+      case '1d':
+        return 'day';
+      case 'week':
+      case '1week':
+      case '1w':
+        return 'week';
+      case 'month':
+      case '1month':
+      case '1mo':
+        return 'month';
+      default:
+        throw ArgumentError('Unsupported Zerodha interval: $value');
+    }
+  }
+
+  Map<String, dynamic> _asMap(dynamic value) {
+    if (value is Map<String, dynamic>) {
+      return value;
+    }
+
+    if (value is Map) {
+      return Map<String, dynamic>.from(value);
+    }
+
+    throw Exception('Invalid Zerodha response format.');
+  }
+}
+
+========== lib\services\broker_service.dart ==========
+
+import '../models/broker_session.dart';
+import 'broker_session_manager.dart';
+
+class BrokerService {
+  BrokerService._();
+
+  static final BrokerService instance = BrokerService._();
+
+  final BrokerSessionManager _sessionManager = BrokerSessionManager.instance;
+
+  // ---------------------------------------------------------------------------
+  // Legacy compatibility API
+  //
+  // These methods/getters are retained because several existing backend
+  // services still use the original BrokerService singleton API.
+  // ---------------------------------------------------------------------------
+
+  BrokerSession? get session {
+    final sessions = _sessionManager.sessions;
+
+    if (sessions.isEmpty) {
+      return null;
+    }
+
+    return sessions.values.first;
+  }
+
+  bool get isConnected {
+    final current = session;
+
+    return current != null && current.accessToken.isNotEmpty;
+  }
+
+  String get accessToken {
+    final current = session;
+
+    if (current == null || current.accessToken.isEmpty) {
+      throw StateError('Broker is not connected.');
+    }
+
+    return current.accessToken;
+  }
+
+  bool hasValidSession() {
+    final current = session;
+
+    return current != null && current.hasValidAccessToken;
+  }
+
+  void connect(BrokerSession session) {
+    final userId = int.tryParse(session.userId);
+
+    if (userId == null) {
+      throw ArgumentError(
+        'Broker session userId must contain a valid Quanttora user ID.',
+      );
+    }
+
+    _sessionManager.saveSessionForUser(userId: userId, session: session);
+  }
+
+  void update(BrokerSession session) {
+    final userId = int.tryParse(session.userId);
+
+    if (userId == null) {
+      throw ArgumentError(
+        'Broker session userId must contain a valid Quanttora user ID.',
+      );
+    }
+
+    _sessionManager.updateSessionForUser(userId: userId, session: session);
+  }
+
+  void disconnect() {
+    final current = session;
+
+    if (current == null) {
+      return;
+    }
+
+    final userId = int.tryParse(current.userId);
+
+    if (userId != null) {
+      _sessionManager.clearSessionForUser(userId);
+    }
+  }
+
+  String get broker {
+    final current = session;
+
+    if (current == null) {
+      throw StateError('Broker is not connected.');
+    }
+
+    return current.broker;
+  }
+
+  String get userId {
+    final current = session;
+
+    if (current == null) {
+      throw StateError('Broker is not connected.');
+    }
+
+    return current.userId;
+  }
+
+  String get userName {
+    final current = session;
+
+    if (current == null) {
+      throw StateError('Broker is not connected.');
+    }
+
+    return current.userName;
+  }
+
+  String get email {
+    final current = session;
+
+    if (current == null) {
+      throw StateError('Broker is not connected.');
+    }
+
+    return current.email;
+  }
+
+  DateTime? get accessTokenExpiresAt {
+    return session?.accessTokenExpiresAt;
+  }
+
+  bool get isAccessTokenExpired {
+    return session?.isAccessTokenExpired ?? true;
+  }
+
+  // ---------------------------------------------------------------------------
+  // User-scoped API
+  // ---------------------------------------------------------------------------
+
+  BrokerSession? sessionForUser(int userId) {
+    return _sessionManager.sessionForUser(userId);
+  }
+
+  bool isConnectedForUser(int userId) {
+    return _sessionManager.isConnectedForUser(userId);
+  }
+
+  void connectForUser({required int userId, required BrokerSession session}) {
+    _sessionManager.saveSessionForUser(userId: userId, session: session);
+  }
+
+  void disconnectForUser(int userId) {
+    _sessionManager.clearSessionForUser(userId);
+  }
+
+  void updateForUser({required int userId, required BrokerSession session}) {
+    _sessionManager.updateSessionForUser(userId: userId, session: session);
+  }
+
+  bool hasValidSessionForUser(int userId) {
+    return _sessionManager.hasValidSessionForUser(userId);
+  }
+
+  String accessTokenForUser(int userId) {
+    return _sessionManager.accessTokenForUser(userId);
+  }
+
+  String brokerForUser(int userId) {
+    final current = sessionForUser(userId);
+
+    if (current == null) {
+      throw StateError('Broker is not connected.');
+    }
+
+    return current.broker;
+  }
+
+  String userIdForUser(int userId) {
+    final current = sessionForUser(userId);
+
+    if (current == null) {
+      throw StateError('Broker is not connected.');
+    }
+
+    return current.userId;
+  }
+
+  String userNameForUser(int userId) {
+    final current = sessionForUser(userId);
+
+    if (current == null) {
+      throw StateError('Broker is not connected.');
+    }
+
+    return current.userName;
+  }
+
+  String emailForUser(int userId) {
+    final current = sessionForUser(userId);
+
+    if (current == null) {
+      throw StateError('Broker is not connected.');
+    }
+
+    return current.email;
+  }
+
+  DateTime? accessTokenExpiresAtForUser(int userId) {
+    return sessionForUser(userId)?.accessTokenExpiresAt;
+  }
+
+  bool isAccessTokenExpiredForUser(int userId) {
+    return sessionForUser(userId)?.isAccessTokenExpired ?? true;
+  }
+
+  int get connectedUserCount {
+    return _sessionManager.connectedUserCount;
+  }
+}
+
+========== lib\routes\broker_routes.dart ==========
+
+import 'dart:convert';
+
+import 'package:backend/integrations/upstox/upstox_broker_service.dart';
+import 'package:backend/services/broker_market_service.dart';
+import 'package:backend/middleware/auth_middleware.dart';
+import 'package:backend/models/trade_execution_request.dart'
+    as trade_execution_models;
+import 'package:backend/services/broker_dashboard_service.dart';
+import 'package:backend/services/broker_service.dart';
+import 'package:backend/services/market_candle_service.dart';
+import 'package:backend/services/paper_trade_store.dart';
+import 'package:backend/services/trade_execution_guard.dart' as execution_guard;
+import 'package:backend/services/upstox_instrument_search_service.dart';
+import 'package:backend/services/upstox_market_feed.dart';
+import 'package:backend/services/zerodha_market_feed.dart';
+import 'package:backend/services/upstox_option_chain_service.dart';
+import 'package:shelf/shelf.dart';
+import 'package:shelf_router/shelf_router.dart';
+
+class BrokerRoutes {
+  BrokerRoutes() {
+    router = Router();
+
+    router.get('/status', _status);
+    router.get('/dashboard', _dashboard);
+
+    router.get('/funds', _funds);
+    router.get('/holdings', _holdings);
+    router.get('/positions', _positions);
+    router.get('/orders', _orders);
+    router.get('/orders/<orderId>', _orderDetails);
+    router.get('/trades', _trades);
+    router.get('/quotes', _quotes);
+    router.get('/instruments/search', _instrumentSearch);
+    router.get('/market-indices', _marketIndices);
+    router.get('/history', _history);
+    router.get('/candles', _candles);
+    router.get('/option-chain', _optionChain);
+    router.get('/option-contracts', _optionContracts);
+
+    router.post('/orders', _placeOrder);
+    router.put('/orders/<orderId>', _modifyOrder);
+    router.delete('/orders/<orderId>', _cancelOrder);
+
+    router.get('/paper-trades', _paperTrades);
+    router.get('/paper-trades/<tradeId>', _paperTradeDetails);
+    router.post('/paper-trades/<tradeId>/close', _closePaperTrade);
+
+    router.post('/disconnect', _disconnect);
+
+    router.post('/market-feed/connect', _connectMarketFeed);
+    router.post('/market-feed/subscribe', _subscribeMarketFeed);
+    router.post('/market-feed/unsubscribe', _unsubscribeMarketFeed);
+    router.get('/market-feed/subscriptions', _subscriptions);
+
+    router.get('/feed/status', _feedStatus);
+    router.post('/feed/connect', _connectMarketFeed);
+    router.post('/feed/disconnect', _disconnectMarketFeed);
+    router.post('/feed/subscribe', _subscribeMarketFeed);
+    router.post('/feed/unsubscribe', _unsubscribeMarketFeed);
+
+    router.post('/paper-trade', _paperTrade);
+    router.post('/paper-trade/execute', _paperTrade);
+    router.get('/paper-trade/status', _paperTradeStatus);
+  }
+
+  late final Router router;
+
+  final UpstoxBrokerService _broker = UpstoxBrokerService();
+
+  final BrokerService _brokerService = BrokerService.instance;
+
+  final BrokerMarketService _marketBrokerService =
+      BrokerMarketService.instance;
+
+  final MarketCandleService _candleService = MarketCandleService.instance;
+
+  final UpstoxInstrumentSearchService _instrumentSearchService =
+      UpstoxInstrumentSearchService();
+
+  static const execution_guard.TradeExecutionGuard _executionGuard =
+      execution_guard.TradeExecutionGuard();
+
+  Response _json(dynamic data, {int statusCode = 200}) {
+    return Response(
+      statusCode,
+      body: jsonEncode(data),
+      headers: const {'Content-Type': 'application/json'},
+    );
+  }
+
+  Response _brokerRequired() {
+    return _json({
+      'success': false,
+      'error': {
+        'code': 'BROKER_NOT_CONNECTED',
+        'message': 'Broker is not connected.',
+      },
+    }, statusCode: 409);
+  }
+
+  Response _brokerError(Object error) {
+    return _json({
+      'success': false,
+      'error': {'code': 'BROKER_ERROR', 'message': error.toString()},
+    }, statusCode: 500);
+  }
+
+  Response _validationError(String code, String message) {
+    return _json({
+      'success': false,
+      'error': {'code': code, 'message': message},
+    }, statusCode: 400);
+  }
+
+  int _userId(Request request) {
+    final userId = AuthMiddleware.getUserId(request);
+
+    if (userId == null) {
+      throw StateError('Authentication is required.');
+    }
+
+    return userId;
+  }
+
+  String _accessToken(Request request) {
+    return _brokerService.accessTokenForUser(_userId(request));
+  }
+
+  bool _isZerodha(Request request) {
+    final session = _brokerService.sessionForUser(_userId(request));
+    final broker = session?.broker.toLowerCase() ?? '';
+    return broker == 'zerodha' ||
+        broker == 'zerodha kite' ||
+        broker == 'kite';
+  }
+
+  bool _marketFeedConnected(Request request) {
+    if (_isZerodha(request)) {
+      return _brokerService.hasValidSessionForUser(_userId(request));
+    }
+    return UpstoxMarketFeed.instance.isConnected;
+  }
+
+  bool _hasValidSession(Request request) {
+    return _brokerService.hasValidSessionForUser(_userId(request));
+  }
+
+  Future<Response> _execute(
+    Request request,
+    Future<dynamic> Function(String token) action,
+  ) async {
+    try {
+      if (!_hasValidSession(request)) {
+        return _brokerRequired();
+      }
+
+      final result = await action(_accessToken(request));
+
+      return _json(result);
+    } catch (error) {
+      return _brokerError(error);
+    }
+  }
+
+  Future<Response> _status(Request request) async {
+    try {
+      final userId = _userId(request);
+      final session = _brokerService.sessionForUser(userId);
+
+      if (session == null) {
+        return _json({
+          'success': true,
+          'connected': false,
+          'marketFeed': _marketFeedConnected(request),
+          'broker': null,
+          'user': null,
+          'accessTokenExpired': true,
+          'accessTokenExpiresAt': null,
+          'paperTrading': true,
+          'liveExecution': false,
+          'paperTradeCount': PaperTradeStore.instance.count,
+        });
+      }
+
+      return _json({
+        'success': true,
+        'connected': _brokerService.isConnectedForUser(userId),
+        'marketFeed': _marketFeedConnected(request),
+        'broker': session.broker,
+        'user': {
+          'id': userId,
+          'brokerUserId': session.userId,
+          'name': session.userName,
+          'email': session.email,
+        },
+        'executionGuard': true,
+        'paperTrading': true,
+        'liveExecution': false,
+        'paperTradeCount': PaperTradeStore.instance.count,
+        'accessTokenExpired': session.isAccessTokenExpired,
+        'accessTokenExpiresAt': session.accessTokenExpiresAt?.toIso8601String(),
+      });
+    } catch (error) {
+      return _brokerError(error);
+    }
+  }
+
+  Future<Response> _dashboard(Request request) async {
+    final userId = _userId(request);
+
+    if (!_brokerService.hasValidSessionForUser(userId)) {
+      return _brokerRequired();
+    }
+
+    try {
+      final result = await BrokerDashboardService.instance.getDashboard(
+        userId: userId,
+      );
+
+      return _json({'success': true, 'data': result});
+    } catch (error) {
+      return _brokerError(error);
+    }
+  }
+
+  Future<Response> _funds(Request request) {
+    return _execute(request, (token) => _marketBrokerService.current.getFunds(token));
+  }
+
+  Future<Response> _holdings(Request request) {
+    return _execute(request, (token) => _marketBrokerService.current.getHoldings(token));
+  }
+
+  Future<Response> _positions(Request request) {
+    return _execute(request, (token) => _marketBrokerService.current.getPositions(token));
+  }
+
+  Future<Response> _orders(Request request) {
+    return _execute(request, (token) => _marketBrokerService.current.getOrderBook(token));
+  }
+
+  Future<Response> _trades(Request request) {
+    return _execute(request, (token) => _marketBrokerService.current.getTradeBook(token));
+  }
+
+  Future<Response> _instrumentSearch(Request request) async {
+    final query = request.url.queryParameters['query'];
+
+    if (query == null || query.trim().isEmpty) {
+      return _validationError(
+        'QUERY_REQUIRED',
+        'query is required.',
+      );
+    }
+
+    final q = request.url.queryParameters;
+
+    final exchanges = q['exchanges'] ?? 'NSE';
+    final segments = q['segments'] ?? 'EQ';
+    final instrumentTypes = q['instrumentTypes'];
+    final expiry = q['expiry'];
+
+    final pageNumber =
+        int.tryParse(q['pageNumber'] ?? '1') ?? 1;
+
+    final records =
+        int.tryParse(q['records'] ?? '30') ?? 30;
+
+    final atmOffset =
+        int.tryParse(q['atmOffset'] ?? '');
+
+    return _execute(
+      request,
+      (token) => _instrumentSearchService.search(
+        accessToken: token,
+        query: query.trim(),
+        exchanges: exchanges,
+        segments: segments,
+        instrumentTypes: instrumentTypes,
+        expiry: expiry,
+        atmOffset: atmOffset,
+        pageNumber: pageNumber,
+        records: records,
+      ),
+    );
+  }
+  Future<Response> _quotes(Request request) async {
+    final instrumentKey =
+        request.url.queryParameters['instrumentKey'] ??
+        request.url.queryParameters['symbol'];
+
+    if (instrumentKey == null || instrumentKey.trim().isEmpty) {
+      return _validationError(
+        'INSTRUMENT_REQUIRED',
+        'instrumentKey is required.',
+      );
+    }
+
+    return _execute(
+      request,
+      (token) => _marketBrokerService.current.getQuotes(token, instrumentKey.trim()),
+    );
+  }
+
+  Future<Response> _marketIndices(Request request) {
+    const instruments =
+        'NSE_INDEX|Nifty 50,'
+        'NSE_INDEX|Nifty Bank,'
+        'BSE_INDEX|SENSEX,'
+        'NSE_INDEX|India VIX';
+
+    return _execute(request, (token) => _marketBrokerService.current.getQuotes(token, instruments));
+  }
+
+  Future<Response> _history(Request request) async {
+    final q = request.url.queryParameters;
+
+    final instrumentKey = q['instrumentKey'];
+    final fromDate = q['fromDate'] ?? q['from'];
+    final toDate = q['toDate'] ?? q['to'];
+    final interval = q['interval'] ?? 'day';
+
+    if (instrumentKey == null ||
+        instrumentKey.trim().isEmpty ||
+        fromDate == null ||
+        fromDate.trim().isEmpty ||
+        toDate == null ||
+        toDate.trim().isEmpty) {
+      return _validationError(
+        'HISTORY_PARAMETERS_REQUIRED',
+        'instrumentKey, fromDate and toDate are required.',
+      );
+    }
+
+    return _execute(
+      request,
+      (token) => _marketBrokerService.current.getHistoricalCandles(
+        token,
+        instrumentKey.trim(),
+        interval,
+        toDate.trim(),
+        fromDate.trim(),
+      ),
+    );
+  }
+
+  Future<Response> _candles(Request request) async {
+    final q = request.url.queryParameters;
+
+    final instrumentKey = q['instrumentKey'];
+    final interval = q['interval'] ?? '1minute';
+    final fromDate = q['fromDate'] ?? q['from'];
+    final toDate = q['toDate'] ?? q['to'];
+
+    if (instrumentKey == null ||
+        instrumentKey.trim().isEmpty ||
+        fromDate == null ||
+        fromDate.trim().isEmpty ||
+        toDate == null ||
+        toDate.trim().isEmpty) {
+      return _validationError(
+        'CANDLE_PARAMETERS_REQUIRED',
+        'instrumentKey, fromDate and toDate are required.',
+      );
+    }
+
+    try {
+      if (!_hasValidSession(request)) {
+        return _brokerRequired();
+      }
+
+      final candles = await _candleService.getHistoricalCandles(
+        instrumentKey: instrumentKey.trim(),
+        interval: interval,
+        fromDate: fromDate.trim(),
+        toDate: toDate.trim(),
+      );
+
+      final vwap = await _candleService.calculateHistoricalVwap(
+        instrumentKey: instrumentKey.trim(),
+        interval: interval,
+        fromDate: fromDate.trim(),
+        toDate: toDate.trim(),
+      );
+
+      return _json({
+        'success': true,
+        'instrumentKey': instrumentKey.trim(),
+        'interval': interval,
+        'fromDate': fromDate.trim(),
+        'toDate': toDate.trim(),
+        'candleCount': candles.length,
+        'vwap': vwap,
+        'candles': candles.map((candle) => candle.toJson()).toList(),
+      });
+    } catch (error) {
+      return _brokerError(error);
+    }
+  }
+
+  Future<Response> _optionChain(Request request) async {
+    try {
+      if (!_hasValidSession(request)) {
+        return _brokerRequired();
+      }
+
+      final instrumentKey = request.url.queryParameters['instrumentKey'];
+
+      if (instrumentKey == null || instrumentKey.trim().isEmpty) {
+        return _validationError(
+          'INSTRUMENT_REQUIRED',
+          'instrumentKey is required.',
+        );
+      }
+
+      final expiry =
+          request.url.queryParameters['expiry'] ??
+          request.url.queryParameters['expiryDate'] ??
+          'current_week';
+
+      final result = await UpstoxOptionChainService.instance.getOptionChain(
+        instrumentKey: instrumentKey.trim(),
+        expiryDate: expiry,
+      );
+
+      return _json(result);
+    } catch (error) {
+      return _brokerError(error);
+    }
+  }
+
+  Future<Response> _optionContracts(Request request) async {
+    try {
+      if (!_hasValidSession(request)) {
+        return _brokerRequired();
+      }
+
+      final instrumentKey = request.url.queryParameters['instrumentKey'];
+
+      if (instrumentKey == null || instrumentKey.trim().isEmpty) {
+        return _validationError(
+          'INSTRUMENT_REQUIRED',
+          'instrumentKey is required.',
+        );
+      }
+
+      final expiry =
+          request.url.queryParameters['expiry'] ??
+          request.url.queryParameters['expiryDate'];
+
+      final result = await UpstoxOptionChainService.instance.getOptionContracts(
+        instrumentKey: instrumentKey.trim(),
+        expiryDate: expiry,
+      );
+
+      return _json(result);
+    } catch (error) {
+      return _brokerError(error);
+    }
+  }
+
+  Future<Response> _orderDetails(Request request, String orderId) {
+    if (orderId.trim().isEmpty) {
+      return Future.value(
+        _validationError('ORDER_ID_REQUIRED', 'orderId is required.'),
+      );
+    }
+
+    return _execute(
+      request,
+      (token) =>
+          _broker.getOrderDetails(accessToken: token, orderId: orderId.trim()),
+    );
+  }
+
+  Future<Response> _placeOrder(Request request) async {
+    try {
+      final userId = _userId(request);
+
+      final rawBody = await request.readAsString();
+
+      if (rawBody.trim().isEmpty) {
+        return _validationError(
+          'REQUEST_BODY_REQUIRED',
+          'Request body is required.',
+        );
+      }
+
+      final decoded = jsonDecode(rawBody);
+
+      if (decoded is! Map) {
+        return _validationError(
+          'INVALID_REQUEST',
+          'Request body must be a JSON object.',
+        );
+      }
+
+      final body = Map<String, dynamic>.from(decoded);
+
+      final executionRequest =
+          trade_execution_models.TradeExecutionRequest.fromMap(body);
+
+      if (executionRequest.instrumentToken.trim().isEmpty) {
+        return _validationError(
+          'INSTRUMENT_REQUIRED',
+          'instrumentToken is required.',
+        );
+      }
+
+      if (executionRequest.quantity <= 0) {
+        return _validationError(
+          'INVALID_QUANTITY',
+          'quantity must be greater than 0.',
+        );
+      }
+
+      if (executionRequest.product.trim().isEmpty) {
+        return _validationError('PRODUCT_REQUIRED', 'product is required.');
+      }
+
+      if (executionRequest.validity.trim().isEmpty) {
+        return _validationError('VALIDITY_REQUIRED', 'validity is required.');
+      }
+
+      if (executionRequest.orderType.trim().isEmpty) {
+        return _validationError(
+          'ORDER_TYPE_REQUIRED',
+          'orderType is required.',
+        );
+      }
+
+      if (executionRequest.transactionType.trim().isEmpty) {
+        return _validationError(
+          'TRANSACTION_TYPE_REQUIRED',
+          'transactionType is required.',
+        );
+      }
+
+      if (executionRequest.price < 0) {
+        return _validationError('INVALID_PRICE', 'price must be 0 or greater.');
+      }
+
+      final brokerConnected = _brokerService.hasValidSessionForUser(userId);
+
+      final marketFeedConnected = _marketFeedConnected(request);
+
+      final guardResult = _executionGuard.evaluate(
+        brokerConnected: brokerConnected,
+        marketFeedConnected: marketFeedConnected,
+        constitutionPassed: executionRequest.constitutionPassed,
+        strategyPolicyPassed: executionRequest.strategyPolicyPassed,
+        aiConfidence: executionRequest.aiConfidence,
+        minimumAiScore: executionRequest.minimumAiScore,
+        tradesToday: executionRequest.tradesToday,
+        maxTradesPerDay: executionRequest.maxTradesPerDay,
+        riskReward: executionRequest.riskReward,
+        minimumRiskReward: executionRequest.minimumRiskReward,
+        liveExecutionEnabled: false,
+        paperTrade: executionRequest.paperTrade,
+        explicitConfirmation: executionRequest.explicitConfirmation,
+      );
+
+      if (!guardResult.allowed) {
+        return _json({
+          'success': false,
+          'executionAllowed': false,
+          'error': {
+            'code': 'TRADE_EXECUTION_BLOCKED',
+            'message': 'Trade execution blocked by Quanttora safety guard.',
+          },
+          'blockingReasons': guardResult.blockingReasons,
+        }, statusCode: 403);
+      }
+
+      if (executionRequest.paperTrade) {
+        final paperTrade = PaperTradeStore.instance.create(
+          instrumentToken: executionRequest.instrumentToken.trim(),
+          quantity: executionRequest.quantity,
+          product: executionRequest.product.trim(),
+          validity: executionRequest.validity.trim(),
+          entryPrice: executionRequest.price,
+          orderType: executionRequest.orderType.trim(),
+          transactionType: executionRequest.transactionType.trim(),
+        );
+
+        return _json({
+          'success': true,
+          'paperTrade': true,
+          'data': paperTrade.toJson(),
+        }, statusCode: 201);
+      }
+
+      if (!_brokerService.hasValidSessionForUser(userId)) {
+        return _brokerRequired();
+      }
+
+      final result = await _broker.placeOrder(
+        accessToken: _accessToken(request),
+        instrumentToken: executionRequest.instrumentToken.trim(),
+        quantity: executionRequest.quantity,
+        product: executionRequest.product.trim(),
+        validity: executionRequest.validity.trim(),
+        price: executionRequest.price,
+        orderType: executionRequest.orderType.trim(),
+        transactionType: executionRequest.transactionType.trim(),
+        disclosedQuantity:
+            int.tryParse(body['disclosedQuantity']?.toString() ?? '') ?? 0,
+        triggerPrice:
+            double.tryParse(body['triggerPrice']?.toString() ?? '') ?? 0,
+        isAmo: body['isAmo'] == true,
+        slice: body['slice'] == true,
+        marketProtection:
+            int.tryParse(body['marketProtection']?.toString() ?? '') ?? -1,
+        tag: body['tag']?.toString(),
+      );
+
+      return _json({'success': true, 'paperTrade': false, 'data': result});
+    } catch (error) {
+      return _brokerError(error);
+    }
+  }
+
+  Future<Response> _modifyOrder(Request request, String orderId) async {
+    try {
+      if (orderId.trim().isEmpty) {
+        return _validationError('ORDER_ID_REQUIRED', 'orderId is required.');
+      }
+
+      if (!_hasValidSession(request)) {
+        return _brokerRequired();
+      }
+
+      final rawBody = await request.readAsString();
+
+      if (rawBody.trim().isEmpty) {
+        return _validationError(
+          'REQUEST_BODY_REQUIRED',
+          'Request body is required.',
+        );
+      }
+
+      final decoded = jsonDecode(rawBody);
+
+      if (decoded is! Map) {
+        return _validationError(
+          'INVALID_REQUEST',
+          'Request body must be a JSON object.',
+        );
+      }
+
+      final body = Map<String, dynamic>.from(decoded);
+
+      final quantity = int.tryParse(body['quantity']?.toString() ?? '');
+
+      final price = double.tryParse(body['price']?.toString() ?? '');
+
+      final validity = body['validity']?.toString().trim();
+
+      final orderType = body['orderType']?.toString().trim();
+
+      if (quantity == null || quantity <= 0) {
+        return _validationError(
+          'INVALID_QUANTITY',
+          'quantity must be greater than 0.',
+        );
+      }
+
+      if (price == null || price < 0) {
+        return _validationError('INVALID_PRICE', 'price must be 0 or greater.');
+      }
+
+      if (validity == null || validity.isEmpty) {
+        return _validationError('VALIDITY_REQUIRED', 'validity is required.');
+      }
+
+      if (orderType == null || orderType.isEmpty) {
+        return _validationError(
+          'ORDER_TYPE_REQUIRED',
+          'orderType is required.',
+        );
+      }
+
+      final result = await _broker.modifyOrder(
+        accessToken: _accessToken(request),
+        orderId: orderId.trim(),
+        quantity: quantity,
+        validity: validity,
+        price: price,
+        orderType: orderType,
+        triggerPrice:
+            double.tryParse(body['triggerPrice']?.toString() ?? '') ?? 0,
+        disclosedQuantity:
+            int.tryParse(body['disclosedQuantity']?.toString() ?? '') ?? 0,
+        marketProtection:
+            int.tryParse(body['marketProtection']?.toString() ?? '') ?? -1,
+      );
+
+      return _json({'success': true, 'data': result});
+    } catch (error) {
+      return _brokerError(error);
+    }
+  }
+
+  Future<Response> _cancelOrder(Request request, String orderId) {
+    if (orderId.trim().isEmpty) {
+      return Future.value(
+        _validationError('ORDER_ID_REQUIRED', 'orderId is required.'),
+      );
+    }
+
+    return _execute(
+      request,
+      (token) =>
+          _broker.cancelOrder(accessToken: token, orderId: orderId.trim()),
+    );
+  }
+
+  Response _paperTrades(Request request) {
+    _userId(request);
+
+    final trades = PaperTradeStore.instance.getAll();
+
+    return _json({
+      'success': true,
+      'data': trades.map((trade) => trade.toJson()).toList(),
+    });
+  }
+
+  Response _paperTradeDetails(Request request, String tradeId) {
+    _userId(request);
+
+    final trade = PaperTradeStore.instance.getById(tradeId.trim());
+
+    if (trade == null) {
+      return _json({
+        'success': false,
+        'error': {
+          'code': 'PAPER_TRADE_NOT_FOUND',
+          'message': 'Paper trade not found.',
+        },
+      }, statusCode: 404);
+    }
+
+    return _json({'success': true, 'data': trade.toJson()});
+  }
+
+  Response _closePaperTrade(Request request, String tradeId) {
+    _userId(request);
+
+    final trade = PaperTradeStore.instance.close(tradeId.trim());
+
+    if (trade == null) {
+      return _json({
+        'success': false,
+        'error': {
+          'code': 'PAPER_TRADE_NOT_FOUND',
+          'message': 'Paper trade not found.',
+        },
+      }, statusCode: 404);
+    }
+
+    return _json({'success': true, 'data': trade.toJson()});
+  }
+
+  Future<Response> _paperTrade(Request request) async {
+    _userId(request);
+
+    return _placeOrder(request);
+  }
+
+  Response _paperTradeStatus(Request request) {
+    final userId = _userId(request);
+
+    return _json({
+      'success': true,
+      'data': {
+        'userId': userId,
+        'supported': true,
+        'paperTradeCount': PaperTradeStore.instance.count,
+      },
+    });
+  }
+
+  Response _feedStatus(Request request) {
+    final userId = _userId(request);
+
+    final session = _brokerService.sessionForUser(userId);
+
+    return _json({
+      'success': true,
+      'connected': _marketFeedConnected(request),
+      'brokerConnected':
+          session != null && _brokerService.isConnectedForUser(userId),
+      'userId': userId,
+      'subscriptions': _isZerodha(request)
+          ? const <String>[]
+          : UpstoxMarketFeed.instance.subscriptions,
+    });
+  }
+
+  Future<Response> _connectMarketFeed(Request request) async {
+    final userId = _userId(request);
+
+    if (!_brokerService.hasValidSessionForUser(userId)) {
+      return _brokerRequired();
+    }
+
+    try {
+      if (_isZerodha(request)) {
+        return _json({
+          'success': true,
+          'connected': true,
+          'broker': 'Zerodha',
+          'mode': 'REST_QUOTES',
+        });
+      }
+
+      await UpstoxMarketFeed.instance.connect();
+
+      return _json({
+        'success': true,
+        'connected': UpstoxMarketFeed.instance.isConnected,
+      });
+    } catch (error) {
+      return _brokerError(error);
+    }
+  }
+
+  Future<Response> _disconnectMarketFeed(Request request) async {
+    _userId(request);
+
+    try {
+      if (_isZerodha(request)) {
+        return _json({
+          'success': true,
+          'connected': false,
+          'broker': 'Zerodha',
+        });
+      }
+
+      await UpstoxMarketFeed.instance.disconnect();
+
+      return _json({'success': true, 'connected': false});
+    } catch (error) {
+      return _brokerError(error);
+    }
+  }
+
+  Future<Response> _subscribeMarketFeed(Request request) async {
+    _userId(request);
+
+    final instrumentKey = request.url.queryParameters['instrumentKey'];
+
+    if (instrumentKey == null || instrumentKey.trim().isEmpty) {
+      return _validationError(
+        'INSTRUMENT_REQUIRED',
+        'instrumentKey is required.',
+      );
+    }
+
+    try {
+      if (_isZerodha(request)) {
+        await ZerodhaMarketFeed.instance.subscribeMany([instrumentKey.trim()]);
+        return _json({
+          'success': true,
+          'instrument': instrumentKey.trim(),
+          'connected': ZerodhaMarketFeed.instance.isConnected,
+          'subscriptions': ZerodhaMarketFeed.instance.subscriptions,
+        });
+      }
+      await UpstoxMarketFeed.instance.subscribeFull(instrumentKey.trim());
+
+      return _json({
+        'success': true,
+        'instrument': instrumentKey.trim(),
+        'subscriptions': _isZerodha(request)
+          ? const <String>[]
+          : UpstoxMarketFeed.instance.subscriptions,
+      });
+    } catch (error) {
+      return _brokerError(error);
+    }
+  }
+
+  Future<Response> _unsubscribeMarketFeed(Request request) async {
+    _userId(request);
+
+    final instrumentKey = request.url.queryParameters['instrumentKey'];
+
+    if (instrumentKey == null || instrumentKey.trim().isEmpty) {
+      return _validationError(
+        'INSTRUMENT_REQUIRED',
+        'instrumentKey is required.',
+      );
+    }
+
+    try {
+      if (_isZerodha(request)) {
+        await ZerodhaMarketFeed.instance.unsubscribeMany([instrumentKey.trim()]);
+        return _json({
+          'success': true,
+          'connected': ZerodhaMarketFeed.instance.isConnected,
+          'subscriptions': ZerodhaMarketFeed.instance.subscriptions,
+        });
+      }
+      await UpstoxMarketFeed.instance.unsubscribeFull(instrumentKey.trim());
+
+      return _json({
+        'success': true,
+        'subscriptions': _isZerodha(request)
+          ? const <String>[]
+          : UpstoxMarketFeed.instance.subscriptions,
+      });
+    } catch (error) {
+      return _brokerError(error);
+    }
+  }
+
+  Response _subscriptions(Request request) {
+    _userId(request);
+
+    return _json({
+      'success': true,
+      'connected': UpstoxMarketFeed.instance.isConnected,
+      'subscriptions': _isZerodha(request)
+          ? const <String>[]
+          : UpstoxMarketFeed.instance.subscriptions,
+    });
+  }
+
+  Future<Response> _disconnect(Request request) async {
+    final userId = _userId(request);
+
+    try {
+      if (!_isZerodha(request)) {
+        await UpstoxMarketFeed.instance.disconnect();
+      }
+
+      _brokerService.disconnectForUser(userId);
+
+      return _json({
+        'success': true,
+        'connected': false,
+        'message': 'Broker disconnected.',
+      });
+    } catch (error) {
+      return _brokerError(error);
+    }
+  }
+}
+
+
+
+
+========== pubspec.yaml ==========
+
+name: backend
+
+description: Quanttora Backend
+
+version: 1.0.0
+
+environment:
+  sdk: ^3.9.0
+
+dependencies:
+  shelf: ^1.4.2
+  shelf_router: ^1.1.4
+  shelf_cors_headers: ^0.1.5
+  http: ^1.2.2
+  dotenv: ^4.2.0
+  web_socket_channel: ^3.0.3
+  crypto: ^3.0.6
+  protobuf: ^6.0.0
+  fixnum: ^1.1.1
+  postgres: 3.5.12
+  cryptography: ^2.9.0
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.26.2

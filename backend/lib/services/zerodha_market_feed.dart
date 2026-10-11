@@ -1,0 +1,390 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:backend/models/market_tick.dart';
+import 'package:backend/services/market_store.dart';
+import 'package:http/http.dart' as http;
+import 'package:web_socket_channel/web_socket_channel.dart';
+
+/// Kite Connect live market feed. Kite uses numeric instrument tokens and
+/// binary packets; this decoder is intentionally separate from Upstox protobuf.
+class ZerodhaMarketFeed {
+  ZerodhaMarketFeed._();
+  static final ZerodhaMarketFeed instance = ZerodhaMarketFeed._();
+
+  WebSocketChannel? _channel;
+  StreamSubscription<dynamic>? _subscription;
+  bool _connected = false;
+  bool _connecting = false;
+  String? _accessToken;
+  String? _apiKey;
+  String? _lastError;
+  DateTime? _lastTickAt;
+
+  final Set<int> _tokens = <int>{};
+  final Map<int, String> _keysByToken = <int, String>{};
+  final Map<String, int> _tokensByKey = <String, int>{};
+  final Map<int, String> _symbolsByToken = <int, String>{};
+
+  bool get isConnected => _connected;
+  bool get isConnecting => _connecting;
+  String? get lastError => _lastError;
+  DateTime? get lastTickAt => _lastTickAt;
+  List<String> get subscriptions =>
+      _tokens.map((t) => _keysByToken[t] ?? '$t').toList(growable: false);
+
+  String _readApiKey() {
+    final fromEnvironment = Platform.environment['ZERODHA_API_KEY']?.trim();
+    if (fromEnvironment != null && fromEnvironment.isNotEmpty) {
+      return fromEnvironment;
+    }
+    final file = File('.env');
+    if (!file.existsSync()) {
+      throw StateError(
+        'ZERODHA_API_KEY is missing from environment and backend .env.',
+      );
+    }
+    for (final line in file.readAsLinesSync()) {
+      final row = line.trim();
+      if (row.startsWith('ZERODHA_API_KEY=')) {
+        var value = row.substring('ZERODHA_API_KEY='.length).trim();
+        if (value.length >= 2 &&
+            ((value.startsWith('"') && value.endsWith('"')) ||
+                (value.startsWith("'") && value.endsWith("'")))) {
+          value = value.substring(1, value.length - 1);
+        }
+        if (value.isNotEmpty) return value;
+      }
+    }
+    throw StateError('ZERODHA_API_KEY was not found in backend .env.');
+  }
+
+  Future<void> connect({required String accessToken}) async {
+    if (_connected && _accessToken == accessToken) return;
+    if (_connecting) return;
+    _connecting = true;
+    _lastError = null;
+    try {
+      await _closeSocket();
+      _accessToken = accessToken;
+      _apiKey = _readApiKey();
+
+      final uri = Uri.https('api.kite.trade', '/instruments');
+      final response = await http
+          .get(
+            uri,
+            headers: {
+              'X-Kite-Version': '3',
+              'Authorization': 'token $_apiKey:$accessToken',
+            },
+          )
+          .timeout(const Duration(seconds: 20));
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw StateError(
+          'Kite instruments download failed (${response.statusCode}).',
+        );
+      }
+      _loadInstrumentMaster(response.body);
+
+      final wsUri = Uri(
+        scheme: 'wss',
+        host: 'ws.kite.trade',
+        path: '/',
+        queryParameters: {'api_key': _apiKey!, 'access_token': accessToken},
+      );
+      _channel = WebSocketChannel.connect(wsUri);
+      await _channel!.ready.timeout(const Duration(seconds: 15));
+      _connected = true;
+      _subscription = _channel!.stream.listen(
+        _onMessage,
+        onError: (Object error, StackTrace stack) {
+          _lastError = error.toString();
+          _connected = false;
+          print('[Zerodha Feed] WebSocket error: $error');
+        },
+        onDone: () {
+          _connected = false;
+          print('[Zerodha Feed] WebSocket disconnected.');
+        },
+        cancelOnError: false,
+      );
+
+      // Subscribe to key indices by their instrument-master symbols, when present.
+      await subscribeMany(const [
+        'NSE:NIFTY 50',
+        'NSE:NIFTY BANK',
+        'BSE:SENSEX',
+        'NSE:INDIA VIX',
+      ]);
+      print('[Zerodha Feed] Connected. Subscriptions: ${_tokens.length}.');
+    } catch (error) {
+      _lastError = error.toString();
+      _connected = false;
+      await _closeSocket();
+      rethrow;
+    } finally {
+      _connecting = false;
+    }
+  }
+
+  void _loadInstrumentMaster(String csv) {
+    final lines = const LineSplitter().convert(csv);
+    if (lines.length < 2) throw StateError('Kite instrument master is empty.');
+    final headers = _parseCsvLine(lines.first);
+    final tokenIndex = headers.indexOf('instrument_token');
+    final exchangeIndex = headers.indexOf('exchange');
+    final tradingsymbolIndex = headers.indexOf('tradingsymbol');
+    if (tokenIndex < 0 || exchangeIndex < 0 || tradingsymbolIndex < 0) {
+      throw StateError('Kite instrument master has unexpected columns.');
+    }
+    _tokensByKey.clear();
+    _keysByToken.clear();
+    _symbolsByToken.clear();
+    for (final line in lines.skip(1)) {
+      final fields = _parseCsvLine(line);
+      if (fields.length <=
+          [
+            tokenIndex,
+            exchangeIndex,
+            tradingsymbolIndex,
+          ].reduce((a, b) => a > b ? a : b)) {
+        continue;
+      }
+      final token = int.tryParse(fields[tokenIndex]);
+      final exchange = fields[exchangeIndex].trim();
+      final symbol = fields[tradingsymbolIndex].trim();
+      if (token == null || exchange.isEmpty || symbol.isEmpty) continue;
+      final key = '$exchange:$symbol';
+      _tokensByKey[key.toUpperCase()] = token;
+      _keysByToken[token] = key;
+      _symbolsByToken[token] = symbol;
+    }
+  }
+
+  List<String> _parseCsvLine(String line) {
+    final fields = <String>[];
+    final buffer = StringBuffer();
+    var quoted = false;
+    for (var i = 0; i < line.length; i++) {
+      final c = line[i];
+      if (c == '"') {
+        if (quoted && i + 1 < line.length && line[i + 1] == '"') {
+          buffer.write('"');
+          i++;
+        } else {
+          quoted = !quoted;
+        }
+      } else if (c == ',' && !quoted) {
+        fields.add(buffer.toString());
+        buffer.clear();
+      } else {
+        buffer.write(c);
+      }
+    }
+    fields.add(buffer.toString());
+    return fields;
+  }
+
+  Future<int> _resolveToken(String key) async {
+    final trimmed = key.trim();
+    final numeric = int.tryParse(trimmed);
+    if (numeric != null && numeric > 0) {
+      _keysByToken.putIfAbsent(numeric, () => trimmed);
+      _symbolsByToken.putIfAbsent(numeric, () => trimmed);
+      return numeric;
+    }
+    final token = _tokensByKey[trimmed.toUpperCase()];
+    if (token != null) return token;
+    throw ArgumentError(
+      'Cannot map "$key" to a Kite instrument token. Use EXCHANGE:TRADINGSYMBOL (for example NSE:INFY) or a numeric instrument token.',
+    );
+  }
+
+  Future<void> subscribeMany(List<String> instrumentKeys) async {
+    if (!_connected || _channel == null) {
+      throw StateError('Zerodha live feed is not connected.');
+    }
+    final resolved = <int>[];
+    for (final key in instrumentKeys) {
+      final token = await _resolveToken(key);
+      _keysByToken[token] = key.trim();
+      _tokens.add(token);
+      resolved.add(token);
+    }
+    if (resolved.isNotEmpty) {
+      _channel!.sink.add(jsonEncode({'a': 'subscribe', 'v': resolved}));
+      _channel!.sink.add(
+        jsonEncode({
+          'a': 'mode',
+          'v': ['full', resolved],
+        }),
+      );
+    }
+  }
+
+  Future<void> unsubscribeMany(List<String> instrumentKeys) async {
+    if (!_connected || _channel == null) {
+      throw StateError('Zerodha live feed is not connected.');
+    }
+    final resolved = <int>[];
+    for (final key in instrumentKeys) {
+      final token =
+          int.tryParse(key.trim()) ?? _tokensByKey[key.trim().toUpperCase()];
+      if (token != null) {
+        resolved.add(token);
+        _tokens.remove(token);
+      }
+    }
+    if (resolved.isNotEmpty) {
+      _channel!.sink.add(jsonEncode({'a': 'unsubscribe', 'v': resolved}));
+    }
+  }
+
+  void _onMessage(dynamic message) {
+    try {
+      if (message is String) {
+        print('[Zerodha Feed] Server message: $message');
+        return;
+      }
+
+      if (message is List<int>) {
+        if (message.length < 2) {
+          print(
+            '[Zerodha Feed] Received short binary message: ${message.length} bytes',
+          );
+          return;
+        }
+
+        final packetCount = _u16(Uint8List.fromList(message), 0);
+        final previousTickAt = _lastTickAt;
+
+        _decodePackets(Uint8List.fromList(message));
+
+        if (_lastTickAt != previousTickAt) {
+          print(
+            '[Zerodha Feed] Tick received. Packets: $packetCount. Last tick: $_lastTickAt',
+          );
+        } else {
+          print(
+            '[Zerodha Feed] Binary message received, but no tick decoded. Bytes: ${message.length}, packets: $packetCount',
+          );
+        }
+        return;
+      }
+
+      print('[Zerodha Feed] Unexpected message type: ${message.runtimeType}');
+    } catch (error, stackTrace) {
+      _lastError = 'Tick decode error: $error';
+      print('[Zerodha Feed] $_lastError');
+      print(stackTrace);
+    }
+  }
+
+  int _u16(Uint8List b, int o) => (b[o] << 8) | b[o + 1];
+  int _u32(Uint8List b, int o) =>
+      ((b[o] << 24) | (b[o + 1] << 16) | (b[o + 2] << 8) | b[o + 3]) &
+      0xffffffff;
+
+  void _decodePackets(Uint8List bytes) {
+    if (bytes.length < 2) return;
+    final count = _u16(bytes, 0);
+    var offset = 2;
+    for (var i = 0; i < count; i++) {
+      if (offset + 2 > bytes.length) return;
+      final length = _u16(bytes, offset);
+      offset += 2;
+      if (length < 8 || offset + length > bytes.length) return;
+      final packet = Uint8List.sublistView(bytes, offset, offset + length);
+      _decodePacket(packet);
+      offset += length;
+    }
+  }
+
+  void _decodePacket(Uint8List p) {
+    if (p.length < 8) return;
+
+    final token = _u32(p, 0) & 0x7fffffff;
+    final price = _u32(p, 4) / 100.0;
+    if (price <= 0) return;
+
+    var previousClose = 0.0;
+    var volume = 0;
+    var averagePrice = 0.0;
+    var bidPrice = 0.0;
+    var askPrice = 0.0;
+    var bidQty = 0;
+    var askQty = 0;
+
+    // Kite index quote packet (28 bytes): close at offset 24.
+    if (p.length == 28) {
+      previousClose = _u32(p, 24) / 100.0;
+    }
+
+    // Kite quote/ full packet: OHLC starts at offset 28;
+    // close is at offset 40. Average price and volume are at
+    // offsets 12 and 16 respectively.
+    if (p.length >= 44) {
+      averagePrice = _u32(p, 12) / 100.0;
+      volume = _u32(p, 16);
+      previousClose = _u32(p, 40) / 100.0;
+    }
+
+    // Full packet market depth begins at offset 64.
+    // Each depth entry is 12 bytes; 5 bid entries then 5 asks.
+    if (p.length >= 184) {
+      const depthOffset = 64;
+      bidQty = _u32(p, depthOffset);
+      bidPrice = _u32(p, depthOffset + 4) / 100.0;
+      askQty = _u32(p, depthOffset + 60);
+      askPrice = _u32(p, depthOffset + 64) / 100.0;
+    }
+
+    final key = _keysByToken[token] ?? '$token';
+    final symbol = _symbolsByToken[token] ?? key;
+    final change = previousClose > 0 ? price - previousClose : 0.0;
+    final changePercent = previousClose > 0
+        ? change / previousClose * 100
+        : 0.0;
+    final old = MarketStore.instance.get(key);
+
+    final tick = MarketTick(
+      instrumentKey: key,
+      symbol: symbol,
+      ltp: price,
+      previousClose: previousClose > 0
+          ? previousClose
+          : (old?.previousClose ?? 0),
+      change: change,
+      changePercent: changePercent,
+      bidPrice: bidPrice,
+      askPrice: askPrice,
+      bidQuantity: bidQty,
+      askQuantity: askQty,
+      volume: volume,
+      averageTradedPrice: averagePrice,
+      vwap: old?.vwap ?? 0,
+      timestamp: DateTime.now().toUtc(),
+    );
+
+    MarketStore.instance.update(tick);
+    _lastTickAt = DateTime.now().toUtc();
+  }
+
+  Future<void> disconnect() async {
+    _connected = false;
+    _tokens.clear();
+    await _closeSocket();
+  }
+
+  Future<void> _closeSocket() async {
+    await _subscription?.cancel();
+    _subscription = null;
+    try {
+      await _channel?.sink.close();
+    } catch (_) {}
+    _channel = null;
+    _connected = false;
+  }
+}

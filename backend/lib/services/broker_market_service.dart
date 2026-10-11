@@ -1,5 +1,6 @@
 import 'package:backend/interfaces/broker_market_interface.dart';
 import 'package:backend/integrations/upstox/upstox_broker_service.dart';
+import 'package:backend/integrations/zerodha/zerodha_broker_service.dart';
 import 'package:backend/services/broker_service.dart';
 
 class BrokerMarketService {
@@ -22,6 +23,11 @@ class BrokerMarketService {
       case 'upstox':
         return UpstoxBrokerService();
 
+      case 'zerodha':
+      case 'zerodha kite':
+      case 'kite':
+        return ZerodhaBrokerService();
+
       default:
         throw UnsupportedError(
           'Broker "${session.broker}" is not supported yet.',
@@ -42,6 +48,9 @@ class BrokerMarketService {
   bool get isSupported {
     final broker = brokerName.toLowerCase();
 
-    return broker == 'upstox';
+    return broker == 'upstox' ||
+        broker == 'zerodha' ||
+        broker == 'zerodha kite' ||
+        broker == 'kite';
   }
 }

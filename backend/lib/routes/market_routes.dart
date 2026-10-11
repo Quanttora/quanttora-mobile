@@ -1,27 +1,85 @@
-import 'dart:async';
 import 'dart:convert';
 
+import 'package:backend/services/broker_market_service.dart';
+import 'package:backend/services/broker_service.dart';
 import 'package:backend/services/market_store.dart';
+import 'package:backend/services/zerodha_market_feed.dart';
 import 'package:backend/services/upstox_market_feed.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 
-class MarketRoutes {
-  final Router router = Router()
-    ..get('/status', _status)
-    ..get('/dashboard', _dashboard)
-    ..get('/quotes', _quotes)
-    ..get('/quote/<instrumentKey>', _quote)
-    ..get('/stream', _stream);
+bool isIndianEquityMarketOpen([DateTime? now]) {
+  final ist = (now ?? DateTime.now().toUtc()).toUtc().add(
+    const Duration(hours: 5, minutes: 30),
+  );
 
-  static const Map<String, String> _dashboardSymbols = {
+  // MondayÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“Friday only. Exchange holidays require a separate calendar.
+  if (ist.weekday == DateTime.saturday || ist.weekday == DateTime.sunday) {
+    return false;
+  }
+
+  final minutes = ist.hour * 60 + ist.minute;
+  const marketStart = 9 * 60 + 15;
+  const marketEnd = 15 * 60 + 30;
+
+  return minutes >= marketStart && minutes < marketEnd;
+}
+
+// Market-data freshness policy: a tick older than 10 seconds is stale
+// during regular market hours. Exchange holidays require a holiday calendar.
+Map<String, dynamic> _marketDataFreshness({
+  required bool feedConnected,
+  required DateTime? lastTickAt,
+  DateTime? now,
+}) {
+  final current = (now ?? DateTime.now().toUtc()).toUtc();
+  final marketOpen = isIndianEquityMarketOpen(current);
+  final tickAgeSeconds = lastTickAt == null
+      ? null
+      : current.difference(lastTickAt.toUtc()).inSeconds;
+  final tickIsRecent =
+      tickAgeSeconds != null && tickAgeSeconds >= 0 && tickAgeSeconds <= 10;
+
+  final String status;
+  if (!feedConnected) {
+    status = 'FEED_DISCONNECTED';
+  } else if (!marketOpen) {
+    status = 'MARKET_CLOSED';
+  } else if (tickIsRecent) {
+    status = 'LIVE';
+  } else {
+    status = 'DELAYED';
+  }
+
+  return {
+    'freshnessStatus': status,
+    'marketOpen': marketOpen,
+    'lastTickAt': lastTickAt?.toUtc().toIso8601String(),
+    'tickAgeSeconds': tickAgeSeconds,
+    'freshnessThresholdSeconds': 10,
+  };
+}
+
+class MarketRoutes {
+  MarketRoutes() {
+    router = Router();
+
+    router.get('/status', _status);
+    router.get('/dashboard', _dashboard);
+    router.get('/quotes', _quotes);
+    router.get('/quote/<instrumentKey>', _quote);
+  }
+
+  late final Router router;
+
+  static const Map<String, String> _upstoxDashboardSymbols = {
     'nifty': 'NSE_INDEX|Nifty 50',
     'bankNifty': 'NSE_INDEX|Nifty Bank',
     'sensex': 'BSE_INDEX|SENSEX',
     'indiaVix': 'NSE_INDEX|India VIX',
   };
 
-  static const Map<String, String> _sectorSymbols = {
+  static const Map<String, String> _upstoxSectorSymbols = {
     'AUTO': 'NSE_INDEX|Nifty Auto',
     'FMCG': 'NSE_INDEX|Nifty FMCG',
     'IT': 'NSE_INDEX|Nifty IT',
@@ -31,28 +89,270 @@ class MarketRoutes {
     'REALTY': 'NSE_INDEX|Nifty Realty',
   };
 
-  static Response _status(Request request) {
-    return _json({
-      'connected': UpstoxMarketFeed.instance.isConnected,
-      'totalQuotes': MarketStore.instance.getAll().length,
-    });
+  static const Map<String, String> _zerodhaDashboardSymbols = {
+    'nifty': 'NSE:NIFTY 50',
+    'bankNifty': 'NSE:NIFTY BANK',
+    'sensex': 'BSE:SENSEX',
+    'indiaVix': 'NSE:INDIA VIX',
+  };
+
+  static const Map<String, String> _zerodhaSectorSymbols = {
+    'AUTO': 'NSE:NIFTY AUTO',
+    'FMCG': 'NSE:NIFTY FMCG',
+    'IT': 'NSE:NIFTY IT',
+    'METAL': 'NSE:NIFTY METAL',
+    'PHARMA': 'NSE:NIFTY PHARMA',
+    'PSU BANK': 'NSE:NIFTY PSU BANK',
+    'REALTY': 'NSE:NIFTY REALTY',
+  };
+
+  final BrokerService _brokerService = BrokerService.instance;
+
+  final BrokerMarketService _brokerMarketService = BrokerMarketService.instance;
+
+  bool _isZerodhaActive() {
+    final session = _brokerService.session;
+
+    if (session == null) {
+      return false;
+    }
+
+    final broker = session.broker.toLowerCase();
+
+    return broker == 'zerodha' || broker == 'zerodha kite' || broker == 'kite';
   }
 
-  static Response _dashboard(Request request) {
-    final Map<String, dynamic> indices = {};
+  Future<Map<String, dynamic>> _getActiveQuotes(String instruments) async {
+    final session = _brokerService.session;
 
-    _dashboardSymbols.forEach(
-      (key, instrumentKey) {
+    if (session == null || !session.hasValidAccessToken) {
+      throw StateError('No valid broker session.');
+    }
+
+    return _brokerMarketService.current.getQuotes(
+      session.accessToken,
+      instruments,
+    );
+  }
+
+  static Map<String, dynamic> _jsonQuote(dynamic raw, String symbol) {
+    if (raw is! Map) {
+      return {
+        'instrumentKey': symbol,
+        'ltp': 0,
+        'previousClose': 0,
+        'change': 0,
+        'changePercent': 0,
+      };
+    }
+
+    final map = Map<String, dynamic>.from(raw);
+
+    final ltp = _toDouble(
+      map['ltp'] ??
+          map['last_price'] ??
+          map['lastPrice'] ??
+          map['last_traded_price'],
+    );
+
+    final ohlc = map['ohlc'];
+    final previousClose = ohlc is Map
+        ? _toDouble(ohlc['close'])
+        : _toDouble(
+            map['previousClose'] ?? map['previous_close'] ?? map['close'],
+          );
+
+    final netChange = _toDouble(
+      map['net_change'] ?? map['netChange'] ?? map['change'],
+    );
+
+    final calculatedChange = netChange != 0 ? netChange : ltp - previousClose;
+
+    final changePercent = previousClose > 0
+        ? (calculatedChange / previousClose) * 100
+        : 0.0;
+
+    return {
+      'instrumentKey': symbol,
+      'ltp': ltp,
+      'previousClose': previousClose,
+      'change': calculatedChange,
+      'changePercent': changePercent,
+      'timestamp': DateTime.now().toUtc().toIso8601String(),
+    };
+  }
+
+  static double _toDouble(dynamic value) {
+    if (value is num) {
+      return value.toDouble();
+    }
+
+    return double.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  static Map<String, dynamic> _extractZerodhaData(
+    Map<String, dynamic> response,
+  ) {
+    final rawData = response['data'];
+
+    if (rawData is Map) {
+      return Map<String, dynamic>.from(rawData);
+    }
+
+    return {};
+  }
+
+  Future<Response> _status(Request request) async {
+    try {
+      if (_isZerodhaActive()) {
+        final session = _brokerService.session;
+
+        final connected = session != null && session.hasValidAccessToken;
+
+        final feedConnected = ZerodhaMarketFeed.instance.isConnected;
+        final lastTickAt = ZerodhaMarketFeed.instance.lastTickAt;
+
+        return _json({
+          'connected': connected,
+          'broker': session?.broker,
+          'totalQuotes': MarketStore.instance.getAll().length,
+          'marketFeed': feedConnected,
+          ..._marketDataFreshness(
+            feedConnected: feedConnected,
+            lastTickAt: lastTickAt,
+          ),
+          'lastError': ZerodhaMarketFeed.instance.lastError,
+          'subscriptions': ZerodhaMarketFeed.instance.subscriptions,
+        });
+      }
+
+      return _json({
+        'connected': UpstoxMarketFeed.instance.isConnected,
+        'totalQuotes': MarketStore.instance.getAll().length,
+        'broker': _brokerService.session?.broker,
+        'marketFeed': UpstoxMarketFeed.instance.isConnected,
+      });
+    } catch (error) {
+      return _error(error);
+    }
+  }
+
+  int _calculateReadinessScore(
+    Map<String, dynamic> indices,
+    List<Map<String, dynamic>> sectors,
+  ) {
+    if (!isIndianEquityMarketOpen()) return 0;
+
+    final nifty = indices['nifty'];
+    final bankNifty = indices['bankNifty'];
+    final vix = _toDouble(indices['indiaVix']?['ltp']);
+
+    final niftyMove = _toDouble(nifty?['changePercent']).abs();
+    final bankMove = _toDouble(bankNifty?['changePercent']).abs();
+    final directionalSectors = sectors
+        .where((sector) => _toDouble(sector['percentageChange']).abs() >= 0.5)
+        .length;
+
+    var score = 0;
+    if (niftyMove >= 0.3) score += 25;
+    if (bankMove >= 0.3) score += 25;
+    if (vix > 0 && vix < 25) score += 25;
+    if (directionalSectors >= 4) score += 25;
+
+    return score;
+  }
+
+  Future<Response> _dashboard(Request request) async {
+    try {
+      if (_isZerodhaActive()) {
+        final symbols = _zerodhaDashboardSymbols.values.join(',');
+        print('[Market Dashboard] Zerodha index quote request: $symbols');
+        final response = await _getActiveQuotes(symbols);
+        print('[Market Dashboard] Zerodha index quote response received.');
+        final data = _extractZerodhaData(response);
+
+        final indices = <String, dynamic>{};
+
+        _zerodhaDashboardSymbols.forEach((key, symbol) {
+          indices[key] = _jsonQuote(data[symbol], symbol);
+        });
+
+        final sectorSymbols = _zerodhaSectorSymbols.values.join(',');
+        print(
+          '[Market Dashboard] Zerodha sector quote request: $sectorSymbols',
+        );
+        final sectorResponse = await _getActiveQuotes(sectorSymbols);
+        print('[Market Dashboard] Zerodha sector quote response received.');
+        final sectorData = _extractZerodhaData(sectorResponse);
+
+        final sectors = <Map<String, dynamic>>[];
+
+        _zerodhaSectorSymbols.forEach((name, symbol) {
+          final quote = _jsonQuote(sectorData[symbol], symbol);
+          final change = _toDouble(quote['change']);
+          final changePercent = _toDouble(quote['changePercent']);
+
+          sectors.add({
+            'name': name,
+            'instrumentKey': symbol,
+            'ltp': quote['ltp'],
+            'previousClose': quote['previousClose'],
+            'percentageChange': changePercent,
+            'change': change,
+            'timestamp': quote['timestamp'],
+          });
+        });
+
+        sectors.sort(
+          (a, b) => _toDouble(
+            b['percentageChange'],
+          ).compareTo(_toDouble(a['percentageChange'])),
+        );
+
+        final marketOpen = isIndianEquityMarketOpen();
+
+        return _json({
+          'connected': true,
+          'marketOpen': marketOpen,
+          'broker': _brokerService.session?.broker,
+          'indices': indices,
+          'sectors': sectors,
+          'sectorStrength': {
+            'available': sectors.isNotEmpty,
+            'strongest': sectors.isEmpty ? null : sectors.first,
+            'weakest': sectors.isEmpty ? null : sectors.last,
+            'totalSectors': sectors.length,
+          },
+          'readinessScore': _calculateReadinessScore(indices, sectors),
+          'readinessFactors': {
+            'marketEnvironment': marketOpen && sectors.length >= 5,
+            'volatility':
+                marketOpen &&
+                _toDouble(indices['indiaVix']?['ltp']) > 0 &&
+                _toDouble(indices['indiaVix']?['ltp']) < 25,
+            'strategyConditions':
+                marketOpen &&
+                sectors.any(
+                  (sector) =>
+                      _toDouble(sector['percentageChange']).abs() >= 0.5,
+                ),
+            'riskCapacity': false,
+          },
+          'lastUpdated': DateTime.now().toUtc().toIso8601String(),
+        });
+      }
+
+      final indices = <String, dynamic>{};
+
+      _upstoxDashboardSymbols.forEach((key, instrumentKey) {
         final tick = MarketStore.instance.get(instrumentKey);
 
         indices[key] = tick?.toJson();
-      },
-    );
+      });
 
-    final sectors = <Map<String, dynamic>>[];
+      final sectors = <Map<String, dynamic>>[];
 
-    _sectorSymbols.forEach(
-      (name, instrumentKey) {
+      _upstoxSectorSymbols.forEach((name, instrumentKey) {
         final tick = MarketStore.instance.get(instrumentKey);
 
         if (tick == null) {
@@ -64,8 +364,7 @@ class MarketRoutes {
         double percentageChange = 0;
 
         if (previousClose > 0) {
-          percentageChange =
-              ((tick.ltp - previousClose) / previousClose) * 100;
+          percentageChange = ((tick.ltp - previousClose) / previousClose) * 100;
         }
 
         sectors.add({
@@ -76,123 +375,99 @@ class MarketRoutes {
           'percentageChange': percentageChange,
           'timestamp': tick.timestamp.toIso8601String(),
         });
-      },
-    );
+      });
 
-    sectors.sort(
-      (a, b) {
-        final aChange = a['percentageChange'] as double;
-        final bChange = b['percentageChange'] as double;
+      sectors.sort(
+        (a, b) => _toDouble(
+          b['percentageChange'],
+        ).compareTo(_toDouble(a['percentageChange'])),
+      );
 
-        return bChange.compareTo(aChange);
-      },
-    );
-
-    Map<String, dynamic>? strongestSector;
-    Map<String, dynamic>? weakestSector;
-
-    if (sectors.isNotEmpty) {
-      strongestSector = sectors.first;
-      weakestSector = sectors.last;
-    }
-
-    return _json({
-      'connected': UpstoxMarketFeed.instance.isConnected,
-      'marketOpen': MarketStore.instance.getAll().isNotEmpty,
-      'indices': indices,
-      'sectors': sectors,
-      'sectorStrength': {
-        'available': sectors.isNotEmpty,
-        'strongest': strongestSector,
-        'weakest': weakestSector,
-        'totalSectors': sectors.length,
-      },
-      'lastUpdated': DateTime.now().toIso8601String(),
-    });
-  }
-
-  static Response _quotes(Request request) {
-    return _json(
-      MarketStore.instance.toJson(),
-    );
-  }
-
-  static Response _quote(
-    Request request,
-    String instrumentKey,
-  ) {
-    final tick = MarketStore.instance.get(instrumentKey);
-
-    if (tick == null) {
-      return Response.notFound(
-        jsonEncode({
-          'message': 'Quote not found',
-        }),
-        headers: const {
-          'Content-Type': 'application/json',
+      return _json({
+        'connected': UpstoxMarketFeed.instance.isConnected,
+        'marketOpen': MarketStore.instance.getAll().isNotEmpty,
+        'broker': _brokerService.session?.broker,
+        'indices': indices,
+        'sectors': sectors,
+        'sectorStrength': {
+          'available': sectors.isNotEmpty,
+          'strongest': sectors.isEmpty ? null : sectors.first,
+          'weakest': sectors.isEmpty ? null : sectors.last,
+          'totalSectors': sectors.length,
         },
-      );
+        'lastUpdated': DateTime.now().toUtc().toIso8601String(),
+      });
+    } catch (error, stackTrace) {
+      print('');
+      print('========================================');
+      print('MARKET DASHBOARD ERROR');
+      print('BROKER: ${_brokerService.session?.broker}');
+      print('ERROR: $error');
+      print('STACK TRACE:');
+      print(stackTrace);
+      print('========================================');
+      print('');
+      return _error(error);
     }
+  }
 
-    return _json(
-      tick.toJson(),
+  Future<Response> _quotes(Request request) async {
+    try {
+      if (_isZerodhaActive()) {
+        final requested =
+            request.url.queryParameters['instrumentKey'] ??
+            request.url.queryParameters['instruments'];
+
+        if (requested == null || requested.trim().isEmpty) {
+          return _json({'success': true, 'data': const {}});
+        }
+
+        final response = await _getActiveQuotes(requested.trim());
+
+        return _json(response);
+      }
+
+      return _json(MarketStore.instance.toJson());
+    } catch (error) {
+      return _error(error);
+    }
+  }
+
+  Future<Response> _quote(Request request, String instrumentKey) async {
+    try {
+      if (_isZerodhaActive()) {
+        final response = await _getActiveQuotes(instrumentKey);
+
+        return _json(response);
+      }
+
+      final tick = MarketStore.instance.get(instrumentKey);
+
+      if (tick == null) {
+        return Response.notFound(
+          jsonEncode({'message': 'Quote not found'}),
+          headers: const {'Content-Type': 'application/json'},
+        );
+      }
+
+      return _json(tick.toJson());
+    } catch (error) {
+      return _error(error);
+    }
+  }
+
+  Response _error(Object error) {
+    return Response(
+      500,
+      body: jsonEncode({'success': false, 'error': error.toString()}),
+      headers: const {'Content-Type': 'application/json'},
     );
   }
 
-  static Response _stream(Request request) {
-    final controller = StreamController<List<int>>();
-
-    final headers = <String, String>{
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
-      'X-Accel-Buffering': 'no',
-    };
-
-    Timer? timer;
-
-    void sendSnapshot() {
-      final payload = jsonEncode(
-        MarketStore.instance.toJson(),
-      );
-
-      controller.add(
-        utf8.encode(
-          'event: market\n'
-          'data: $payload\n\n',
-        ),
-      );
-    }
-
-    sendSnapshot();
-
-    timer = Timer.periodic(
-      const Duration(milliseconds: 500),
-      (_) {
-        sendSnapshot();
-      },
-    );
-
-    controller.onCancel = () {
-      timer?.cancel();
-      timer = null;
-      controller.close();
-    };
-
-    return Response.ok(
-      controller.stream,
-      headers: headers,
-    );
-  }
-
-  static Response _json(
-    dynamic body,
-  ) {
+  Response _json(dynamic body) {
     return Response.ok(
       jsonEncode(body),
-      headers: const {
-        'Content-Type': 'application/json',
-      },
+      headers: const {'Content-Type': 'application/json'},
     );
   }
 }

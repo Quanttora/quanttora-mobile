@@ -1,6 +1,7 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 
 import 'package:backend/integrations/upstox/upstox_broker_service.dart';
+import 'package:backend/services/broker_market_service.dart';
 import 'package:backend/middleware/auth_middleware.dart';
 import 'package:backend/models/trade_execution_request.dart'
     as trade_execution_models;
@@ -11,7 +12,9 @@ import 'package:backend/services/paper_trade_store.dart';
 import 'package:backend/services/trade_execution_guard.dart' as execution_guard;
 import 'package:backend/services/upstox_instrument_search_service.dart';
 import 'package:backend/services/upstox_market_feed.dart';
+import 'package:backend/services/zerodha_market_feed.dart';
 import 'package:backend/services/upstox_option_chain_service.dart';
+import 'package:backend/services/zerodha_option_chain_service.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf_router/shelf_router.dart';
 
@@ -68,6 +71,8 @@ class BrokerRoutes {
 
   final BrokerService _brokerService = BrokerService.instance;
 
+  final BrokerMarketService _marketBrokerService = BrokerMarketService.instance;
+
   final MarketCandleService _candleService = MarketCandleService.instance;
 
   final UpstoxInstrumentSearchService _instrumentSearchService =
@@ -122,6 +127,19 @@ class BrokerRoutes {
     return _brokerService.accessTokenForUser(_userId(request));
   }
 
+  bool _isZerodha(Request request) {
+    final session = _brokerService.sessionForUser(_userId(request));
+    final broker = session?.broker.toLowerCase() ?? '';
+    return broker == 'zerodha' || broker == 'zerodha kite' || broker == 'kite';
+  }
+
+  bool _marketFeedConnected(Request request) {
+    if (_isZerodha(request)) {
+      return ZerodhaMarketFeed.instance.isConnected;
+    }
+    return UpstoxMarketFeed.instance.isConnected;
+  }
+
   bool _hasValidSession(Request request) {
     return _brokerService.hasValidSessionForUser(_userId(request));
   }
@@ -152,7 +170,7 @@ class BrokerRoutes {
         return _json({
           'success': true,
           'connected': false,
-          'marketFeed': UpstoxMarketFeed.instance.isConnected,
+          'marketFeed': _marketFeedConnected(request),
           'broker': null,
           'user': null,
           'accessTokenExpired': true,
@@ -166,7 +184,7 @@ class BrokerRoutes {
       return _json({
         'success': true,
         'connected': _brokerService.isConnectedForUser(userId),
-        'marketFeed': UpstoxMarketFeed.instance.isConnected,
+        'marketFeed': _marketFeedConnected(request),
         'broker': session.broker,
         'user': {
           'id': userId,
@@ -205,33 +223,45 @@ class BrokerRoutes {
   }
 
   Future<Response> _funds(Request request) {
-    return _execute(request, (token) => _broker.getFunds(token));
+    return _execute(
+      request,
+      (token) => _marketBrokerService.current.getFunds(token),
+    );
   }
 
   Future<Response> _holdings(Request request) {
-    return _execute(request, (token) => _broker.getHoldings(token));
+    return _execute(
+      request,
+      (token) => _marketBrokerService.current.getHoldings(token),
+    );
   }
 
   Future<Response> _positions(Request request) {
-    return _execute(request, (token) => _broker.getPositions(token));
+    return _execute(
+      request,
+      (token) => _marketBrokerService.current.getPositions(token),
+    );
   }
 
   Future<Response> _orders(Request request) {
-    return _execute(request, (token) => _broker.getOrderBook(token));
+    return _execute(
+      request,
+      (token) => _marketBrokerService.current.getOrderBook(token),
+    );
   }
 
   Future<Response> _trades(Request request) {
-    return _execute(request, (token) => _broker.getTradeBook(token));
+    return _execute(
+      request,
+      (token) => _marketBrokerService.current.getTradeBook(token),
+    );
   }
 
   Future<Response> _instrumentSearch(Request request) async {
     final query = request.url.queryParameters['query'];
 
     if (query == null || query.trim().isEmpty) {
-      return _validationError(
-        'QUERY_REQUIRED',
-        'query is required.',
-      );
+      return _validationError('QUERY_REQUIRED', 'query is required.');
     }
 
     final q = request.url.queryParameters;
@@ -241,14 +271,11 @@ class BrokerRoutes {
     final instrumentTypes = q['instrumentTypes'];
     final expiry = q['expiry'];
 
-    final pageNumber =
-        int.tryParse(q['pageNumber'] ?? '1') ?? 1;
+    final pageNumber = int.tryParse(q['pageNumber'] ?? '1') ?? 1;
 
-    final records =
-        int.tryParse(q['records'] ?? '30') ?? 30;
+    final records = int.tryParse(q['records'] ?? '30') ?? 30;
 
-    final atmOffset =
-        int.tryParse(q['atmOffset'] ?? '');
+    final atmOffset = int.tryParse(q['atmOffset'] ?? '');
 
     return _execute(
       request,
@@ -265,6 +292,7 @@ class BrokerRoutes {
       ),
     );
   }
+
   Future<Response> _quotes(Request request) async {
     final instrumentKey =
         request.url.queryParameters['instrumentKey'] ??
@@ -279,7 +307,8 @@ class BrokerRoutes {
 
     return _execute(
       request,
-      (token) => _broker.getQuotes(token, instrumentKey.trim()),
+      (token) =>
+          _marketBrokerService.current.getQuotes(token, instrumentKey.trim()),
     );
   }
 
@@ -290,7 +319,10 @@ class BrokerRoutes {
         'BSE_INDEX|SENSEX,'
         'NSE_INDEX|India VIX';
 
-    return _execute(request, (token) => _broker.getQuotes(token, instruments));
+    return _execute(
+      request,
+      (token) => _marketBrokerService.current.getQuotes(token, instruments),
+    );
   }
 
   Future<Response> _history(Request request) async {
@@ -315,7 +347,7 @@ class BrokerRoutes {
 
     return _execute(
       request,
-      (token) => _broker.getHistoricalCandles(
+      (token) => _marketBrokerService.current.getHistoricalCandles(
         token,
         instrumentKey.trim(),
         interval,
@@ -399,10 +431,15 @@ class BrokerRoutes {
           request.url.queryParameters['expiryDate'] ??
           'current_week';
 
-      final result = await UpstoxOptionChainService.instance.getOptionChain(
-        instrumentKey: instrumentKey.trim(),
-        expiryDate: expiry,
-      );
+      final result = _isZerodha(request)
+          ? await ZerodhaOptionChainService.instance.getOptionChain(
+              instrumentKey: instrumentKey.trim(),
+              expiryDate: expiry,
+            )
+          : await UpstoxOptionChainService.instance.getOptionChain(
+              instrumentKey: instrumentKey.trim(),
+              expiryDate: expiry,
+            );
 
       return _json(result);
     } catch (error) {
@@ -429,10 +466,15 @@ class BrokerRoutes {
           request.url.queryParameters['expiry'] ??
           request.url.queryParameters['expiryDate'];
 
-      final result = await UpstoxOptionChainService.instance.getOptionContracts(
-        instrumentKey: instrumentKey.trim(),
-        expiryDate: expiry,
-      );
+      final result = _isZerodha(request)
+          ? await ZerodhaOptionChainService.instance.getOptionContracts(
+              instrumentKey: instrumentKey.trim(),
+              expiryDate: expiry,
+            )
+          : await UpstoxOptionChainService.instance.getOptionContracts(
+              instrumentKey: instrumentKey.trim(),
+              expiryDate: expiry,
+            );
 
       return _json(result);
     } catch (error) {
@@ -523,7 +565,7 @@ class BrokerRoutes {
 
       final brokerConnected = _brokerService.hasValidSessionForUser(userId);
 
-      final marketFeedConnected = UpstoxMarketFeed.instance.isConnected;
+      final marketFeedConnected = _marketFeedConnected(request);
 
       final guardResult = _executionGuard.evaluate(
         brokerConnected: brokerConnected,
@@ -769,11 +811,13 @@ class BrokerRoutes {
 
     return _json({
       'success': true,
-      'connected': UpstoxMarketFeed.instance.isConnected,
+      'connected': _marketFeedConnected(request),
       'brokerConnected':
           session != null && _brokerService.isConnectedForUser(userId),
       'userId': userId,
-      'subscriptions': UpstoxMarketFeed.instance.subscriptions,
+      'subscriptions': _isZerodha(request)
+          ? const <String>[]
+          : UpstoxMarketFeed.instance.subscriptions,
     });
   }
 
@@ -785,6 +829,15 @@ class BrokerRoutes {
     }
 
     try {
+      if (_isZerodha(request)) {
+        return _json({
+          'success': true,
+          'connected': true,
+          'broker': 'Zerodha',
+          'mode': 'REST_QUOTES',
+        });
+      }
+
       await UpstoxMarketFeed.instance.connect();
 
       return _json({
@@ -800,6 +853,14 @@ class BrokerRoutes {
     _userId(request);
 
     try {
+      if (_isZerodha(request)) {
+        return _json({
+          'success': true,
+          'connected': false,
+          'broker': 'Zerodha',
+        });
+      }
+
       await UpstoxMarketFeed.instance.disconnect();
 
       return _json({'success': true, 'connected': false});
@@ -821,12 +882,23 @@ class BrokerRoutes {
     }
 
     try {
+      if (_isZerodha(request)) {
+        await ZerodhaMarketFeed.instance.subscribeMany([instrumentKey.trim()]);
+        return _json({
+          'success': true,
+          'instrument': instrumentKey.trim(),
+          'connected': ZerodhaMarketFeed.instance.isConnected,
+          'subscriptions': ZerodhaMarketFeed.instance.subscriptions,
+        });
+      }
       await UpstoxMarketFeed.instance.subscribeFull(instrumentKey.trim());
 
       return _json({
         'success': true,
         'instrument': instrumentKey.trim(),
-        'subscriptions': UpstoxMarketFeed.instance.subscriptions,
+        'subscriptions': _isZerodha(request)
+            ? const <String>[]
+            : UpstoxMarketFeed.instance.subscriptions,
       });
     } catch (error) {
       return _brokerError(error);
@@ -846,11 +918,23 @@ class BrokerRoutes {
     }
 
     try {
+      if (_isZerodha(request)) {
+        await ZerodhaMarketFeed.instance.unsubscribeMany([
+          instrumentKey.trim(),
+        ]);
+        return _json({
+          'success': true,
+          'connected': ZerodhaMarketFeed.instance.isConnected,
+          'subscriptions': ZerodhaMarketFeed.instance.subscriptions,
+        });
+      }
       await UpstoxMarketFeed.instance.unsubscribeFull(instrumentKey.trim());
 
       return _json({
         'success': true,
-        'subscriptions': UpstoxMarketFeed.instance.subscriptions,
+        'subscriptions': _isZerodha(request)
+            ? const <String>[]
+            : UpstoxMarketFeed.instance.subscriptions,
       });
     } catch (error) {
       return _brokerError(error);
@@ -863,7 +947,9 @@ class BrokerRoutes {
     return _json({
       'success': true,
       'connected': UpstoxMarketFeed.instance.isConnected,
-      'subscriptions': UpstoxMarketFeed.instance.subscriptions,
+      'subscriptions': _isZerodha(request)
+          ? const <String>[]
+          : UpstoxMarketFeed.instance.subscriptions,
     });
   }
 
@@ -871,7 +957,9 @@ class BrokerRoutes {
     final userId = _userId(request);
 
     try {
-      await UpstoxMarketFeed.instance.disconnect();
+      if (!_isZerodha(request)) {
+        await UpstoxMarketFeed.instance.disconnect();
+      }
 
       _brokerService.disconnectForUser(userId);
 
@@ -885,4 +973,3 @@ class BrokerRoutes {
     }
   }
 }
-

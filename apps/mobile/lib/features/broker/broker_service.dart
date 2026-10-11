@@ -166,6 +166,75 @@ class BrokerService {
     return _api.delete('/broker/orders/$orderId');
   }
 
+  Future<void> connectZerodha() async {
+    final session = Supabase.instance.client.auth.currentSession;
+    final accessToken = session?.accessToken.trim();
+
+    if (accessToken == null || accessToken.isEmpty) {
+      throw StateError('Authentication session is missing or expired.');
+    }
+
+    final baseUrl = dotenv.env['API_BASE_URL']?.trim();
+
+    if (baseUrl == null || baseUrl.isEmpty) {
+      throw StateError('API_BASE_URL is not configured in .env');
+    }
+
+    final normalizedBaseUrl = baseUrl.endsWith('/')
+        ? baseUrl.substring(0, baseUrl.length - 1)
+        : baseUrl;
+
+    final uri = Uri.parse('$normalizedBaseUrl/auth/zerodha/login');
+    final client = http.Client();
+
+    try {
+      final request = http.Request('GET', uri)
+        ..headers.addAll({
+          'Accept': 'application/json',
+          'Authorization': 'Bearer $accessToken',
+        })
+        ..followRedirects = false;
+
+      final streamedResponse = await client
+          .send(request)
+          .timeout(const Duration(seconds: 20));
+
+      final response = await http.Response.fromStream(streamedResponse);
+
+      final isRedirect = [
+        301,
+        302,
+        303,
+        307,
+        308,
+      ].contains(response.statusCode);
+
+      if (!isRedirect) {
+        throw Exception(
+          'Unable to start Zerodha authorization '
+          '(HTTP ${response.statusCode}): ${response.body}',
+        );
+      }
+
+      final location = response.headers['location'];
+
+      if (location == null || location.trim().isEmpty) {
+        throw StateError('Backend did not return a Zerodha authorization URL.');
+      }
+
+      final launched = await launchUrl(
+        Uri.parse(location),
+        mode: LaunchMode.externalApplication,
+      );
+
+      if (!launched) {
+        throw Exception('Unable to launch Zerodha Login');
+      }
+    } finally {
+      client.close();
+    }
+  }
+
   Future<void> connectBroker() async {
     final session = Supabase.instance.client.auth.currentSession;
     final accessToken = session?.accessToken.trim();

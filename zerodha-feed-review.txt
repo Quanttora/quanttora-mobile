@@ -1,0 +1,2564 @@
+﻿QUANTTORA ZERODHA LIVE FEED REVIEW
+
+
+========== pubspec.yaml ==========
+
+name: backend
+
+description: Quanttora Backend
+
+version: 1.0.0
+
+environment:
+  sdk: ^3.9.0
+
+dependencies:
+  shelf: ^1.4.2
+  shelf_router: ^1.1.4
+  shelf_cors_headers: ^0.1.5
+  http: ^1.2.2
+  dotenv: ^4.2.0
+  web_socket_channel: ^3.0.3
+  crypto: ^3.0.6
+  protobuf: ^6.0.0
+  fixnum: ^1.1.1
+  postgres: 3.5.12
+  cryptography: ^2.9.0
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.26.2
+
+
+========== lib\services\market_cache_service.dart ==========
+
+import 'package:backend/generated/market_data_v3.pb.dart';
+
+class MarketCacheService {
+  MarketCacheService._();
+
+  static final MarketCacheService instance = MarketCacheService._();
+
+  final Map<String, Feed> _feeds = {};
+
+  void update(String key, Feed feed) {
+    _feeds[key] = feed;
+  }
+
+  Feed? getFeed(String key) {
+    return _feeds[key];
+  }
+
+  Map<String, Feed> getAllFeeds() {
+    return Map.unmodifiable(_feeds);
+  }
+
+  bool contains(String key) {
+    return _feeds.containsKey(key);
+  }
+
+  void clear() {
+    _feeds.clear();
+  }
+
+  int get count => _feeds.length;
+}
+
+
+========== lib\services\market_store.dart ==========
+
+import 'package:backend/models/market_tick.dart';
+
+class MarketStore {
+  MarketStore._();
+
+  static final MarketStore instance = MarketStore._();
+
+  final Map<String, MarketTick> _ticks = {};
+
+  // Cumulative price-volume state per instrument.
+  final Map<String, double> _cumulativePriceVolume = {};
+
+  // Last cumulative traded volume received from the broker.
+  final Map<String, int> _previousVolume = {};
+
+  void update(MarketTick tick) {
+    final previousVolume = _previousVolume[tick.instrumentKey] ?? 0;
+
+    final currentVolume = tick.volume;
+
+    // Upstox volume is cumulative during the trading session.
+    //
+    // If the broker volume increases, only the new volume
+    // contributes to the live VWAP calculation.
+    if (currentVolume > previousVolume && tick.ltp > 0) {
+      final volumeDelta = currentVolume - previousVolume;
+
+      final previousPriceVolume =
+          _cumulativePriceVolume[tick.instrumentKey] ?? 0.0;
+
+      _cumulativePriceVolume[tick.instrumentKey] =
+          previousPriceVolume + (tick.ltp * volumeDelta);
+    }
+
+    // Detect a broker/session volume reset.
+    if (currentVolume < previousVolume) {
+      _cumulativePriceVolume.remove(tick.instrumentKey);
+    }
+
+    _previousVolume[tick.instrumentKey] = currentVolume;
+
+    final cumulativePriceVolume =
+        _cumulativePriceVolume[tick.instrumentKey] ?? 0.0;
+
+    final vwap = currentVolume > 0
+        ? cumulativePriceVolume / currentVolume
+        : 0.0;
+
+    _ticks[tick.instrumentKey] = tick.copyWith(vwap: vwap);
+  }
+
+  MarketTick? get(String instrumentKey) {
+    return _ticks[instrumentKey];
+  }
+
+  List<MarketTick> getAll() {
+    return _ticks.values.toList();
+  }
+
+  Map<String, dynamic> toJson() {
+    return {'market': _ticks.values.map((tick) => tick.toJson()).toList()};
+  }
+
+  void clear() {
+    _ticks.clear();
+    _cumulativePriceVolume.clear();
+    _previousVolume.clear();
+  }
+
+  void resetVwap(String instrumentKey) {
+    _cumulativePriceVolume.remove(instrumentKey);
+
+    _previousVolume.remove(instrumentKey);
+  }
+}
+
+
+
+========== lib\services\market_feed_processor.dart ==========
+
+import 'package:backend/generated/market_data_v3.pb.dart';
+import 'package:backend/models/market_tick.dart';
+import 'package:backend/services/market_store.dart';
+
+class MarketFeedProcessor {
+  MarketFeedProcessor._();
+
+  static final MarketFeedProcessor instance = MarketFeedProcessor._();
+
+  static const Map<String, String> _symbols = {
+    // MAIN INDICES
+    'NSE_INDEX|Nifty 50': 'NIFTY 50',
+    'NSE_INDEX|Nifty Bank': 'BANK NIFTY',
+    'BSE_INDEX|SENSEX': 'SENSEX',
+    'NSE_INDEX|India VIX': 'INDIA VIX',
+
+    // SECTOR INDICES
+    'NSE_INDEX|Nifty Auto': 'NIFTY AUTO',
+    'NSE_INDEX|Nifty FMCG': 'NIFTY FMCG',
+    'NSE_INDEX|Nifty IT': 'NIFTY IT',
+    'NSE_INDEX|Nifty Metal': 'NIFTY METAL',
+    'NSE_INDEX|Nifty Pharma': 'NIFTY PHARMA',
+    'NSE_INDEX|Nifty PSU Bank': 'NIFTY PSU BANK',
+    'NSE_INDEX|Nifty Realty': 'NIFTY REALTY',
+
+    // EXISTING WATCHLIST
+    'NSE_EQ|INE002A01018': 'RELIANCE',
+    'NSE_EQ|INE467B01029': 'TCS',
+    'NSE_EQ|INE040A01034': 'HDFCBANK',
+    'NSE_EQ|INE009A01021': 'INFY',
+    'NSE_EQ|INE090A01021': 'ICICIBANK',
+    'NSE_EQ|INE062A01020': 'SBIN',
+    'NSE_EQ|INE397D01024': 'BHARTIARTL',
+    'NSE_EQ|INE154A01025': 'ITC',
+  };
+
+  void process(FeedResponse response) {
+    if (response.feeds.isEmpty) {
+      return;
+    }
+
+    response.feeds.forEach((instrumentKey, feed) {
+      // ------------------------------------------------------------
+      // IMPORTANT
+      //
+      // Do NOT reject instruments that are not in the static map.
+      //
+      // Discover can search any Upstox instrument and subscribe to it
+      // dynamically. Those instruments must also reach MarketStore.
+      // ------------------------------------------------------------
+
+      final symbol = _getSymbol(
+        instrumentKey,
+      );
+
+      double? ltp;
+      double previousClose = 0;
+
+      double bidPrice = 0;
+      double askPrice = 0;
+
+      int bidQuantity = 0;
+      int askQuantity = 0;
+
+      int volume = 0;
+      double averageTradedPrice = 0;
+
+      // ------------------------------------------------------------
+      // FULL FEED
+      // ------------------------------------------------------------
+
+      if (feed.hasFullFeed()) {
+        final full = feed.fullFeed;
+
+        // INDEX FULL FEED
+        if (full.hasIndexFF()) {
+          final index = full.indexFF;
+
+          if (index.hasLtpc()) {
+            ltp = index.ltpc.ltp;
+            previousClose = index.ltpc.cp;
+          }
+        }
+
+        // EQUITY / MARKET FULL FEED
+        else if (full.hasMarketFF()) {
+          final market = full.marketFF;
+
+          if (market.hasLtpc()) {
+            ltp = market.ltpc.ltp;
+            previousClose = market.ltpc.cp;
+          }
+
+          if (market.hasVtt()) {
+            volume = market.vtt.toInt();
+          }
+
+          if (market.hasAtp()) {
+            averageTradedPrice = market.atp;
+          }
+
+          if (market.marketLevel.bidAskQuote.isNotEmpty) {
+            final level1 =
+                market.marketLevel.bidAskQuote.first;
+
+            bidPrice = level1.bidP.toDouble();
+            askPrice = level1.askP.toDouble();
+
+            bidQuantity = level1.bidQ.toInt();
+            askQuantity = level1.askQ.toInt();
+          }
+        }
+      }
+
+      // ------------------------------------------------------------
+      // LTPC FEED
+      // ------------------------------------------------------------
+
+      else if (feed.hasLtpc()) {
+        ltp = feed.ltpc.ltp;
+        previousClose = feed.ltpc.cp;
+      }
+
+      // ------------------------------------------------------------
+      // Nothing useful in this feed frame
+      // ------------------------------------------------------------
+
+      if (ltp == null) {
+        return;
+      }
+
+      final change = ltp - previousClose;
+
+      final changePercent = previousClose > 0
+          ? (change / previousClose) * 100
+          : 0.0;
+
+      // ------------------------------------------------------------
+      // Store the tick
+      // ------------------------------------------------------------
+
+      final tick = MarketTick(
+        instrumentKey: instrumentKey,
+        symbol: symbol,
+        ltp: ltp,
+        previousClose: previousClose,
+        change: change,
+        changePercent: changePercent,
+        bidPrice: bidPrice,
+        askPrice: askPrice,
+        bidQuantity: bidQuantity,
+        askQuantity: askQuantity,
+        volume: volume,
+        averageTradedPrice: averageTradedPrice,
+        vwap: 0.0,
+        timestamp: DateTime.now(),
+      );
+
+      MarketStore.instance.update(tick);
+
+      // ------------------------------------------------------------
+      // Debug logging
+      // ------------------------------------------------------------
+
+      print(
+        '${tick.symbol.padRight(20)} '
+        '[$instrumentKey] '
+        'LTP:${tick.ltp.toStringAsFixed(2)} '
+        'Change:${tick.change >= 0 ? '+' : ''}'
+        '${tick.change.toStringAsFixed(2)} '
+        '(${tick.changePercent >= 0 ? '+' : ''}'
+        '${tick.changePercent.toStringAsFixed(2)}%) '
+        'Bid:${tick.bidPrice}(${tick.bidQuantity}) '
+        'Ask:${tick.askPrice}(${tick.askQuantity}) '
+        'Volume:${tick.volume} '
+        'ATP:${tick.averageTradedPrice.toStringAsFixed(2)}',
+      );
+    });
+  }
+
+  String _getSymbol(String instrumentKey) {
+    // Known instruments get their friendly symbol.
+    final knownSymbol = _symbols[instrumentKey];
+
+    if (knownSymbol != null) {
+      return knownSymbol;
+    }
+
+    // ------------------------------------------------------------
+    // Dynamically searched instruments
+    //
+    // Example:
+    // NSE_EQ|INE614G01033
+    //
+    // We don't reject them anymore. Until Discover supplies the
+    // trading symbol metadata to MarketFeedProcessor, use the
+    // instrument key suffix as a safe fallback.
+    // ------------------------------------------------------------
+
+    final separatorIndex = instrumentKey.indexOf('|');
+
+    if (separatorIndex >= 0 &&
+        separatorIndex < instrumentKey.length - 1) {
+      return instrumentKey.substring(separatorIndex + 1);
+    }
+
+    return instrumentKey;
+  }
+}
+
+
+========== lib\interfaces\broker\broker_market_feed_interface.dart ==========
+
+import 'package:backend/generated/market_data_v3.pb.dart';
+
+abstract class BrokerMarketFeedInterface {
+  bool get isConnected;
+
+  List<String> get subscriptions;
+
+  Future<void> connect();
+
+  Future<void> disconnect();
+
+  Future<void> subscribe(
+    List<String> instruments,
+  );
+
+  Future<void> unsubscribe(
+    List<String> instruments,
+  );
+
+  Future<void> subscribeFull(
+    String instrumentKey,
+  );
+
+  Future<void> unsubscribeFull(
+    String instrumentKey,
+  );
+
+  Future<void> subscribeMany(
+    List<String> instrumentKeys,
+  );
+
+  Future<void> unsubscribeMany(
+    List<String> instrumentKeys,
+  );
+
+  void listen(
+    void Function(FeedResponse response) handler,
+  );
+}
+
+
+========== lib\services\broker_service.dart ==========
+
+import '../models/broker_session.dart';
+import 'broker_session_manager.dart';
+
+class BrokerService {
+  BrokerService._();
+
+  static final BrokerService instance = BrokerService._();
+
+  final BrokerSessionManager _sessionManager = BrokerSessionManager.instance;
+
+  // ---------------------------------------------------------------------------
+  // Legacy compatibility API
+  //
+  // These methods/getters are retained because several existing backend
+  // services still use the original BrokerService singleton API.
+  // ---------------------------------------------------------------------------
+
+  BrokerSession? get session {
+    final sessions = _sessionManager.sessions;
+
+    if (sessions.isEmpty) {
+      return null;
+    }
+
+    return sessions.values.first;
+  }
+
+  bool get isConnected {
+    final current = session;
+
+    return current != null && current.accessToken.isNotEmpty;
+  }
+
+  String get accessToken {
+    final current = session;
+
+    if (current == null || current.accessToken.isEmpty) {
+      throw StateError('Broker is not connected.');
+    }
+
+    return current.accessToken;
+  }
+
+  bool hasValidSession() {
+    final current = session;
+
+    return current != null && current.hasValidAccessToken;
+  }
+
+  void connect(BrokerSession session) {
+    final userId = int.tryParse(session.userId);
+
+    if (userId == null) {
+      throw ArgumentError(
+        'Broker session userId must contain a valid Quanttora user ID.',
+      );
+    }
+
+    _sessionManager.saveSessionForUser(userId: userId, session: session);
+  }
+
+  void update(BrokerSession session) {
+    final userId = int.tryParse(session.userId);
+
+    if (userId == null) {
+      throw ArgumentError(
+        'Broker session userId must contain a valid Quanttora user ID.',
+      );
+    }
+
+    _sessionManager.updateSessionForUser(userId: userId, session: session);
+  }
+
+  void disconnect() {
+    final current = session;
+
+    if (current == null) {
+      return;
+    }
+
+    final userId = int.tryParse(current.userId);
+
+    if (userId != null) {
+      _sessionManager.clearSessionForUser(userId);
+    }
+  }
+
+  String get broker {
+    final current = session;
+
+    if (current == null) {
+      throw StateError('Broker is not connected.');
+    }
+
+    return current.broker;
+  }
+
+  String get userId {
+    final current = session;
+
+    if (current == null) {
+      throw StateError('Broker is not connected.');
+    }
+
+    return current.userId;
+  }
+
+  String get userName {
+    final current = session;
+
+    if (current == null) {
+      throw StateError('Broker is not connected.');
+    }
+
+    return current.userName;
+  }
+
+  String get email {
+    final current = session;
+
+    if (current == null) {
+      throw StateError('Broker is not connected.');
+    }
+
+    return current.email;
+  }
+
+  DateTime? get accessTokenExpiresAt {
+    return session?.accessTokenExpiresAt;
+  }
+
+  bool get isAccessTokenExpired {
+    return session?.isAccessTokenExpired ?? true;
+  }
+
+  // ---------------------------------------------------------------------------
+  // User-scoped API
+  // ---------------------------------------------------------------------------
+
+  BrokerSession? sessionForUser(int userId) {
+    return _sessionManager.sessionForUser(userId);
+  }
+
+  bool isConnectedForUser(int userId) {
+    return _sessionManager.isConnectedForUser(userId);
+  }
+
+  void connectForUser({required int userId, required BrokerSession session}) {
+    _sessionManager.saveSessionForUser(userId: userId, session: session);
+  }
+
+  void disconnectForUser(int userId) {
+    _sessionManager.clearSessionForUser(userId);
+  }
+
+  void updateForUser({required int userId, required BrokerSession session}) {
+    _sessionManager.updateSessionForUser(userId: userId, session: session);
+  }
+
+  bool hasValidSessionForUser(int userId) {
+    return _sessionManager.hasValidSessionForUser(userId);
+  }
+
+  String accessTokenForUser(int userId) {
+    return _sessionManager.accessTokenForUser(userId);
+  }
+
+  String brokerForUser(int userId) {
+    final current = sessionForUser(userId);
+
+    if (current == null) {
+      throw StateError('Broker is not connected.');
+    }
+
+    return current.broker;
+  }
+
+  String userIdForUser(int userId) {
+    final current = sessionForUser(userId);
+
+    if (current == null) {
+      throw StateError('Broker is not connected.');
+    }
+
+    return current.userId;
+  }
+
+  String userNameForUser(int userId) {
+    final current = sessionForUser(userId);
+
+    if (current == null) {
+      throw StateError('Broker is not connected.');
+    }
+
+    return current.userName;
+  }
+
+  String emailForUser(int userId) {
+    final current = sessionForUser(userId);
+
+    if (current == null) {
+      throw StateError('Broker is not connected.');
+    }
+
+    return current.email;
+  }
+
+  DateTime? accessTokenExpiresAtForUser(int userId) {
+    return sessionForUser(userId)?.accessTokenExpiresAt;
+  }
+
+  bool isAccessTokenExpiredForUser(int userId) {
+    return sessionForUser(userId)?.isAccessTokenExpired ?? true;
+  }
+
+  int get connectedUserCount {
+    return _sessionManager.connectedUserCount;
+  }
+}
+
+
+
+========== lib\routes\market_routes.dart ==========
+
+import 'dart:convert';
+
+import 'package:backend/services/broker_market_service.dart';
+import 'package:backend/services/broker_service.dart';
+import 'package:backend/services/market_store.dart';
+import 'package:backend/services/upstox_market_feed.dart';
+import 'package:shelf/shelf.dart';
+import 'package:shelf_router/shelf_router.dart';
+
+class MarketRoutes {
+  MarketRoutes() {
+    router = Router();
+
+    router.get('/status', _status);
+    router.get('/dashboard', _dashboard);
+    router.get('/quotes', _quotes);
+    router.get('/quote/<instrumentKey>', _quote);
+  }
+
+  late final Router router;
+
+  static const Map<String, String> _upstoxDashboardSymbols = {
+    'nifty': 'NSE_INDEX|Nifty 50',
+    'bankNifty': 'NSE_INDEX|Nifty Bank',
+    'sensex': 'BSE_INDEX|SENSEX',
+    'indiaVix': 'NSE_INDEX|India VIX',
+  };
+
+  static const Map<String, String> _upstoxSectorSymbols = {
+    'AUTO': 'NSE_INDEX|Nifty Auto',
+    'FMCG': 'NSE_INDEX|Nifty FMCG',
+    'IT': 'NSE_INDEX|Nifty IT',
+    'METAL': 'NSE_INDEX|Nifty Metal',
+    'PHARMA': 'NSE_INDEX|Nifty Pharma',
+    'PSU BANK': 'NSE_INDEX|Nifty PSU Bank',
+    'REALTY': 'NSE_INDEX|Nifty Realty',
+  };
+
+  static const Map<String, String> _zerodhaDashboardSymbols = {
+    'nifty': 'NSE:NIFTY 50',
+    'bankNifty': 'NSE:NIFTY BANK',
+    'sensex': 'BSE:SENSEX',
+    'indiaVix': 'NSE:INDIA VIX',
+  };
+
+  static const Map<String, String> _zerodhaSectorSymbols = {
+    'AUTO': 'NSE:NIFTY AUTO',
+    'FMCG': 'NSE:NIFTY FMCG',
+    'IT': 'NSE:NIFTY IT',
+    'METAL': 'NSE:NIFTY METAL',
+    'PHARMA': 'NSE:NIFTY PHARMA',
+    'PSU BANK': 'NSE:NIFTY PSU BANK',
+    'REALTY': 'NSE:NIFTY REALTY',
+  };
+
+  final BrokerService _brokerService = BrokerService.instance;
+
+  final BrokerMarketService _brokerMarketService =
+      BrokerMarketService.instance;
+
+  bool _isZerodhaActive() {
+    final session = _brokerService.session;
+
+    if (session == null) {
+      return false;
+    }
+
+    final broker = session.broker.toLowerCase();
+
+    return broker == 'zerodha' ||
+        broker == 'zerodha kite' ||
+        broker == 'kite';
+  }
+
+  Future<Map<String, dynamic>> _getActiveQuotes(
+    String instruments,
+  ) async {
+    final session = _brokerService.session;
+
+    if (session == null || !session.hasValidAccessToken) {
+      throw StateError('No valid broker session.');
+    }
+
+    return _brokerMarketService.current.getQuotes(
+      session.accessToken,
+      instruments,
+    );
+  }
+
+  static Map<String, dynamic> _jsonQuote(
+    dynamic raw,
+    String symbol,
+  ) {
+    if (raw is! Map) {
+      return {
+        'instrumentKey': symbol,
+        'ltp': 0,
+        'previousClose': 0,
+        'change': 0,
+        'changePercent': 0,
+      };
+    }
+
+    final map = Map<String, dynamic>.from(raw);
+
+    final ltp = _toDouble(
+      map['ltp'] ??
+          map['last_price'] ??
+          map['lastPrice'] ??
+          map['last_traded_price'],
+    );
+
+    final ohlc = map['ohlc'];
+    final previousClose = ohlc is Map
+        ? _toDouble(ohlc['close'])
+        : _toDouble(
+            map['previousClose'] ??
+                map['previous_close'] ??
+                map['close'],
+          );
+
+    final netChange = _toDouble(
+      map['net_change'] ??
+          map['netChange'] ??
+          map['change'],
+    );
+
+    final calculatedChange =
+        netChange != 0 ? netChange : ltp - previousClose;
+
+    final changePercent = previousClose > 0
+        ? (calculatedChange / previousClose) * 100
+        : 0.0;
+
+    return {
+      'instrumentKey': symbol,
+      'ltp': ltp,
+      'previousClose': previousClose,
+      'change': calculatedChange,
+      'changePercent': changePercent,
+      'timestamp': DateTime.now().toUtc().toIso8601String(),
+    };
+  }
+
+  static double _toDouble(dynamic value) {
+    if (value is num) {
+      return value.toDouble();
+    }
+
+    return double.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  static Map<String, dynamic> _extractZerodhaData(
+    Map<String, dynamic> response,
+  ) {
+    final rawData = response['data'];
+
+    if (rawData is Map) {
+      return Map<String, dynamic>.from(rawData);
+    }
+
+    return {};
+  }
+
+  Future<Response> _status(Request request) async {
+    try {
+      if (_isZerodhaActive()) {
+        final session = _brokerService.session;
+
+        final connected =
+            session != null &&
+            session.hasValidAccessToken;
+
+        return _json({
+          'connected': connected,
+          'broker': session?.broker,
+          'totalQuotes': 0,
+          'marketFeed': connected,
+        });
+      }
+
+      return _json({
+        'connected': UpstoxMarketFeed.instance.isConnected,
+        'totalQuotes': MarketStore.instance.getAll().length,
+        'broker': _brokerService.session?.broker,
+        'marketFeed': UpstoxMarketFeed.instance.isConnected,
+      });
+    } catch (error) {
+      return _error(error);
+    }
+  }
+
+  Future<Response> _dashboard(Request request) async {
+    try {
+      if (_isZerodhaActive()) {
+        final symbols = _zerodhaDashboardSymbols.values.join(',');
+        print('[Market Dashboard] Zerodha index quote request: $symbols');
+        final response = await _getActiveQuotes(symbols);
+        print('[Market Dashboard] Zerodha index quote response received.');
+        final data = _extractZerodhaData(response);
+
+        final indices = <String, dynamic>{};
+
+        _zerodhaDashboardSymbols.forEach((key, symbol) {
+          indices[key] = _jsonQuote(data[symbol], symbol);
+        });
+
+        final sectorSymbols = _zerodhaSectorSymbols.values.join(',');
+        print('[Market Dashboard] Zerodha sector quote request: $sectorSymbols');
+        final sectorResponse = await _getActiveQuotes(sectorSymbols);
+        print('[Market Dashboard] Zerodha sector quote response received.');
+        final sectorData = _extractZerodhaData(sectorResponse);
+
+        final sectors = <Map<String, dynamic>>[];
+
+        _zerodhaSectorSymbols.forEach((name, symbol) {
+          final quote = _jsonQuote(sectorData[symbol], symbol);
+          final change = _toDouble(quote['change']);
+          final changePercent =
+              _toDouble(quote['changePercent']);
+
+          sectors.add({
+            'name': name,
+            'instrumentKey': symbol,
+            'ltp': quote['ltp'],
+            'previousClose': quote['previousClose'],
+            'percentageChange': changePercent,
+            'change': change,
+            'timestamp': quote['timestamp'],
+          });
+        });
+
+        sectors.sort(
+          (a, b) => _toDouble(b['percentageChange'])
+              .compareTo(_toDouble(a['percentageChange'])),
+        );
+
+        return _json({
+          'connected': true,
+          'marketOpen': true,
+          'broker': _brokerService.session?.broker,
+          'indices': indices,
+          'sectors': sectors,
+          'sectorStrength': {
+            'available': sectors.isNotEmpty,
+            'strongest':
+                sectors.isEmpty ? null : sectors.first,
+            'weakest':
+                sectors.isEmpty ? null : sectors.last,
+            'totalSectors': sectors.length,
+          },
+          'lastUpdated': DateTime.now()
+              .toUtc()
+              .toIso8601String(),
+        });
+      }
+
+      final indices = <String, dynamic>{};
+
+      _upstoxDashboardSymbols.forEach(
+        (key, instrumentKey) {
+          final tick =
+              MarketStore.instance.get(instrumentKey);
+
+          indices[key] = tick?.toJson();
+        },
+      );
+
+      final sectors = <Map<String, dynamic>>[];
+
+      _upstoxSectorSymbols.forEach(
+        (name, instrumentKey) {
+          final tick =
+              MarketStore.instance.get(instrumentKey);
+
+          if (tick == null) {
+            return;
+          }
+
+          final previousClose = tick.previousClose;
+
+          double percentageChange = 0;
+
+          if (previousClose > 0) {
+            percentageChange =
+                ((tick.ltp - previousClose) /
+                        previousClose) *
+                    100;
+          }
+
+          sectors.add({
+            'name': name,
+            'instrumentKey': instrumentKey,
+            'ltp': tick.ltp,
+            'previousClose': previousClose,
+            'percentageChange': percentageChange,
+            'timestamp':
+                tick.timestamp.toIso8601String(),
+          });
+        },
+      );
+
+      sectors.sort(
+        (a, b) => _toDouble(b['percentageChange'])
+            .compareTo(_toDouble(a['percentageChange'])),
+      );
+
+      return _json({
+        'connected':
+            UpstoxMarketFeed.instance.isConnected,
+        'marketOpen':
+            MarketStore.instance.getAll().isNotEmpty,
+        'broker': _brokerService.session?.broker,
+        'indices': indices,
+        'sectors': sectors,
+        'sectorStrength': {
+          'available': sectors.isNotEmpty,
+          'strongest':
+              sectors.isEmpty ? null : sectors.first,
+          'weakest':
+              sectors.isEmpty ? null : sectors.last,
+          'totalSectors': sectors.length,
+        },
+        'lastUpdated':
+            DateTime.now().toUtc().toIso8601String(),
+      });
+    } catch (error, stackTrace) {
+      print('');
+      print('========================================');
+      print('MARKET DASHBOARD ERROR');
+      print('BROKER: ${_brokerService.session?.broker}');
+      print('ERROR: $error');
+      print('STACK TRACE:');
+      print(stackTrace);
+      print('========================================');
+      print('');
+      return _error(error);
+    }
+  }
+
+  Future<Response> _quotes(Request request) async {
+    try {
+      if (_isZerodhaActive()) {
+        final requested =
+            request.url.queryParameters['instrumentKey'] ??
+                request.url.queryParameters['instruments'];
+
+        if (requested == null ||
+            requested.trim().isEmpty) {
+          return _json(
+            {
+              'success': true,
+              'data': const {},
+            },
+          );
+        }
+
+        final response =
+            await _getActiveQuotes(requested.trim());
+
+        return _json(response);
+      }
+
+      return _json(
+        MarketStore.instance.toJson(),
+      );
+    } catch (error) {
+      return _error(error);
+    }
+  }
+
+  Future<Response> _quote(
+    Request request,
+    String instrumentKey,
+  ) async {
+    try {
+      if (_isZerodhaActive()) {
+        final response =
+            await _getActiveQuotes(
+          instrumentKey,
+        );
+
+        return _json(response);
+      }
+
+      final tick =
+          MarketStore.instance.get(instrumentKey);
+
+      if (tick == null) {
+        return Response.notFound(
+          jsonEncode({
+            'message': 'Quote not found',
+          }),
+          headers: const {
+            'Content-Type': 'application/json',
+          },
+        );
+      }
+
+      return _json(tick.toJson());
+    } catch (error) {
+      return _error(error);
+    }
+  }
+
+  Response _error(Object error) {
+    return Response(
+      500,
+      body: jsonEncode({
+        'success': false,
+        'error': error.toString(),
+      }),
+      headers: const {
+        'Content-Type': 'application/json',
+      },
+    );
+  }
+
+  Response _json(dynamic body) {
+    return Response.ok(
+      jsonEncode(body),
+      headers: const {
+        'Content-Type': 'application/json',
+      },
+    );
+  }
+}
+
+
+
+========== lib\integrations\zerodha\zerodha_broker_service.dart ==========
+
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:backend/interfaces/broker_market_interface.dart';
+import 'package:http/http.dart' as http;
+
+class ZerodhaBrokerService implements BrokerMarketInterface {
+  static const String _apiBaseUrl = 'https://api.kite.trade';
+
+  String get _apiKey {
+    final processValue =
+        Platform.environment['ZERODHA_API_KEY']?.trim() ?? '';
+
+    if (processValue.isNotEmpty) {
+      return processValue;
+    }
+
+    final envFile = File('.env');
+
+    if (!envFile.existsSync()) {
+      throw StateError(
+        'Backend .env file was not found. '
+        'Expected .env in the backend working directory.',
+      );
+    }
+
+    final lines = envFile.readAsLinesSync();
+
+    for (final line in lines) {
+      final trimmed = line.trim();
+
+      if (trimmed.isEmpty || trimmed.startsWith('#')) {
+        continue;
+      }
+
+      final separatorIndex = trimmed.indexOf('=');
+
+      if (separatorIndex <= 0) {
+        continue;
+      }
+
+      final key = trimmed.substring(0, separatorIndex).trim();
+
+      if (key != 'ZERODHA_API_KEY') {
+        continue;
+      }
+
+      var value = trimmed.substring(separatorIndex + 1).trim();
+
+      if (value.length >= 2) {
+        final first = value[0];
+        final last = value[value.length - 1];
+
+        if ((first == '"' && last == '"') ||
+            (first == "'" && last == "'")) {
+          value = value.substring(1, value.length - 1).trim();
+        }
+      }
+
+      if (value.isNotEmpty) {
+        return value;
+      }
+    }
+
+    throw StateError(
+      'ZERODHA_API_KEY was not found in the backend .env file.',
+    );
+  }
+
+  Map<String, String> _headers(String accessToken) {
+    final apiKey = _apiKey;
+    final token = accessToken.trim();
+
+    if (token.isEmpty) {
+      throw StateError('Zerodha access token is empty.');
+    }
+
+    return {
+      'X-Kite-Version': '3',
+      'Authorization': 'token $apiKey:$token',
+      'Accept': 'application/json',
+      'Content-Type': 'application/x-www-form-urlencoded',
+    };
+  }
+
+  Future<dynamic> _request(
+    String method,
+    String endpoint,
+    String accessToken, {
+    Map<String, String>? body,
+  }) async {
+    final url = Uri.parse('$_apiBaseUrl$endpoint');
+    final headers = _headers(accessToken);
+
+    late http.Response response;
+
+    switch (method) {
+      case 'GET':
+        response = await http
+            .get(url, headers: headers)
+            .timeout(const Duration(seconds: 15));
+        break;
+
+      case 'POST':
+        response = await http
+            .post(url, headers: headers, body: body)
+            .timeout(const Duration(seconds: 15));
+        break;
+
+      case 'PUT':
+        response = await http
+            .put(url, headers: headers, body: body)
+            .timeout(const Duration(seconds: 15));
+        break;
+
+      case 'DELETE':
+        response = await http
+            .delete(url, headers: headers)
+            .timeout(const Duration(seconds: 15));
+        break;
+
+      default:
+        throw ArgumentError('Unsupported HTTP method: $method');
+    }
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(
+        'Zerodha $method failed (${response.statusCode}): ${response.body}',
+      );
+    }
+
+    if (response.body.trim().isEmpty) {
+      return <String, dynamic>{};
+    }
+
+    final decoded = jsonDecode(response.body);
+
+    if (decoded is Map) {
+      return Map<String, dynamic>.from(decoded);
+    }
+
+    return decoded;
+  }
+
+  @override
+  Future<Map<String, dynamic>> getFunds(String accessToken) async {
+    return _asMap(await _request('GET', '/user/margins', accessToken));
+  }
+
+  @override
+  Future<Map<String, dynamic>> getProfile(String accessToken) async {
+    return _asMap(await _request('GET', '/user/profile', accessToken));
+  }
+
+  @override
+  Future<Map<String, dynamic>> getHoldings(String accessToken) async {
+    return _asMap(await _request('GET', '/portfolio/holdings', accessToken));
+  }
+
+  @override
+  Future<Map<String, dynamic>> getPositions(String accessToken) async {
+    return _asMap(await _request('GET', '/portfolio/positions', accessToken));
+  }
+
+  @override
+  Future<Map<String, dynamic>> getOrderBook(String accessToken) async {
+    return _asMap(await _request('GET', '/orders', accessToken));
+  }
+
+  @override
+  Future<Map<String, dynamic>> getTradeBook(String accessToken) async {
+    return _asMap(await _request('GET', '/trades', accessToken));
+  }
+
+  @override
+  Future<Map<String, dynamic>> getQuotes(
+    String accessToken,
+    String instrumentKeys,
+  ) async {
+    final instruments = instrumentKeys
+        .split(',')
+        .map((value) => value.trim())
+        .where((value) => value.isNotEmpty);
+
+    final query = instruments
+        .map((instrument) => 'i=${Uri.encodeQueryComponent(instrument)}')
+        .join('&');
+
+    if (query.isEmpty) {
+      throw ArgumentError('At least one instrument is required.');
+    }
+
+    return _asMap(await _request('GET', '/quote?$query', accessToken));
+  }
+
+  @override
+  Future<Map<String, dynamic>> getHistoricalCandles(
+    String accessToken,
+    String instrumentKey,
+    String interval,
+    String toDate,
+    String fromDate,
+  ) async {
+    final intervalValue = _normalizeInterval(interval);
+    final instrumentToken = _resolveHistoricalInstrumentToken(instrumentKey);
+
+    final from = _parseDate(fromDate, 'fromDate');
+    final to = _parseDate(toDate, 'toDate');
+
+    if (from.isAfter(to)) {
+      throw ArgumentError('fromDate cannot be after toDate.');
+    }
+
+    final chunkDays = _historicalChunkDays(intervalValue);
+    final allCandles = <dynamic>[];
+    var chunkStart = from;
+
+    while (!chunkStart.isAfter(to)) {
+      var chunkEnd = chunkStart.add(Duration(days: chunkDays));
+
+      if (chunkEnd.isAfter(to)) {
+        chunkEnd = to;
+      }
+
+      final endpoint = '/instruments/historical/'
+          '$instrumentToken/'
+          '$intervalValue'
+          '?from=${Uri.encodeQueryComponent(_formatDate(chunkStart))}'
+          '&to=${Uri.encodeQueryComponent(_formatDate(chunkEnd))}';
+
+      final response = _asMap(
+        await _request('GET', endpoint, accessToken),
+      );
+
+      final data = response['data'];
+      if (data is Map) {
+        final candles = data['candles'];
+        if (candles is List) {
+          allCandles.addAll(candles);
+        }
+      }
+
+      if (chunkEnd.isAtSameMomentAs(to)) {
+        break;
+      }
+
+      chunkStart = chunkEnd.add(const Duration(days: 1));
+    }
+
+    final deduplicated = <String, dynamic>{};
+    for (final candle in allCandles) {
+      if (candle is List && candle.isNotEmpty) {
+        deduplicated[candle[0].toString()] = candle;
+      }
+    }
+
+    final candles = deduplicated.values.toList();
+    candles.sort((a, b) => a[0].toString().compareTo(b[0].toString()));
+
+    return <String, dynamic>{
+      'status': 'success',
+      'data': <String, dynamic>{
+        'candles': candles,
+      },
+    };
+  }
+
+  @override
+  Future<Map<String, dynamic>> getIntradayCandles(
+    String accessToken,
+    String instrumentKey,
+    String interval,
+  ) async {
+    throw UnsupportedError(
+      'Zerodha intraday candles use the historical candle endpoint '
+      'with the current trading-day date range.',
+    );
+  }
+
+  String _resolveHistoricalInstrumentToken(String value) {
+    final normalized = value.trim();
+
+    if (RegExp(r'^\d+$').hasMatch(normalized)) {
+      return normalized;
+    }
+
+    final key = normalized.toUpperCase();
+
+    const tokenMap = <String, String>{
+      'NSE_INDEX|NIFTY 50': '256265',
+      'NSE_INDEX|NIFTY BANK': '260105',
+      'BSE_INDEX|SENSEX': '265',
+      'NSE:NIFTY 50': '256265',
+      'NSE:NIFTY BANK': '260105',
+      'BSE:SENSEX': '265',
+    };
+
+    final token = tokenMap[key];
+    if (token != null) {
+      return token;
+    }
+
+    throw ArgumentError(
+      'Unsupported Zerodha historical instrument: $value. '
+      'Pass a Zerodha instrument token or a supported index key.',
+    );
+  }
+
+  int _historicalChunkDays(String interval) {
+    switch (interval) {
+      case 'minute':
+        return 60;
+      case '3minute':
+      case '5minute':
+      case '10minute':
+        return 100;
+      case '15minute':
+      case '30minute':
+        return 200;
+      case '60minute':
+        return 400;
+      case 'day':
+      case 'week':
+      case 'month':
+        return 2000;
+      default:
+        return 60;
+    }
+  }
+
+  DateTime _parseDate(String value, String fieldName) {
+    try {
+      return DateTime.parse(value.trim());
+    } catch (_) {
+      throw ArgumentError(
+        '$fieldName must use YYYY-MM-DD format: $value',
+      );
+    }
+  }
+
+  String _formatDate(DateTime value) {
+    final year = value.year.toString().padLeft(4, '0');
+    final month = value.month.toString().padLeft(2, '0');
+    final day = value.day.toString().padLeft(2, '0');
+    return '$year-$month-$day';
+  }
+
+  String _normalizeInterval(String value) {
+    final normalized = value.trim().toLowerCase();
+
+    switch (normalized) {
+      case 'minute':
+      case '1minute':
+      case '1m':
+        return 'minute';
+      case '3minute':
+      case '3m':
+        return '3minute';
+      case '5minute':
+      case '5m':
+        return '5minute';
+      case '10minute':
+      case '10m':
+        return '10minute';
+      case '15minute':
+      case '15m':
+        return '15minute';
+      case '30minute':
+      case '30m':
+        return '30minute';
+      case '60minute':
+      case '1hour':
+      case '1h':
+        return '60minute';
+      case 'day':
+      case '1day':
+      case '1d':
+        return 'day';
+      case 'week':
+      case '1week':
+      case '1w':
+        return 'week';
+      case 'month':
+      case '1month':
+      case '1mo':
+        return 'month';
+      default:
+        throw ArgumentError('Unsupported Zerodha interval: $value');
+    }
+  }
+
+  Map<String, dynamic> _asMap(dynamic value) {
+    if (value is Map<String, dynamic>) {
+      return value;
+    }
+
+    if (value is Map) {
+      return Map<String, dynamic>.from(value);
+    }
+
+    throw Exception('Invalid Zerodha response format.');
+  }
+}
+
+
+
+========== lib\integrations\zerodha\zerodha_auth_service.dart ==========
+
+import 'dart:convert';
+
+import 'package:dotenv/dotenv.dart';
+import 'package:http/http.dart' as http;
+import 'package:crypto/crypto.dart';
+
+class ZerodhaAuthService {
+  final DotEnv _env = DotEnv()..load();
+
+  String get apiKey => _env['ZERODHA_API_KEY'] ?? '';
+
+  String get apiSecret => _env['ZERODHA_API_SECRET'] ?? '';
+
+  String get redirectUri => _env['ZERODHA_REDIRECT_URI'] ?? '';
+
+  String getLoginUrl() {
+    return Uri.https(
+      'kite.zerodha.com',
+      '/connect/login',
+      {
+        'v': '3',
+        'api_key': apiKey,
+      },
+    ).toString();
+  }
+
+  Future<Map<String, dynamic>> exchangeRequestToken({
+    required String requestToken,
+  }) async {
+    final checksum = _sha256(
+      '$apiKey$requestToken$apiSecret',
+    );
+
+    final response = await http.post(
+      Uri.parse(
+        'https://api.kite.trade/session/token',
+      ),
+      headers: {
+        'X-Kite-Version': '3',
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: {
+        'api_key': apiKey,
+        'request_token': requestToken,
+        'checksum': checksum,
+      },
+    );
+
+    if (response.statusCode < 200 ||
+        response.statusCode >= 300) {
+      throw Exception(
+        'Zerodha authentication failed '
+        '(${response.statusCode}): ${response.body}',
+      );
+    }
+
+    final decoded = jsonDecode(response.body);
+
+    if (decoded is! Map) {
+      throw Exception(
+        'Invalid Zerodha authentication response.',
+      );
+    }
+
+    return Map<String, dynamic>.from(decoded);
+  }
+
+  String _sha256(String value) {
+    return sha256.convert(utf8.encode(value)).toString();
+  }
+}
+
+
+
+
+
+========== lib\routes\zerodha_auth_routes.dart ==========
+
+import 'dart:convert';
+import 'dart:io';
+import 'dart:math';
+
+import 'package:backend/api/api_response.dart';
+import 'package:backend/integrations/upstox/upstox_auth_service.dart';
+import 'package:backend/integrations/zerodha/zerodha_auth_service.dart';
+import 'package:backend/middleware/auth_middleware.dart';
+import 'package:backend/models/broker_connection.dart';
+import 'package:backend/models/broker_session.dart';
+import 'package:backend/repositories/user_repository.dart';
+import 'package:backend/services/auth/auth_api_service.dart';
+import 'package:backend/services/auth/authentication_service.dart';
+import 'package:backend/services/broker_connection_repository.dart';
+import 'package:backend/services/broker_service.dart';
+import 'package:backend/services/upstox_market_feed.dart';
+import 'package:http/http.dart' as http;
+import 'package:shelf/shelf.dart';
+import 'package:shelf_router/shelf_router.dart';
+
+class ZerodhaAuthRoutes {
+  final UpstoxAuthService _upstox = UpstoxAuthService();
+  final ZerodhaAuthService _zerodha = ZerodhaAuthService();
+
+  final BrokerConnectionRepository _repository = BrokerConnectionRepository();
+
+  final BrokerService _brokerService = BrokerService.instance;
+
+  final UpstoxMarketFeed _marketFeed = UpstoxMarketFeed.instance;
+
+  static const List<String> _marketInstruments = [
+    'NSE_INDEX|Nifty 50',
+    'NSE_INDEX|Nifty Bank',
+    'BSE_INDEX|SENSEX',
+    'NSE_INDEX|India VIX',
+    'NSE_INDEX|Nifty Auto',
+    'NSE_INDEX|Nifty FMCG',
+    'NSE_INDEX|Nifty IT',
+    'NSE_INDEX|Nifty Metal',
+    'NSE_INDEX|Nifty Pharma',
+    'NSE_INDEX|Nifty PSU Bank',
+    'NSE_INDEX|Nifty Realty',
+    'NSE_EQ|INE002A01018',
+    'NSE_EQ|INE467B01029',
+    'NSE_EQ|INE040A01034',
+    'NSE_EQ|INE009A01021',
+    'NSE_EQ|INE090A01021',
+    'NSE_EQ|INE062A01020',
+    'NSE_EQ|INE397D01024',
+    'NSE_EQ|INE154A01025',
+  ];
+
+  /*
+   * OAuth state storage.
+   *
+   * Upstox redirects the browser to the callback endpoint and therefore
+   * does not preserve the original Authorization header.
+   *
+   * We create a short-lived state value when the authenticated Quanttora
+   * user starts broker authorization. The callback uses that state to
+   * recover the Quanttora user ID.
+   */
+  static final Map<String, _UpstoxOAuthState> _oauthStates = {};
+
+  static final Map<String, _ZerodhaOAuthState> _zerodhaOAuthStates = {};
+
+  Router get router {
+    final router = Router();
+
+    router.post('/register', _register);
+
+    router.post('/login', _login);
+
+    router.post('/logout', _logout);
+
+    router.get('/me', AuthMiddleware.requireAuthentication()(_me));
+
+    /*
+     * IMPORTANT:
+     *
+     * The login endpoint is authenticated because we need to know which
+     * Quanttora user is starting the Upstox connection.
+     */
+    router.post(
+      '/upstox/login',
+      AuthMiddleware.requireAuthentication()(_upstoxLogin),
+    );
+
+    /*
+     * Upstox callback is intentionally public.
+     *
+     * The authenticated Quanttora user is recovered through the OAuth
+     * state created by /upstox/login.
+     */
+    router.get('/upstox/callback', _upstoxCallback);
+
+    /*
+     * Zerodha login endpoint is authenticated because we need to know which
+     * Quanttora user is starting the Zerodha connection.
+     */
+    router.post(
+      '/zerodha/login',
+      AuthMiddleware.requireAuthentication()(_zerodhaLogin),
+    );
+
+    /*
+     * Zerodha callback is public. The Quanttora user is recovered through
+     * redirect_params/state created by /zerodha/login.
+     */
+    router.get('/zerodha/callback', _zerodhaCallback);
+
+    return router;
+  }
+
+  Future<Response> _upstoxLogin(Request request) async {
+    final user = AuthMiddleware.getUser(request);
+
+    if (user == null) {
+      return ApiResponse.error(
+        statusCode: HttpStatus.unauthorized,
+        code: 'AUTH_REQUIRED',
+        message: 'Authentication is required.',
+      );
+    }
+
+    _cleanupExpiredOAuthStates();
+
+    final state = _generateOAuthState();
+
+    _oauthStates[state] = _UpstoxOAuthState(
+      userId: user.id,
+      createdAt: DateTime.now().toUtc(),
+    );
+
+    final baseUrl = _upstox.getLoginUrl();
+
+    final baseUri = Uri.parse(baseUrl);
+
+    final loginUri = baseUri.replace(
+      queryParameters: {...baseUri.queryParameters, 'state': state},
+    );
+
+    print('');
+    print('==============================');
+    print('UPSTOX AUTHORIZATION STARTED');
+    print('QUANTTORA USER ID: ${user.id}');
+    print('STATE CREATED');
+    print('==============================');
+    print('');
+
+    return Response.found(loginUri.toString());
+  }
+
+  Future<Response> _upstoxCallback(Request request) async {
+    _cleanupExpiredOAuthStates();
+
+    final queryParameters = request.requestedUri.queryParameters;
+
+    final code = queryParameters['code'];
+    final state = queryParameters['state'];
+    final error = queryParameters['error'];
+    final errorDescription = queryParameters['error_description'];
+
+    if (error != null && error.isNotEmpty) {
+      print('');
+      print('==============================');
+      print('UPSTOX AUTHORIZATION ERROR');
+      print('ERROR: $error');
+      print('DESCRIPTION: $errorDescription');
+      print('==============================');
+      print('');
+
+      return Response(
+        HttpStatus.badRequest,
+        body: 'Upstox authorization was cancelled or failed.',
+      );
+    }
+
+    if (state == null || state.trim().isEmpty) {
+      print('UPSTOX CALLBACK ERROR: OAuth state missing.');
+
+      return Response(HttpStatus.badRequest, body: 'OAuth state is missing.');
+    }
+
+    final oauthState = _oauthStates.remove(state);
+
+    if (oauthState == null) {
+      print('UPSTOX CALLBACK ERROR: Invalid or expired OAuth state.');
+
+      return Response(
+        HttpStatus.badRequest,
+        body: 'OAuth state is invalid or expired.',
+      );
+    }
+
+    final quanttoraUserId = oauthState.userId;
+
+    if (code == null || code.isEmpty) {
+      print('');
+      print('==============================');
+      print('UPSTOX CALLBACK ERROR');
+      print('Authorization code missing.');
+      print('QUANTTORA USER ID: $quanttoraUserId');
+      print('==============================');
+      print('');
+
+      return Response(
+        HttpStatus.badRequest,
+        body: 'Authorization Code Missing',
+      );
+    }
+
+    try {
+      print('');
+      print('==============================');
+      print('UPSTOX CALLBACK RECEIVED');
+      print('Authorization code received.');
+      print('QUANTTORA USER ID: $quanttoraUserId');
+      print('Exchanging code for access token...');
+      print('==============================');
+      print('');
+
+      final token = await _upstox.exchangeCode(code: code);
+
+      final accessToken = token['access_token']?.toString() ?? '';
+
+      if (accessToken.isEmpty) {
+        throw Exception('Upstox access token was not returned.');
+      }
+
+      print('UPSTOX TOKEN EXCHANGE SUCCESSFUL');
+
+      /*
+       * Standard Upstox OAuth does not require a refresh token for the
+       * normal access-token lifecycle. Keep reading the field if Upstox
+       * supplies one, so the backend remains forward-compatible.
+       */
+      final refreshToken = token['refresh_token']?.toString();
+
+      final profileResponse = await http
+          .get(
+            Uri.parse('https://api.upstox.com/v2/user/profile'),
+            headers: {
+              'Accept': 'application/json',
+              'Authorization': 'Bearer $accessToken',
+            },
+          )
+          .timeout(const Duration(seconds: 15));
+
+      print(
+        'UPSTOX PROFILE STATUS: '
+        '${profileResponse.statusCode}',
+      );
+
+      if (profileResponse.statusCode != 200) {
+        throw Exception(
+          'Unable to fetch Upstox profile. '
+          'HTTP ${profileResponse.statusCode}: '
+          '${profileResponse.body}',
+        );
+      }
+
+      final decodedProfile = jsonDecode(profileResponse.body);
+
+      if (decodedProfile is! Map) {
+        throw Exception('Invalid Upstox profile response.');
+      }
+
+      final profileData = decodedProfile['data'];
+
+      if (profileData is! Map) {
+        throw Exception('Invalid Upstox profile data.');
+      }
+
+      final upstoxUserId = profileData['user_id']?.toString() ?? '';
+
+      final userName = profileData['user_name']?.toString() ?? '';
+
+      final email = profileData['email']?.toString() ?? '';
+
+      if (upstoxUserId.isEmpty) {
+        throw Exception('Upstox user ID was not returned.');
+      }
+
+      /*
+       * Upstox standard access tokens remain valid until 3:30 AM
+       * on the following day.
+       */
+      final accessTokenExpiresAt = _calculateUpstoxAccessTokenExpiry();
+
+      /*
+       * BrokerConnection keeps the Upstox identity.
+       */
+      final connection = BrokerConnection(
+        broker: 'Upstox',
+        userId: upstoxUserId,
+        userName: userName,
+        email: email,
+        accessToken: accessToken,
+        extendedToken: token['extended_token']?.toString() ?? '',
+        refreshToken: refreshToken ?? '',
+        accessTokenExpiresAt: accessTokenExpiresAt,
+      );
+
+      /*
+       * Persist the broker connection against the
+       * authenticated Quanttora user.
+       */
+      await _repository.save(connection, quanttoraUserId: quanttoraUserId);
+
+      /*
+       * BrokerSession.userId is the Upstox user ID because that is the
+       * broker identity.
+       *
+       * The session itself is stored against the Quanttora user ID below.
+       */
+      final session = BrokerSession(
+        broker: connection.broker,
+        userId: connection.userId,
+        userName: connection.userName,
+        email: connection.email,
+        accessToken: accessToken,
+        refreshToken: refreshToken,
+        connectedAt: DateTime.now().toUtc(),
+        accessTokenExpiresAt: accessTokenExpiresAt,
+      );
+
+      /*
+       * The in-memory session remains available for the current process.
+       */
+      _brokerService.connectForUser(userId: quanttoraUserId, session: session);
+
+      print('BROKER SESSION CONNECTED');
+      print('QUANTTORA USER ID: $quanttoraUserId');
+      print('UPSTOX USER ID: $upstoxUserId');
+
+      /*
+       * Connect market feed after the broker session has been stored.
+       */
+      try {
+        await _marketFeed.connect();
+
+        await _marketFeed.subscribeMany(_marketInstruments);
+
+        print(
+          'MARKET INSTRUMENTS SUBSCRIBED: '
+          '${_marketInstruments.length}',
+        );
+      } catch (e, stackTrace) {
+        /*
+         * Broker connection itself succeeded.
+         *
+         * Market feed failure should not destroy the valid broker
+         * session. Log it and allow the user to continue.
+         */
+        print('');
+        print('UPSTOX MARKET FEED CONNECTION WARNING');
+        print('ERROR: $e');
+        print('STACK TRACE:');
+        print(stackTrace);
+        print('');
+      }
+
+      print('');
+      print('==============================');
+      print('UPSTOX CONNECTED');
+      print('QUANTTORA USER ID: $quanttoraUserId');
+      print('UPSTOX USER: ${connection.userName}');
+      print('UPSTOX EMAIL: ${connection.email}');
+      print(
+        'MARKET INSTRUMENTS: '
+        '${_marketInstruments.length}',
+      );
+      print(
+        'ACCESS TOKEN EXPIRY: '
+        '${accessTokenExpiresAt.toUtc().toIso8601String()}',
+      );
+      print(
+        'REFRESH TOKEN: '
+        '${refreshToken != null && refreshToken.isNotEmpty ? 'present' : 'not provided'}',
+      );
+      print('==============================');
+      print('');
+
+      return Response.found('http://localhost:3000/broker-connected');
+    } catch (e, stackTrace) {
+      print('');
+      print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+      print('UPSTOX CONNECTION FAILED');
+      print('QUANTTORA USER ID: $quanttoraUserId');
+      print('ERROR: $e');
+      print('STACK TRACE:');
+      print(stackTrace);
+      print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+      print('');
+
+      return Response.internalServerError(
+        body:
+            'Upstox connection failed. '
+            'Check backend terminal for the exact error.',
+      );
+    }
+  }
+
+  Future<Response> _zerodhaLogin(Request request) async {
+    final user = AuthMiddleware.getUser(request);
+
+    if (user == null) {
+      return ApiResponse.error(
+        statusCode: HttpStatus.unauthorized,
+        code: 'AUTH_REQUIRED',
+        message: 'Authentication is required.',
+      );
+    }
+
+    _cleanupExpiredZerodhaOAuthStates();
+
+    final state = _generateOAuthState();
+
+    _zerodhaOAuthStates[state] = _ZerodhaOAuthState(
+      userId: user.id,
+      createdAt: DateTime.now().toUtc(),
+    );
+
+    print(
+      '[Zerodha OAuth] State stored; map size: ${_zerodhaOAuthStates.length}',
+    );
+
+    final baseUrl = _zerodha.getLoginUrl();
+    final baseUri = Uri.parse(baseUrl);
+
+    // Zerodha supports redirect_params and appends the supplied query
+    // parameters to the configured redirect URL after successful login.
+    final loginUri = baseUri.replace(
+      queryParameters: {
+        ...baseUri.queryParameters,
+        'redirect_params': 'state=$state',
+      },
+    );
+
+    print('');
+    print('==============================');
+    print('ZERODHA AUTHORIZATION STARTED');
+    print('QUANTTORA USER ID: ${user.id}');
+    print('STATE CREATED');
+    print('==============================');
+    print('');
+
+    return Response.found(loginUri.toString());
+  }
+
+  Future<Response> _zerodhaCallback(Request request) async {
+    _cleanupExpiredZerodhaOAuthStates();
+
+    final queryParameters = request.requestedUri.queryParameters;
+
+    final requestToken = queryParameters['request_token'];
+    final status = queryParameters['status'];
+
+    // Zerodha may return redirect_params as an encoded query-key when the
+    // browser callback passes state=... through the redirect URL. In that
+    // case Dart exposes the key as `state=<oauth-state>` with an empty value
+    // instead of exposing a normal `state` parameter. Accept both forms.
+    String? state = queryParameters['state'];
+
+    if (state == null || state.trim().isEmpty) {
+      for (final entry in queryParameters.entries) {
+        final key = entry.key;
+
+        if (key.startsWith('state=') && key.length > 'state='.length) {
+          state = key.substring('state='.length);
+          break;
+        }
+      }
+    }
+
+    state = state?.trim();
+
+    if (status != null && status.toLowerCase() != 'success') {
+      print('ZERODHA AUTHORIZATION ERROR: status=$status');
+      return Response(
+        HttpStatus.badRequest,
+        body: 'Zerodha authorization was cancelled or failed.',
+      );
+    }
+
+    if (state == null || state.trim().isEmpty) {
+      print('ZERODHA CALLBACK ERROR: OAuth state missing.');
+      return Response(HttpStatus.badRequest, body: 'OAuth state is missing.');
+    }
+
+    print(
+      '[Zerodha OAuth] Callback state received; length: ${state.length}; map size: ${_zerodhaOAuthStates.length}; matching state exists: ${_zerodhaOAuthStates.containsKey(state)}',
+    );
+
+    final oauthState = _zerodhaOAuthStates.remove(state);
+
+    if (oauthState == null) {
+      print(
+        '[Zerodha OAuth] State validation failed; stored state count: ${_zerodhaOAuthStates.length}',
+      );
+      print('ZERODHA CALLBACK ERROR: Invalid or expired OAuth state.');
+      return Response(
+        HttpStatus.badRequest,
+        body: 'OAuth state is invalid or expired.',
+      );
+    }
+
+    final quanttoraUserId = oauthState.userId;
+
+    if (requestToken == null || requestToken.trim().isEmpty) {
+      print('ZERODHA CALLBACK ERROR: Request token missing.');
+      return Response(
+        HttpStatus.badRequest,
+        body: 'Zerodha request token is missing.',
+      );
+    }
+
+    try {
+      print('');
+      print('==============================');
+      print('ZERODHA CALLBACK RECEIVED');
+      print('Request token received.');
+      print('QUANTTORA USER ID: $quanttoraUserId');
+      print('Exchanging request token for access token...');
+      print('==============================');
+      print('');
+
+      final tokenResponse = await _zerodha.exchangeRequestToken(
+        requestToken: requestToken,
+      );
+
+      final tokenData = tokenResponse['data'];
+
+      if (tokenData is! Map) {
+        throw Exception('Invalid Zerodha token response.');
+      }
+
+      final accessToken = tokenData['access_token']?.toString() ?? '';
+      final zerodhaUserId = tokenData['user_id']?.toString() ?? '';
+      final userName = tokenData['user_name']?.toString() ?? '';
+      final email = tokenData['email']?.toString() ?? '';
+
+      if (accessToken.isEmpty) {
+        throw Exception('Zerodha access token was not returned.');
+      }
+
+      if (zerodhaUserId.isEmpty) {
+        throw Exception('Zerodha user ID was not returned.');
+      }
+
+      print('ZERODHA TOKEN EXCHANGE SUCCESSFUL');
+
+      final accessTokenExpiresAt = _calculateZerodhaAccessTokenExpiry();
+
+      final connection = BrokerConnection(
+        broker: 'Zerodha',
+        userId: zerodhaUserId,
+        userName: userName,
+        email: email,
+        accessToken: accessToken,
+        extendedToken: '',
+        refreshToken: '',
+        accessTokenExpiresAt: accessTokenExpiresAt,
+      );
+
+      await _repository.save(connection, quanttoraUserId: quanttoraUserId);
+
+      final session = BrokerSession(
+        broker: connection.broker,
+        userId: connection.userId,
+        userName: connection.userName,
+        email: connection.email,
+        accessToken: accessToken,
+        refreshToken: null,
+        connectedAt: DateTime.now().toUtc(),
+        accessTokenExpiresAt: accessTokenExpiresAt,
+      );
+
+      _brokerService.connectForUser(userId: quanttoraUserId, session: session);
+
+      print('');
+      print('==============================');
+      print('ZERODHA CONNECTED');
+      print('QUANTTORA USER ID: $quanttoraUserId');
+      print('ZERODHA USER ID: $zerodhaUserId');
+      print('ZERODHA USER: ${connection.userName}');
+      print('ZERODHA EMAIL: ${connection.email}');
+      print('==============================');
+      print('');
+
+      return Response.found('http://localhost:3000/broker-connected');
+    } catch (e, stackTrace) {
+      print('');
+      print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+      print('ZERODHA CONNECTION FAILED');
+      print('QUANTTORA USER ID: $quanttoraUserId');
+      print('ERROR: $e');
+      print('STACK TRACE:');
+      print(stackTrace);
+      print('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
+      print('');
+
+      return Response.internalServerError(
+        body:
+            'Zerodha connection failed. '
+            'Check backend terminal for the exact error.',
+      );
+    }
+  }
+
+  Future<Response> _register(Request request) async {
+    final body = await ApiResponse.readJsonBody(request);
+
+    if (body == null) {
+      return ApiResponse.error(
+        statusCode: HttpStatus.badRequest,
+        code: 'INVALID_JSON',
+        message: 'Request body must contain valid JSON.',
+      );
+    }
+
+    final email = body['email'];
+    final password = body['password'];
+    final displayName = body['displayName'];
+
+    if (email is! String || password is! String || displayName is! String) {
+      return ApiResponse.error(
+        statusCode: HttpStatus.badRequest,
+        code: 'INVALID_REQUEST',
+        message: 'Email, password and displayName are required.',
+      );
+    }
+
+    final normalizedEmail = email.trim().toLowerCase();
+
+    final normalizedDisplayName = displayName.trim();
+
+    if (normalizedEmail.isEmpty) {
+      return ApiResponse.error(
+        statusCode: HttpStatus.badRequest,
+        code: 'INVALID_EMAIL',
+        message: 'Email is required.',
+      );
+    }
+
+    if (password.isEmpty) {
+      return ApiResponse.error(
+        statusCode: HttpStatus.badRequest,
+        code: 'INVALID_PASSWORD',
+        message: 'Password is required.',
+      );
+    }
+
+    if (normalizedDisplayName.isEmpty) {
+      return ApiResponse.error(
+        statusCode: HttpStatus.badRequest,
+        code: 'INVALID_DISPLAY_NAME',
+        message: 'Display name is required.',
+      );
+    }
+
+    final existingUser = await UserRepository.findByEmail(normalizedEmail);
+
+    if (existingUser != null) {
+      return ApiResponse.error(
+        statusCode: HttpStatus.conflict,
+        code: 'EMAIL_ALREADY_EXISTS',
+        message: 'An account with this email already exists.',
+      );
+    }
+
+    try {
+      final result = await AuthApiService.register(
+        email: normalizedEmail,
+        password: password,
+        displayName: normalizedDisplayName,
+      );
+
+      final user = await UserRepository.findById(result.userId);
+
+      if (user == null) {
+        return ApiResponse.error(
+          statusCode: HttpStatus.internalServerError,
+          code: 'REGISTRATION_FAILED',
+          message: 'Unable to load the newly created user.',
+        );
+      }
+
+      return ApiResponse.success(
+        statusCode: HttpStatus.created,
+        data: {'user': user.toPublicMap()},
+      );
+    } catch (_) {
+      return ApiResponse.error(
+        statusCode: HttpStatus.internalServerError,
+        code: 'REGISTRATION_FAILED',
+        message: 'Unable to create the account.',
+      );
+    }
+  }
+
+  Future<Response> _login(Request request) async {
+    final body = await ApiResponse.readJsonBody(request);
+
+    if (body == null) {
+      return ApiResponse.error(
+        statusCode: HttpStatus.badRequest,
+        code: 'INVALID_JSON',
+        message: 'Request body must contain valid JSON.',
+      );
+    }
+
+    final email = body['email'];
+    final password = body['password'];
+
+    if (email is! String || password is! String) {
+      return ApiResponse.error(
+        statusCode: HttpStatus.badRequest,
+        code: 'INVALID_REQUEST',
+        message: 'Email and password are required.',
+      );
+    }
+
+    final normalizedEmail = email.trim().toLowerCase();
+
+    if (normalizedEmail.isEmpty || password.isEmpty) {
+      return ApiResponse.error(
+        statusCode: HttpStatus.badRequest,
+        code: 'INVALID_CREDENTIALS',
+        message: 'Email and password are required.',
+      );
+    }
+
+    try {
+      final result = await AuthApiService.login(
+        email: normalizedEmail,
+        password: password,
+      );
+
+      return ApiResponse.success(
+        data: {
+          'user': result.user.toPublicMap(),
+          'session': {
+            'token': result.session.token,
+            'expiresAt': result.session.expiresAt.toUtc().toIso8601String(),
+          },
+        },
+      );
+    } catch (_) {
+      return ApiResponse.error(
+        statusCode: HttpStatus.unauthorized,
+        code: 'INVALID_CREDENTIALS',
+        message: 'Invalid email or password.',
+      );
+    }
+  }
+
+  Future<Response> _logout(Request request) async {
+    final authorization = request.headers[HttpHeaders.authorizationHeader];
+
+    if (authorization == null || authorization.trim().isEmpty) {
+      return ApiResponse.error(
+        statusCode: HttpStatus.unauthorized,
+        code: 'AUTH_REQUIRED',
+        message: 'Authentication is required.',
+      );
+    }
+
+    final parts = authorization.trim().split(' ');
+
+    if (parts.length != 2 ||
+        parts[0].toLowerCase() != 'bearer' ||
+        parts[1].trim().isEmpty) {
+      return ApiResponse.error(
+        statusCode: HttpStatus.unauthorized,
+        code: 'INVALID_AUTH_HEADER',
+        message: 'Invalid authentication header.',
+      );
+    }
+
+    final token = parts[1].trim();
+
+    try {
+      final session = await AuthenticationService.authenticateToken(token);
+
+      if (session == null) {
+        return ApiResponse.error(
+          statusCode: HttpStatus.unauthorized,
+          code: 'INVALID_SESSION',
+          message: 'Session is invalid or expired.',
+        );
+      }
+
+      await AuthenticationService.logout(token);
+
+      return ApiResponse.success(data: {'loggedOut': true});
+    } catch (_) {
+      return ApiResponse.error(
+        statusCode: HttpStatus.unauthorized,
+        code: 'INVALID_SESSION',
+        message: 'Session is invalid or expired.',
+      );
+    }
+  }
+
+  Future<Response> _me(Request request) async {
+    final user = AuthMiddleware.getUser(request);
+
+    if (user == null) {
+      return ApiResponse.error(
+        statusCode: HttpStatus.unauthorized,
+        code: 'AUTH_REQUIRED',
+        message: 'Authentication is required.',
+      );
+    }
+
+    return ApiResponse.success(data: {'user': user.toPublicMap()});
+  }
+
+  String _generateOAuthState() {
+    final random = Random.secure();
+
+    final bytes = List<int>.generate(32, (_) => random.nextInt(256));
+
+    return base64Url.encode(bytes).replaceAll('=', '');
+  }
+
+  void _cleanupExpiredOAuthStates() {
+    final now = DateTime.now().toUtc();
+
+    _oauthStates.removeWhere(
+      (_, value) =>
+          now.difference(value.createdAt) > const Duration(minutes: 10),
+    );
+  }
+
+  void _cleanupExpiredZerodhaOAuthStates() {
+    final now = DateTime.now().toUtc();
+
+    _zerodhaOAuthStates.removeWhere(
+      (_, value) =>
+          now.difference(value.createdAt) > const Duration(minutes: 10),
+    );
+  }
+
+  static DateTime _calculateZerodhaAccessTokenExpiry() {
+    // Zerodha access tokens expire at 6:00 AM IST on the next day.
+    // Calculate in IST and return the equivalent UTC timestamp.
+    final nowIst = DateTime.now().toUtc().add(
+      const Duration(hours: 5, minutes: 30),
+    );
+
+    final expiryIst = DateTime(nowIst.year, nowIst.month, nowIst.day + 1, 6);
+
+    return DateTime.utc(expiryIst.year, expiryIst.month, expiryIst.day, 0, 30);
+  }
+
+  static DateTime _calculateUpstoxAccessTokenExpiry() {
+    final now = DateTime.now();
+
+    final tomorrow = DateTime(now.year, now.month, now.day + 1, 3, 30);
+
+    return tomorrow.toUtc();
+  }
+}
+
+class _UpstoxOAuthState {
+  final int userId;
+  final DateTime createdAt;
+
+  const _UpstoxOAuthState({required this.userId, required this.createdAt});
+}
+
+class _ZerodhaOAuthState {
+  final int userId;
+  final DateTime createdAt;
+
+  const _ZerodhaOAuthState({required this.userId, required this.createdAt});
+}
+
+
+
+========== bin\server.dart ==========
+
+import 'dart:io';
+
+import 'package:backend/database/database.dart';
+import 'package:backend/middleware/auth_middleware.dart';
+import 'package:backend/routes/broker_routes.dart';
+import 'package:backend/routes/market_routes.dart';
+import 'package:backend/routes/risk_guard/risk_guard_routes.dart';
+import 'package:backend/routes/zerodha_auth_routes.dart';
+import 'package:backend/services/broker_startup_service.dart';
+import 'package:shelf/shelf.dart';
+import 'package:shelf/shelf_io.dart' as io;
+import 'package:shelf_router/shelf_router.dart';
+
+Future<void> main() async {
+  await Database.initialize();
+
+  final router = Router();
+
+  router.get('/health', (Request request) {
+    return Response.ok(
+      'Backend Running',
+      headers: const {
+        'Content-Type': 'text/plain',
+      },
+    );
+  });
+
+  /*
+   * IMPORTANT:
+   *
+   * ZerodhaAuthRoutes contains the complete authentication router:
+   *
+   *   /login
+   *   /register
+   *   /logout
+   *   /me
+   *   /upstox/login
+   *   /upstox/callback
+   *   /zerodha/login
+   *   /zerodha/callback
+   *
+   * Therefore it MUST be mounted at /auth/.
+   *
+   * This makes:
+   *
+   *   /auth/login
+   *   /auth/zerodha/login
+   *   /auth/zerodha/callback
+   *
+   * resolve to the correct handlers.
+   */
+  router.mount(
+    '/auth/',
+    ZerodhaAuthRoutes().router.call,
+  );
+
+  /*
+   * Broker routes require an authenticated Quanttora user.
+   */
+  final brokerHandler = Pipeline()
+      .addMiddleware(
+        AuthMiddleware.requireAuthentication(),
+      )
+      .addHandler(
+        BrokerRoutes().router.call,
+      );
+
+  router.mount(
+    '/broker/',
+    brokerHandler,
+  );
+
+  /*
+   * Market routes require an authenticated Quanttora user.
+   */
+  final marketHandler = Pipeline()
+      .addMiddleware(
+        AuthMiddleware.requireAuthentication(),
+      )
+      .addHandler(
+        MarketRoutes().router.call,
+      );
+
+  router.mount(
+    '/market/',
+    marketHandler,
+  );
+
+  /*
+   * Risk Guard routes require an authenticated Quanttora user.
+   */
+  final riskGuardHandler = Pipeline()
+      .addMiddleware(
+        AuthMiddleware.requireAuthentication(),
+      )
+      .addHandler(
+        RiskGuardRoutes().router.call,
+      );
+
+  router.mount(
+    '/risk-guard/',
+    riskGuardHandler,
+  );
+
+  /*
+   * Restore the last valid broker session when the backend starts.
+   */
+  await BrokerStartupService.instance.restore();
+
+  /*
+   * Global request logging.
+   */
+  final handler = Pipeline()
+      .addMiddleware(
+        logRequests(),
+      )
+      .addHandler(
+        router.call,
+      );
+
+  await io.serve(
+    handler,
+    InternetAddress.anyIPv4,
+    8080,
+  );
+
+  print('');
+  print('========================================');
+  print('Quanttora Backend Started');
+  print('http://0.0.0.0:8080');
+  print('========================================');
+}
