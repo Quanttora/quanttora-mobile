@@ -13,6 +13,7 @@ import 'package:backend/services/auth/auth_api_service.dart';
 import 'package:backend/services/auth/authentication_service.dart';
 import 'package:backend/services/broker_connection_repository.dart';
 import 'package:backend/services/broker_service.dart';
+import 'package:backend/services/zerodha_market_feed.dart';
 import 'package:backend/services/upstox_market_feed.dart';
 import 'package:http/http.dart' as http;
 import 'package:shelf/shelf.dart';
@@ -330,6 +331,14 @@ class ZerodhaAuthRoutes {
        */
       _brokerService.connectForUser(userId: quanttoraUserId, session: session);
 
+      print('[Zerodha OAuth] Starting live market feed...');
+      try {
+        await ZerodhaMarketFeed.instance.connect(accessToken: accessToken);
+        print('[Zerodha OAuth] Live market feed connection completed.');
+      } catch (feedError) {
+        print('[Zerodha OAuth] Live market feed connection failed: $feedError');
+      }
+
       print('BROKER SESSION CONNECTED');
       print('QUANTTORA USER ID: $quanttoraUserId');
       print('UPSTOX USER ID: $upstoxUserId');
@@ -578,6 +587,14 @@ class ZerodhaAuthRoutes {
       );
 
       _brokerService.connectForUser(userId: quanttoraUserId, session: session);
+
+      print('[Zerodha OAuth] Starting live market feed...');
+      try {
+        await ZerodhaMarketFeed.instance.connect(accessToken: accessToken);
+        print('[Zerodha OAuth] Live market feed connection completed.');
+      } catch (feedError) {
+        print('[Zerodha OAuth] Live market feed connection failed: $feedError');
+      }
 
       print('');
       print('==============================');
